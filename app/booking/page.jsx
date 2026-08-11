@@ -82,4 +82,100 @@ export default function BookingForm() {
             </select>
           </Field>
           <Field label="Event date"><input style={inputStyle} type="date" value={form.eventDate} onChange={(e) => update("eventDate", e.target.value)} /></Field>
-          <Field label="Estimated guest count (optional)"><input style={inputStyle} type="number" value={form.guestCount} onChange={(e) => update("guestCount"
+          <Field label="Estimated guest count (optional)"><input style={inputStyle} type="number" value={form.guestCount} onChange={(e) => update("guestCount", e.target.value)} placeholder="e.g. 40" /></Field>
+        </StepBlock>
+      )}
+
+      {step === 2 && (
+        <StepBlock icon={<Package size={20} color="#C97A3D" />} title="Choose your package">
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {TIERS.map((t) => (
+              <button key={t.id} onClick={() => update("tier", t.id)} style={{ textAlign: "left", padding: "18px", borderRadius: "14px", cursor: "pointer", background: form.tier === t.id ? "#332e28" : "#2a2723", border: form.tier === t.id ? "1.5px solid #C97A3D" : "1px solid #3a3733" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontWeight: 700, fontSize: "16px" }}>{t.name}</span>
+                  <span style={{ color: "#C97A3D", fontWeight: 700 }}>{t.price}</span>
+                </div>
+                <p style={{ fontSize: "13px", color: "#a8a29a", margin: "4px 0 10px" }}>{t.tagline}</p>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "13px", color: "#8a857d" }}>
+                  {t.features.map((f) => <li key={f} style={{ display: "flex", gap: "6px", marginBottom: "4px" }}><Check size={13} color="#7A8B76" style={{ flexShrink: 0, marginTop: "2px" }} /> {f}</li>)}
+                </ul>
+              </button>
+            ))}
+          </div>
+        </StepBlock>
+      )}
+
+      {step === 3 && (
+        <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {STYLES.map((s) => (
+              <button key={s.id} onClick={() => update("style", s.id)} style={{ textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#332e28" : "#2a2723", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #3a3733" }}>
+                <div style={{ fontWeight: 600, fontSize: "15px" }}>{s.label}</div>
+                <div style={{ fontSize: "13px", color: "#a8a29a", marginTop: "2px" }}>{s.desc}</div>
+              </button>
+            ))}
+          </div>
+          <Field label="Anything we should know? (optional)">
+            <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical", fontFamily: "inherit" }} value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Key moments to look for, songs you love, people to feature..." />
+          </Field>
+        </StepBlock>
+      )}
+
+      {step === 4 && (
+        <StepBlock icon={<Users size={20} color="#C97A3D" />} title="Review your booking">
+          <SummaryRow label="Host" value={form.hostName} />
+          <SummaryRow label="Email" value={form.email} />
+          <SummaryRow label="Event" value={`${form.eventType} — ${form.eventDate}`} />
+          <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
+          <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />
+          <div style={{ marginTop: "20px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>
+            By booking, you'll receive a service agreement by email. Your event gallery and video stay accessible for 90 days after delivery; raw guest uploads are removed 30 days after final delivery.
+          </div>
+        </StepBlock>
+      )}
+
+      <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
+        {step > 1 && <button onClick={() => setStep(step - 1)} style={backBtn}><ArrowLeft size={16} /> Back</button>}
+        {step < 4 ? (
+          <button onClick={() => canProceed() && setStep(step + 1)} disabled={!canProceed()} style={nextBtn(canProceed())}>Continue <ArrowRight size={16} /></button>
+        ) : (
+          <button onClick={handleSubmit} disabled={submitting} style={nextBtn(true)}>{submitting ? "Booking..." : "Confirm booking"}</button>
+        )}
+      </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }) {
+  return (
+    <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
+      <div style={{ width: "100%", maxWidth: "460px" }}>
+        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: 0 }}>Recapped For You</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StepBlock({ icon, title, children }) {
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>{icon}<h2 style={{ fontFamily: "Georgia, serif", fontSize: "21px", margin: 0 }}>{title}</h2></div>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return <div style={{ marginBottom: "16px" }}><label style={{ fontSize: "13px", color: "#a8a29a", display: "block", marginBottom: "6px" }}>{label}</label>{children}</div>;
+}
+
+function SummaryRow({ label, value }) {
+  return <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #3a3733", fontSize: "14px" }}><span style={{ color: "#8a857d" }}>{label}</span><span style={{ fontWeight: 500 }}>{value || "—"}</span></div>;
+}
+
+const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #4a4642", background: "#211F1D", color: "#F7F3EC", fontSize: "15px", outline: "none", boxSizing: "border-box" };
+const backBtn = { flex: "0 0 auto", padding: "13px 18px", borderRadius: "10px", border: "1px solid #4a4642", background: "transparent", color: "#a8a29a", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" };
+const nextBtn = (enabled) => ({ flex: 1, padding: "13px 18px", borderRadius: "10px", border: "none", background: enabled ? "#C97A3D" : "#4a4642", color: enabled ? "#211F1D" : "#8a857d", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: enabled ? "pointer" : "default" });

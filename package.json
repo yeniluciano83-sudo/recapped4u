@@ -1,0 +1,23 @@
+{
+  "name": "recapped-for-you",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "@aws-sdk/client-s3": "^3.620.0",
+    "@aws-sdk/s3-request-presigner": "^3.620.0",
+    "stripe": "^16.8.0",
+    "resend": "^4.0.0",
+    "qrcode": "^1.5.4",
+    "lucide-react": "^0.383.0"
+  }
+}

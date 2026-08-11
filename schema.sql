@@ -1,0 +1,84 @@
+-- Recapped For You — Supabase schema
+-- Run this in the Supabase SQL editor after creating your project.
+
+create extension if not exists "uuid-ossp";
+
+-- One row per client booking / event
+create table bookings (
+  id uuid primary key default uuid_generate_v4(),
+  host_name text not null,
+  email text not null,
+  event_type text not null,
+  event_date date not null,
+  guest_count integer,
+  tier text not null check (tier in ('standard', 'premium', 'keepsake')),
+  style text check (style in ('cinematic', 'upbeat', 'documentary')),
+  notes text,
+  status text not null default 'booked'
+    check (status in ('booked', 'collecting', 'editing', 'delivered')),
+  stripe_payment_status text default 'unpaid'
+    check (stripe_payment_status in ('unpaid', 'paid', 'refunded')),
+  stripe_session_id text,
+  upload_slug text unique not null, -- used to build the public guest-upload URL
+  delivered_at timestamptz,
+  gallery_expires_at timestamptz, -- delivered_at + 90 days, set on delivery
+  created_at timestamptz not null default now()
+);
+
+-- One row per guest-uploaded file, linked to a booking
+create table uploads (
+  id uuid primary key default uuid_generate_v4(),
+  booking_id uuid not null references bookings(id) on delete cascade,
+  uploader_name text,
+  storage_key text not null, -- path in R2/S3
+  file_type text check (file_type in ('photo', 'video')),
+  uploaded_at timestamptz not null default now(),
+  purge_at timestamptz -- set to uploaded_at + 30 days after delivery, for cleanup job
+);
+
+-- One row per photo analyzed by the curation pipeline
+create table photo_analysis (
+  id uuid primary key default uuid_generate_v4(),
+  upload_id uuid not null references uploads(id) on delete cascade,
+  technical_quality integer check (technical_quality between 1 and 10),
+  emotional_strength integer check (emotional_strength between 1 and 10),
+  moment_type text,
+  has_faces boolean,
+  notes text,
+  analyzed_at timestamptz not null default now()
+);
+
+-- One row per event's generated story arc / curation report
+create table curation_reports (
+  id uuid primary key default uuid_generate_v4(),
+  booking_id uuid not null references bookings(id) on delete cascade,
+  shortlist_upload_ids uuid[],
+  story_arc jsonb, -- the {section, files, note} structure from curate.js
+  title_card_text text,
+  closing_card_text text,
+  generated_at timestamptz not null default now()
+);
+
+-- Final delivered assets (video cuts, gallery link)
+create table deliverables (
+  id uuid primary key default uuid_generate_v4(),
+  booking_id uuid not null references bookings(id) on delete cascade,
+  full_video_key text,
+  social_video_key text,
+  gallery_photo_keys text[],
+  delivered_at timestamptz not null default now()
+);
+
+-- Helpful index for the dashboard's default sort/filter
+create index bookings_status_idx on bookings(status);
+create index bookings_event_date_idx on bookings(event_date);
+create index uploads_booking_id_idx on uploads(booking_id);
+
+-- Row Level Security: lock everything down by default.
+-- The app will use the Supabase service role key on the server side,
+-- which bypasses RLS — this just prevents public/anon access to raw tables.
+alter table bookings enable row level security;
+alter table uploads enable row level security;
+alter table photo_analysis enable row level security;
+alter table curation_reports enable row level security;
+alter table deliverables enable row level security;

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox } from "lucide-react";
 

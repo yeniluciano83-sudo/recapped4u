@@ -38,10 +38,15 @@ export default function BookingForm() {
     try {
       const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
       const data = await res.json();
+      if (!res.ok) {
+        alert("Booking failed: " + (data.error || "Unknown error"));
+        return;
+      }
       if (data.checkoutUrl) { window.location.href = data.checkoutUrl; return; }
       setSubmitted(true);
     } catch (err) {
       console.error("Booking failed", err);
+      alert("Booking failed. Please try again.");
     } finally {
       setSubmitting(false);
     }

@@ -29,14 +29,22 @@ export async function POST(req) {
         .select()
         .single();
 
+      console.log("Webhook update result — error:", error, "booking:", booking);
       if (!error && booking) {
+        console.log("Attempting to send email to:", booking.email);
         const uploadUrl = `${process.env.APP_URL}/event/${booking.upload_slug}`;
-        await sendBookingConfirmation({
+        const emailResult = await sendBookingConfirmation({
           to: booking.email,
           hostName: booking.host_name,
           eventDate: booking.event_date,
           uploadUrl,
-        }).catch((err) => console.error("Confirmation email failed:", err));
+        }).catch((err) => {
+          console.error("Confirmation email failed:", err);
+          return null;
+        });
+        console.log("Email send result:", emailResult);
+      } else {
+        console.log("Skipped email — condition failed. error:", error, "booking exists:", !!booking);
       }
     }
   }

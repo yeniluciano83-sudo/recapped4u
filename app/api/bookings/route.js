@@ -14,7 +14,7 @@ const TIER_PRICES = {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { hostName, email, eventType, eventDate, guestCount, tier, style, notes } = body;
+    const { hostName, email, eventType, eventDate, guestCount, tier, style, notes, roastEnabled, roastLevel } = body;
 
     if (!hostName || !email || !eventType || !eventDate || !tier) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

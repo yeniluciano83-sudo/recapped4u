@@ -70,10 +70,10 @@ export default function HomePage() {
           Event recap videos & photo galleries
         </p>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 18px" }}>
-          Your event, recapped — no photograper or videographer needed.
+          Your event, recapped — no photographer or videographer needed.
         </h1>
         <p style={{ fontSize: 16, color: "#a8a29a", lineHeight: 1.6, margin: "0 0 32px" }}>
-          We turn the photos and videos your own guests already took into one polished recap video and gallery — no photographer or videographer needed.
+          We turn the photos and videos your own guests already took into one polished recap video and gallery.
         </p>
         <a href="/booking" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#C97A3D", color: "#211F1D", fontSize: 15, fontWeight: 700, padding: "14px 26px", borderRadius: 10, textDecoration: "none" }}>
           Book Your Event <ChevronRight size={17} />

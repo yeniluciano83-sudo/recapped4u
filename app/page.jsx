@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef } from "react";
-import { Camera, Sparkles, Users, Check, ChevronRight, Play, HelpCircle, Mail, Star } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, Play, HelpCircle, Mail, Star, Flame } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },

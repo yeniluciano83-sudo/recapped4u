@@ -38,6 +38,7 @@ export async function POST(req) {
           hostName: booking.host_name,
           eventDate: booking.event_date,
           uploadUrl,
+          uploadSlug: booking.upload_slug,
         }).catch((err) => {
           console.error("Confirmation email failed:", err);
           return null;

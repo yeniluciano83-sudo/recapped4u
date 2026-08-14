@@ -35,6 +35,8 @@ export async function POST(req) {
         notes: notes || null,
         upload_slug: uploadSlug,
         status: "booked",
+        roast_enabled: body.roastEnabled || false,
+        roast_level: body.roastEnabled ? body.roastLevel : null,
       })
       .select()
       .single();

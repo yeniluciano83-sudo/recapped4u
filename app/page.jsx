@@ -21,7 +21,7 @@ const TIERS = [
     features: ["Everything in Premium", "Printed photo book", "Priority 48-72hr turnaround"] },
 ];
 
-const EVENT_TYPES = ["Birthdays", "Corporate Events", "Family Reunions", "Housewarmings", "Retirement Parties", "Baby Showers", "Graduations", "Anniversaries", "Bachelor/Bachelorette Parties", "Something Else? Ask Us"];
+const EVENT_TYPES = ["Parties", "Birthdays", "Corporate Events", "Family Reunions", "Housewarmings", "Retirement Parties", "Baby Showers", "Graduations", "Anniversaries", "Bachelor/Bachelorette Parties", "Vacations","Holiday Celebrations","Something Else? Ask Us"];
 
 const FAQS = [
   { q: "Is this AI-generated?", a: "No — every photo and video clip is real footage from your event. AI only helps us quickly sort through hundreds of guest uploads to find the best moments. A real editor then puts the story together by hand." },

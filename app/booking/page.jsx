@@ -15,6 +15,8 @@ const STYLES = [
   { id: "cinematic", label: "Cinematic", desc: "Slow, emotional, warm color grade" },
   { id: "upbeat", label: "Upbeat", desc: "Fast cuts, high energy, beat-synced" },
   { id: "documentary", label: "Documentary", desc: "Minimal, candid, true to the moment" },
+  { id: "retro", label: "Nostalgic / Retro", desc: "Warm film grain, vintage titles, scrapbook feel" },
+  { id: "highlight", label: "Highlight Reel", desc: "Bold text call-outs, punchy sports-style energy" },
 ];
 
 const EVENT_TYPES = ["Birthday", "Corporate Event", "Family Reunion", "Bar/Bat Mitzvah", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Other"];

@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame } from "lucide-react";
 
 const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
 const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", editing: "Editing", delivered: "Delivered" };
 const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76" };
 const TIER_LABEL = { standard: "Standard", premium: "Premium", keepsake: "Premium + Keepsake" };
+const ROAST_LABEL = { light: "Light Roasting", lukewarm: "Lukewarm Roasting", hot: "Hot Roasting" };
 
 export default function Dashboard() {
   const [bookings, setBookings] = useState([]);
@@ -30,8 +31,6 @@ export default function Dashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Note: this updates the on-screen status only for now.
-  // Wire this to a PATCH /api/bookings/[id] route once you add one.
   const updateStatus = (id, newStatus) => {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
     if (selected?.id === id) setSelected((s) => ({ ...s, status: newStatus }));
@@ -78,7 +77,10 @@ export default function Dashboard() {
             {filtered.map((b) => (
               <button key={b.id} onClick={() => setSelected(b)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderRadius: "12px", background: "#2a2723", border: "1px solid #3a3733", cursor: "pointer", textAlign: "left" }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: "15px" }}>{b.host_name}</div>
+                  <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    {b.host_name}
+                    {b.roast_enabled && <Flame size={13} color="#C97A3D" title="Roast Reel add-on" />}
+                  </div>
                   <div style={{ fontSize: "13px", color: "#8a857d", marginTop: "3px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={12} /> {formatDate(b.event_date)}</span>
                     <span>{b.event_type}</span>
@@ -103,9 +105,23 @@ export default function Dashboard() {
             <p style={{ color: "#8a857d", fontSize: "14px", margin: "0 0 22px" }}>{selected.event_type} · {formatDate(selected.event_date)}</p>
 
             <DetailRow label="Package" value={TIER_LABEL[selected.tier] || selected.tier} />
+            {selected.upload_slug && (
+              <div style={{ padding: "10px 0", borderBottom: "1px solid #3a3733" }}>
+                <a href={`/api/qrcode/${selected.upload_slug}`} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>
+                  View / Download Guest QR Code →
+                </a>
+              </div>
+            )}
             <DetailRow label="Style" value={selected.style} />
             {selected.email && <DetailRow label="Email" value={selected.email} />}
             {selected.guest_count && <DetailRow label="Guests" value={selected.guest_count} />}
+            {selected.roast_enabled && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #3a3733", fontSize: "14px" }}>
+                <span style={{ color: "#8a857d", display: "flex", alignItems: "center", gap: "5px" }}><Flame size={13} color="#C97A3D" /> Roast Reel</span>
+                <span style={{ fontWeight: 500, color: "#C97A3D" }}>{ROAST_LABEL[selected.roast_level] || selected.roast_level}</span>
+              </div>
+            )}
             {selected.notes && <DetailRow label="Notes" value={selected.notes} />}
 
             <div style={{ marginTop: "24px" }}>
@@ -124,7 +140,14 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div style={{ marginTop: "24px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>
+            {selected.roast_enabled && (
+              <div style={{ marginTop: "18px", padding: "14px", background: "#332e28", border: "1px solid #C97A3D44", borderRadius: "10px", fontSize: "12px", color: "#c9a98d", lineHeight: 1.6 }}>
+                <Flame size={12} style={{ marginRight: "5px", verticalAlign: "-1px" }} color="#C97A3D" />
+                Reminder: review and get host approval on the Roast Reel script before sharing with guests.
+              </div>
+            )}
+
+            <div style={{ marginTop: "18px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>
               <Clock size={12} style={{ marginRight: "5px", verticalAlign: "-1px" }} />
               Raw uploads auto-remove 30 days after delivery. Gallery link stays live 90 days.
             </div>

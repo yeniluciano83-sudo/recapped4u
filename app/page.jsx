@@ -177,12 +177,18 @@ export default function HomePage() {
         </div>
       </Section>
 
+      {/* About */}
       <Section id="about" refs={sectionRefs} title="About" icon={<Star size={20} color="#C97A3D" />}>
+        <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600, marginBottom: 16 }}>
+          Somewhere in your guests' camera rolls is the real story of your event — the candid laugh, the toast, the moment the whole room lit up. It's just scattered across forty different phones, most of it never seen twice.
+        </p>
+        <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600, marginBottom: 16 }}>
+          Recapped For You gathers it, sorts through it, and hands it back as one film worth watching. AI does the heavy lifting — scanning hundreds of clips for the moments that matter — but a real editor decides what actually makes the cut. Taste isn't automatable, so we didn't try to automate it.
+        </p>
         <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600 }}>
-          Recapped For You is a small, human-first studio — every recap is finished by a real editor, not handed off entirely to software. AI helps us work fast; taste and care finish the job. We built this because the best moments of an event usually live scattered across everyone's phones, and no one ever puts them together. We do.
+          No crew to coordinate, no camera in anyone's face. Just the party, remembered well.
         </p>
       </Section>
-
       <Section id="contact" refs={sectionRefs} title="Get In Touch" icon={<Mail size={20} color="#C97A3D" />}>
         <p style={{ fontSize: 14, color: "#a8a29a", marginBottom: 18 }}>
           Corporate events, custom packages, or just have a question — reach out.

@@ -119,6 +119,28 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+     <div style={{ ...cardStyle, marginTop: 16, border: "1.5px solid #C97A3D" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <Flame size={18} color="#C97A3D" />
+            <span style={{ fontWeight: 700, fontSize: 15.5 }}>Roast Reel</span>
+            <span style={{ fontSize: 11.5, color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Specialty add-on</span>
+          </div>
+          <p style={{ fontSize: 13, color: "#a8a29a", margin: "0 0 14px", maxWidth: 520 }}>
+            Witty, affectionate commentary layered over your photos and guests — you pick how far to take it, and you approve the full script before anyone sees it. Available on Premium and Keepsake for parties, reunions, anniversaries, and bachelor/bachelorette events.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              { label: "Light Roasting", desc: "Playful, gentle teasing" },
+              { label: "Lukewarm Roasting", desc: "Sharper, inside-joke energy" },
+              { label: "Hot Roasting", desc: "Full send, close friends only" },
+            ].map((r) => (
+              <div key={r.label} style={{ background: "#211F1D", border: "1px solid #3a3733", borderRadius: 10, padding: "10px 14px", flex: "1 1 150px" }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{r.label}</div>
+                <div style={{ fontSize: 11.5, color: "#8a857d", marginTop: 2 }}>{r.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </Section>
 
       <Section id="demo" refs={sectionRefs} title="See a Sample Recap" icon={<Play size={20} color="#C97A3D" />}>

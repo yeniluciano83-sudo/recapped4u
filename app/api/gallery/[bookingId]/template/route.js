@@ -3,9 +3,9 @@ import { supabase } from "@/lib/supabase";
 
 const VALID_TEMPLATES = ["grid", "masonry", "slideshow", "polaroid", "fullbleed"];
 
-// PATCH /api/gallery/[bookingid]/template  { template: "masonry" }
+// PATCH /api/gallery/[bookingId]/template  { template: "masonry" }
 export async function PATCH(req, { params }) {
-  const { bookingid } = params;
+  const { bookingId } = params;
 
   try {
     const { template } = await req.json();
@@ -17,7 +17,7 @@ export async function PATCH(req, { params }) {
     const { data, error } = await supabase
       .from("bookings")
       .update({ gallery_template: template })
-      .eq("id", bookingid)
+      .eq("id", bookingId)
       .select()
       .single();
 

@@ -19,7 +19,9 @@ export async function GET(req, { params }) {
     .from("deliverables")
     .select("*")
     .eq("booking_id", bookingId)
-    .single();
+    .order("delivered_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (!deliverable) {
     return NextResponse.json({ booking, deliverable: null, photos: [] });

@@ -7,7 +7,8 @@
  *   1. Pulls the booking's raw uploads from Supabase + R2
  *   2. Sends each photo to Claude for curation (score + shortlist + story arc)
  *   3. Auto-enhances the shortlisted photos (color, sharpness, style grade)
- *   4. Assembles an automated slideshow video (Ken Burns + crossfades)
+ *   4. Assembles an automated slideshow video (Ken Burns + crossfades + a
+ *      royalty-free soundtrack matched to the booking's editing style)
  *   5. Uploads the finished photos + video to R2 under a deliverable/ path
  *   6. Writes the `deliverables` row and flips the booking to "delivered"
  *
@@ -23,6 +24,15 @@ const { enhancePhoto } = require("../lib/photo-enhance");
 const { assembleSlideshow } = require("../lib/video-assemble");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+// Royalty-free tracks (Pixabay License — free for commercial use, no
+// attribution required), one per editing style, matching the mood
+// described for that style on the booking page.
+const STYLE_MUSIC = {
+  cinematic: path.join(__dirname, "..", "lib", "music", "cinematic.mp3"),
+  upbeat: path.join(__dirname, "..", "lib", "music", "upbeat.mp3"),
+  documentary: path.join(__dirname, "..", "lib", "music", "documentary.mp3"),
+};
 
 const s3 = new S3Client({
   region: "auto",
@@ -138,8 +148,9 @@ async function runAutoRecap(bookingId) {
   }
 
   console.log("Assembling automated slideshow video...");
+  const musicPath = STYLE_MUSIC[booking.style];
   const videoLocalPath = path.join(tmpDir, "recap.mp4");
-  await assembleSlideshow(localPaths, videoLocalPath);
+  await assembleSlideshow(localPaths, videoLocalPath, musicPath);
   const videoBuffer = fs.readFileSync(videoLocalPath);
   const videoKey = `deliverable/${bookingId}/full-cut.mp4`;
   await uploadToR2(videoKey, videoBuffer, "video/mp4");

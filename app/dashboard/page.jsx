@@ -116,9 +116,9 @@ export default function Dashboard() {
             <DetailRow label="Package" value={TIER_LABEL[selected.tier] || selected.tier} />
             {selected.upload_slug && (
               <div style={{ padding: "10px 0", borderBottom: "1px solid #3a3733" }}>
-                <a href={`/api/qrcode/${selected.upload_slug}`} target="_blank" rel="noopener noreferrer"
+                <a href={`/qr/${selected.upload_slug}`} target="_blank" rel="noopener noreferrer"
                   style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>
-                  View / Download Guest QR Code →
+                  View / Share / Print Guest QR Code →
                 </a>
               </div>
             )}

@@ -107,6 +107,11 @@ export default function EventUploadPage() {
         <p style={{ textAlign: "center", fontSize: "12px", color: "#6a655e", marginTop: "22px", lineHeight: 1.6 }}>
           Your photos help build the event recap video.<br />No account needed — just this link.
         </p>
+        <p style={{ textAlign: "center", marginTop: "18px" }}>
+          <a href="/#about" style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>
+            Learn more about us →
+          </a>
+        </p>
       </div>
 
       <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }`}</style>

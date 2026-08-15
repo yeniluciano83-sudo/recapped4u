@@ -25,11 +25,14 @@ export default function BookingForm() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventDate: "", guestCount: "", tier: "", style: "", notes: "" });
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", notes: "" });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
+    ? form.eventTypeOther.trim()
+    : form.eventType;
   const canProceed = () => {
-    if (step === 1) return form.hostName && form.email && form.eventType && form.eventDate;
+    if (step === 1) return form.hostName && form.email && form.eventType && (form.eventType !== "Other" || form.eventTypeOther.trim()) && form.eventDate;
     if (step === 2) return form.tier;
     if (step === 3) return form.style;
     return true;
@@ -38,7 +41,7 @@ export default function BookingForm() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, eventType: effectiveEventType }) });
       const data = await res.json();
       if (!res.ok) {
         alert("Booking failed: " + (data.error || "Unknown error"));
@@ -88,6 +91,11 @@ export default function BookingForm() {
               {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </Field>
+          {form.eventType === "Other" && (
+            <Field label="What's the event?">
+              <input style={inputStyle} value={form.eventTypeOther} onChange={(e) => update("eventTypeOther", e.target.value)} placeholder="e.g. Engagement Party" />
+            </Field>
+          )}
           <Field label="Event date"><input style={inputStyle} type="date" value={form.eventDate} onChange={(e) => update("eventDate", e.target.value)} /></Field>
           <Field label="Estimated guest count (optional)"><input style={inputStyle} type="number" value={form.guestCount} onChange={(e) => update("guestCount", e.target.value)} placeholder="e.g. 40" /></Field>
         </StepBlock>
@@ -132,7 +140,7 @@ export default function BookingForm() {
         <StepBlock icon={<Users size={20} color="#C97A3D" />} title="Review your booking">
           <SummaryRow label="Host" value={form.hostName} />
           <SummaryRow label="Email" value={form.email} />
-          <SummaryRow label="Event" value={`${form.eventType} — ${form.eventDate}`} />
+          <SummaryRow label="Event" value={`${effectiveEventType} — ${form.eventDate}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
           <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />
           <div style={{ marginTop: "20px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>

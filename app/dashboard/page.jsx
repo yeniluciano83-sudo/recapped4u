@@ -31,9 +31,18 @@ export default function Dashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  const updateStatus = (id, newStatus) => {
+  const updateStatus = async (id, newStatus) => {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
     if (selected?.id === id) setSelected((s) => ({ ...s, status: newStatus }));
+    try {
+      await fetch(`/api/bookings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch (err) {
+      console.error("Failed to save status change", err);
+    }
   };
 
   const filtered = bookings

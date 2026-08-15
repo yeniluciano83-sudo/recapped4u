@@ -19,7 +19,7 @@ const STYLES = [
   { id: "highlight", label: "Highlight Reel", desc: "Bold text call-outs, punchy sports-style energy" },
 ];
 
-const EVENT_TYPES = ["Birthday", "Corporate Event", "Family Reunion", "Bar/Bat Mitzvah", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Other"];
+const EVENT_TYPES = ["Party", "Birthday", "Corporate Event", "Family Reunion", "Housewarming", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Bachelor/Bachelorette Party", "Vacation", "Holiday Celebration", "Other"];
 
 export default function BookingForm() {
   const [step, setStep] = useState(1);

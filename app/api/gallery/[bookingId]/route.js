@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getSignedDownloadUrl } from "@/lib/storage";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req, { params }) {
   const { bookingId } = params;
 

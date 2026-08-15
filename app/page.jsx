@@ -16,7 +16,7 @@ const TIERS = [
   { id: "standard", name: "Standard", price: "$275", tagline: "One video, one style",
     features: ["AI-curated photo gallery", "One recap video (5-10 min)", "One editing style", "Digital delivery"] },
   { id: "premium", name: "Premium", price: "$425", tagline: "Two cuts, your style, your name in it", highlight: true,
-    features: ["Everything in Standard", "Social cut (60-90 sec) + full cut", "Choose your editing style", "Editor's personal touch"] },
+    features: ["Everything in Standard", "Social cut (60-90 sec) + full cut", "Choose your editing style"] },
   { id: "keepsake", name: "Premium + Keepsake", price: "$550", tagline: "Something to hold, not just watch",
     features: ["Everything in Premium", "Printed photo book", "Priority 48-72hr turnaround"] },
 ];
@@ -24,7 +24,7 @@ const TIERS = [
 const EVENT_TYPES = ["Parties", "Birthdays", "Corporate Events", "Family Reunions", "Housewarmings", "Retirement Parties", "Baby Showers", "Graduations", "Anniversaries", "Bachelor/Bachelorette Parties", "Vacations","Holiday Celebrations","Something Else? Ask Us"];
 
 const FAQS = [
-  { q: "Is this AI-generated?", a: "No — every photo and video clip is real footage from your event. AI only helps us quickly sort through hundreds of guest uploads to find the best moments. A real editor then puts the story together by hand." },
+  { q: "Is this AI-generated?", a: "No — every photo and video clip is real footage from your event. Our system analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is AI-generated, and nothing waits on a human editor's schedule." },
   { q: "Will our photos be shared with anyone else?", a: "No. Your photos and videos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
   { q: "How long does it take?", a: "Standard turnaround is a few days; Premium + Keepsake includes priority 48-72 hour delivery." },
   { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 90 days after delivery. Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy." },
@@ -33,7 +33,7 @@ const FAQS = [
   { q: "Is there a limit on how many guests can upload?", a: "No hard limit — the QR link works for any size gathering, from a small family dinner to a large corporate event." },
   { q: "What if we need to cancel or reschedule?", a: "Reach out as soon as you know — we'll work with you to reschedule for a new date at no extra cost. Refund terms will be outlined in your service agreement." },
   { q: "How do we pay, and when?", a: "Payment is collected securely at booking through Stripe. We accept all major credit and debit cards." },
-  { q: "Can we pick which photos and clips make the final cut?", a: "Our editor selects the best moments using AI-assisted curation plus a manual pass, but you can flag must-include moments and people in your booking notes." },
+  { q: "Can we pick which photos and clips make the final cut?", a: "Our automated curation selects the best moments for you, but you can flag must-include moments and people in your booking notes and we'll make sure those are prioritized." },
   { q: "Do you travel, or is this remote-only?", a: "Fully remote — there's no need for us to be physically present. Guests upload directly, and our editing happens entirely online, so we can work with events anywhere." },
   { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Premium and Keepsake tiers for select event types) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests." },
 ];
@@ -85,7 +85,7 @@ export default function HomePage() {
           {[
             { n: "1", t: "Book", d: "Pick your package and event date." },
             { n: "2", t: "Guests upload", d: "Share a QR code — guests add photos & video, no app needed." },
-            { n: "3", t: "We edit", d: "AI sorts the best moments; a real editor builds the story." },
+            { n: "3", t: "We edit", d: "Every clip is scored, then cut, graded, and paced into your story — automatically, start to finish." },
             { n: "4", t: "You receive it", d: "A polished video and gallery, ready to share and keep." },
           ].map((s) => (
             <div key={s.n} style={cardStyle}>
@@ -96,7 +96,7 @@ export default function HomePage() {
           ))}
         </div>
         <p style={{ marginTop: 24, fontSize: 13.5, color: "#8a857d", lineHeight: 1.6, maxWidth: 560 }}>
-          Nothing is AI-generated — every photo and clip is real footage from your event. AI just helps us find the best moments in hundreds of files quickly; a human editor puts it all together.
+          Nothing is AI-generated — every photo and clip is real footage from your event. AI finds the best moments in hundreds of files, then our automated process cuts, grades, and paces them into your story.
         </p>
       </Section>
 
@@ -202,10 +202,10 @@ export default function HomePage() {
       {/* About */}
       <Section id="about" refs={sectionRefs} title="About" icon={<Star size={20} color="#C97A3D" />}>
         <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600, marginBottom: 16 }}>
-          Somewhere in your guests' camera rolls is the real story of your event — the candid laugh, the toast, the moment the whole room lit up. It's just scattered across forty different phones, most of it never seen twice.
+          Somewhere across your guests' phones is the real story of your event — the candid laugh, the toast, the moment the whole room lit up at once. It's just scattered across forty different camera rolls, most of it destined to be seen once and forgotten.
         </p>
         <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600, marginBottom: 16 }}>
-          Recapped For You gathers it, sorts through it, and hands it back as one film worth watching. AI does the heavy lifting — scanning hundreds of clips for the moments that matter — but a real editor decides what actually makes the cut. Taste isn't automatable, so we didn't try to automate it.
+          Recapped For You gathers it, sorts through it, and hands it back as one film worth watching — no stranger holding a camera all night, no editor's inbox to wait on. Every photo and clip is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cut, graded, and paced automatically. Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.
         </p>
         <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600 }}>
           No crew to coordinate, no camera in anyone's face. Just the party, remembered well.

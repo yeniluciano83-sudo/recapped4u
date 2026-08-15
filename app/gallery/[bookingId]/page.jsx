@@ -91,7 +91,7 @@ export default function GalleryDeliveryPage() {
         </div>
 
         <p style={{ textAlign: "center", fontSize: "13px", color: "#6a655e", marginBottom: "32px" }}>
-          Edited by your Recapped For You editor · {booking.style} style
+          Cut, graded, and paced automatically · {booking.style} style
         </p>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>

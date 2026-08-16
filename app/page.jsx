@@ -37,7 +37,7 @@ const FAQS = [
   { q: "How do we pay, and when?", a: "Payment is collected securely at booking through Stripe. We accept all major credit and debit cards." },
   { q: "Can we pick which photos and clips make the final cut?", a: "Our automated curation selects the best moments for you, but you can flag must-include moments and people in your booking notes and we'll make sure those are prioritized." },
   { q: "Do you travel, or is this remote-only?", a: "Fully remote — there's no need for us to be physically present. Guests upload directly, and our editing happens entirely online, so we can work with events anywhere." },
-  { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers for select event types) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests." },
+  { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests. Currently offered for parties, family reunions, anniversaries, and bachelor/bachelorette parties." },
 ];
 
 export default function HomePage() {

@@ -108,7 +108,7 @@ export default function CancelBookingPage() {
         </p>
       </div>
 
-      {error && <p style={{ color: "#C97A3D", fontSize: "13px", marginBottom: "14px" }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "#C97A3D", fontSize: "13px", marginBottom: "14px" }}>{error}</p>}
 
       <button
         onClick={handleCancel}

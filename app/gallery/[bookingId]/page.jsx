@@ -159,7 +159,7 @@ export default function GalleryDeliveryPage() {
 
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px" }}>
-          <button onClick={() => setLightbox(null)} style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "#FFFFFF", cursor: "pointer" }}><X size={26} /></button>
+          <button onClick={() => setLightbox(null)} aria-label="Close photo" style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "#FFFFFF", cursor: "pointer" }}><X size={26} /></button>
           <img src={lightbox} alt="" style={{ width: "min(500px, 90vw)", borderRadius: "14px" }} />
         </div>
       )}

@@ -4,15 +4,15 @@ import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame
 
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
-    features: ["AI-curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "One editing style", "Digital delivery", "Guests have 24hrs after the event to upload"] },
+    features: ["AI-curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "Guests have 24hrs after the event to upload"] },
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
-    features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "AI-curated photo gallery", "One recap video", "One editing style", "Digital delivery"] },
+    features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "AI-curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
-    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Pick a theme and must-include photos for your social cut", "Choose your editing style", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
   { id: "custom", name: "Custom Package", price: "Contact us", tagline: "Built entirely around your event",
-    features: ["Tailored scope, pricing, and timeline", "For large events, multi-day coverage, or special requests", "We'll follow up by email to work out the details"] },
+    features: ["Tailored scope, pricing, and timeline", "Choose your editing style (optional)", "For large events, multi-day coverage, or special requests", "We'll follow up by email to work out the details"] },
 ];
 
 const STYLES = [
@@ -48,10 +48,11 @@ export default function BookingForm() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", notes: "", roastEnabled: false, roastLevel: "light" });
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light" });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier) && ROAST_ELIGIBLE_EVENT_TYPES.includes(form.eventType);
+  const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()
     : form.eventType;
@@ -169,6 +170,28 @@ export default function BookingForm() {
             ))}
           </div>
 
+          {isSocialCutEligible && (
+            <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#2a2723", border: "1px solid #3a3733" }}>
+              <div style={{ fontWeight: 700, fontSize: "15px" }}>Social cut theme</div>
+              <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: "4px 0 12px", lineHeight: 1.5 }}>
+                Optional -- pick a different style for your 60-90 second social cut, or leave it matching your main style above. You can also change this (and star must-include photos) later from your QR share page.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {STYLES.map((s) => (
+                  <button key={s.id} onClick={() => update("socialStyle", form.socialStyle === s.id ? "" : s.id)}
+                    style={{
+                      padding: "8px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
+                      border: form.socialStyle === s.id ? "1px solid #C97A3D" : "1px solid #4a4642",
+                      background: form.socialStyle === s.id ? "#332e28" : "transparent",
+                      color: form.socialStyle === s.id ? "#C97A3D" : "#8a857d",
+                    }}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isRoastEligible && (
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#2a2723", border: form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #3a3733" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
@@ -196,7 +219,7 @@ export default function BookingForm() {
           )}
 
           <Field label="Anything we should know? (optional)">
-            <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical", fontFamily: "inherit" }} value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Key moments to look for, songs you love, people to feature..." />
+            <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical", fontFamily: "inherit" }} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
           </Field>
         </StepBlock>
       )}
@@ -208,6 +231,9 @@ export default function BookingForm() {
           <SummaryRow label="Event" value={`${effectiveEventType} — ${form.eventDate}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
           {!isCustom && <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />}
+          {isSocialCutEligible && form.socialStyle && (
+            <SummaryRow label="Social cut theme" value={STYLES.find((s) => s.id === form.socialStyle)?.label} />
+          )}
           {isRoastEligible && form.roastEnabled && (
             <SummaryRow
               label="Roast Reel"

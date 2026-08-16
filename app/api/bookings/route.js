@@ -16,10 +16,12 @@ const TIER_PRICES = {
 // additional charge (no entry here).
 const ROAST_ADDON_PRICE = { premium: 2000 };
 
+const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
+
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { hostName, email, eventType, eventDate, guestCount, tier, style, notes, roastEnabled, roastLevel } = body;
+    const { hostName, email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel } = body;
 
     if (!hostName || !email || !eventType || !eventDate || !tier) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -37,6 +39,7 @@ export async function POST(req) {
         guest_count: guestCount || null,
         tier,
         style: style || null,
+        social_style: SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) ? socialStyle || null : null,
         notes: notes || null,
         upload_slug: uploadSlug,
         status: "booked",

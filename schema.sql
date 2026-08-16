@@ -16,7 +16,7 @@ create table bookings (
   social_style text check (social_style in ('cinematic', 'upbeat', 'documentary', 'retro', 'highlight')), -- optional separate theme for the social cut (Signature/Luxe only); falls back to `style` if unset
   notes text,
   status text not null default 'booked'
-    check (status in ('booked', 'collecting', 'editing', 'awaiting_roast_approval', 'delivered')),
+    check (status in ('booked', 'collecting', 'editing', 'awaiting_roast_approval', 'delivered', 'cancelled')),
   stripe_payment_status text default 'unpaid'
     check (stripe_payment_status in ('unpaid', 'paid', 'refunded')),
   stripe_session_id text,
@@ -28,6 +28,7 @@ create table bookings (
   gallery_template text not null default 'grid' check (gallery_template in ('grid', 'masonry', 'slideshow', 'polaroid')),
   reminder_sent_at timestamptz, -- set when the 24h-post-event upload reminder email is sent
   uploads_closed_at timestamptz, -- set when the host signals guests are done uploading, ahead of the tier's deadline
+  cancelled_at timestamptz, -- set when the host cancels via their self-serve cancellation link
   created_at timestamptz not null default now()
 );
 

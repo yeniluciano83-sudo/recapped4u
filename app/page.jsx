@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef } from "react";
-import { Camera, Sparkles, Users, Check, ChevronRight, Play, HelpCircle, Mail, Star, Flame } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, Play, HelpCircle, Mail, Star, Flame, Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -42,9 +42,11 @@ const FAQS = [
 
 export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sectionRefs = useRef({});
 
   const scrollTo = (id) => {
+    setMobileMenuOpen(false);
     sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -53,7 +55,7 @@ export default function HomePage() {
       <div style={{ position: "sticky", top: 0, zIndex: 40, background: "#FAF7F2ee", backdropFilter: "blur(8px)", borderBottom: "1px solid #E4DED2" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", flexShrink: 0 }}>Recapped For You</span>
-          <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+          <div className="nav-links" style={{ display: "flex", gap: 4, overflowX: "auto" }}>
             {NAV_ITEMS.map((item) => (
               <button key={item.id} onClick={() => scrollTo(item.id)}
                 style={{ background: "none", border: "none", color: "#4a4642", fontSize: 12.5, padding: "8px 10px", cursor: "pointer", whiteSpace: "nowrap" }}>
@@ -61,11 +63,38 @@ export default function HomePage() {
               </button>
             ))}
           </div>
-          <a href="/booking" style={{ flexShrink: 0, background: "#C97A3D", color: "#211F1D", fontSize: 13, fontWeight: 700, padding: "9px 16px", borderRadius: 8, textDecoration: "none" }}>
-            Book Now
-          </a>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            <a href="/booking" style={{ background: "#C97A3D", color: "#211F1D", fontSize: 13, fontWeight: 700, padding: "9px 16px", borderRadius: 8, textDecoration: "none" }}>
+              Book Now
+            </a>
+            <button className="nav-hamburger" onClick={() => setMobileMenuOpen((o) => !o)}
+              style={{ display: "none", background: "none", border: "1px solid #E4DED2", borderRadius: 8, padding: 8, cursor: "pointer", color: "#211F1D" }}
+              aria-label="Toggle menu">
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
         </div>
+        {mobileMenuOpen && (
+          <div className="nav-mobile-panel" style={{ borderTop: "1px solid #E4DED2", background: "#FAF7F2", padding: "8px 20px 14px", display: "flex", flexDirection: "column" }}>
+            {NAV_ITEMS.map((item) => (
+              <button key={item.id} onClick={() => scrollTo(item.id)}
+                style={{ background: "none", border: "none", color: "#4a4642", fontSize: 14, padding: "10px 0", cursor: "pointer", textAlign: "left" }}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+      <style>{`
+        @media (max-width: 640px) {
+          .nav-links { display: none !important; }
+          .nav-hamburger { display: flex !important; align-items: center; justify-content: center; }
+        }
+        .nav-mobile-panel { display: none; }
+        @media (max-width: 640px) {
+          .nav-mobile-panel { display: flex !important; }
+        }
+      `}</style>
 
       <section style={{ maxWidth: 640, margin: "0 auto", padding: "64px 24px 56px", textAlign: "center" }}>
         <p style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 16 }}>

@@ -106,6 +106,7 @@ export default function GalleryDeliveryPage() {
                 const Icon = t.icon;
                 return (
                   <button key={t.id} onClick={() => changeTemplate(t.id)}
+                    aria-pressed={template === t.id}
                     style={{
                       display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
                       fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
@@ -241,7 +242,7 @@ function formatExpiryDate(dateStr) {
 
 function LengthToggle({ active, onClick, label }) {
   return (
-    <button onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "7px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", border: active ? "1px solid #C97A3D" : "1px solid #D8CFC0", background: active ? "#FBEEE0" : "transparent", color: active ? "#C97A3D" : "#6b655c" }}>
+    <button onClick={onClick} aria-pressed={active} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "7px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", border: active ? "1px solid #C97A3D" : "1px solid #D8CFC0", background: active ? "#FBEEE0" : "transparent", color: active ? "#C97A3D" : "#6b655c" }}>
       {active && <Check size={12} strokeWidth={3} />} {label}
     </button>
   );

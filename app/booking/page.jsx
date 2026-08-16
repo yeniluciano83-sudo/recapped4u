@@ -139,7 +139,7 @@ export default function BookingForm() {
         <StepBlock icon={<Package size={20} color="#C97A3D" />} title="Choose your package">
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {TIERS.map((t) => (
-              <button key={t.id} onClick={() => update("tier", t.id)} style={{ textAlign: "left", padding: "18px", borderRadius: "14px", cursor: "pointer", background: form.tier === t.id ? "#FBEEE0" : "#FFFFFF", border: form.tier === t.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
+              <button key={t.id} onClick={() => update("tier", t.id)} aria-pressed={form.tier === t.id} style={{ textAlign: "left", padding: "18px", borderRadius: "14px", cursor: "pointer", background: form.tier === t.id ? "#FBEEE0" : "#FFFFFF", border: form.tier === t.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <span style={{ fontWeight: 700, fontSize: "16px", display: "flex", alignItems: "center", gap: "6px" }}>
                     {form.tier === t.id && <Check size={16} color="#C97A3D" strokeWidth={3} />} {t.name}
@@ -165,7 +165,7 @@ export default function BookingForm() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (
-              <button key={s.id} onClick={() => update("style", s.id)} style={{ textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#FBEEE0" : "#FFFFFF", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
+              <button key={s.id} onClick={() => update("style", s.id)} aria-pressed={form.style === s.id} style={{ textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#FBEEE0" : "#FFFFFF", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
                 <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
                   {form.style === s.id && <Check size={15} color="#C97A3D" strokeWidth={3} />} {s.label}
                 </div>
@@ -183,6 +183,7 @@ export default function BookingForm() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {STYLES.map((s) => (
                   <button key={s.id} onClick={() => update("socialStyle", form.socialStyle === s.id ? "" : s.id)}
+                    aria-pressed={form.socialStyle === s.id}
                     style={{
                       display: "inline-flex", alignItems: "center", gap: "4px",
                       padding: "8px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
@@ -213,7 +214,7 @@ export default function BookingForm() {
               {form.roastEnabled && (
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
                   {ROAST_LEVELS.map((r) => (
-                    <button key={r.id} onClick={() => update("roastLevel", r.id)} style={{ flex: "1 1 110px", textAlign: "left", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: form.roastLevel === r.id ? "#FBEEE0" : "#FAF7F2", border: form.roastLevel === r.id ? "1.5px solid #C97A3D" : "1px solid #D8CFC0" }}>
+                    <button key={r.id} onClick={() => update("roastLevel", r.id)} aria-pressed={form.roastLevel === r.id} style={{ flex: "1 1 110px", textAlign: "left", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: form.roastLevel === r.id ? "#FBEEE0" : "#FAF7F2", border: form.roastLevel === r.id ? "1.5px solid #C97A3D" : "1px solid #D8CFC0" }}>
                       <div style={{ fontWeight: 600, fontSize: "12.5px", display: "flex", alignItems: "center", gap: "4px" }}>
                         {form.roastLevel === r.id && <Check size={12} color="#C97A3D" strokeWidth={3} />} {r.label}
                       </div>

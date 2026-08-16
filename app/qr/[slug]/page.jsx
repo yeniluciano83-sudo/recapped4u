@@ -226,6 +226,7 @@ export default function QrSharePage() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
                 {STYLES.map((s) => (
                   <button key={s.id} onClick={() => handleSetSocialStyle(s.id)} disabled={savingStyle}
+                    aria-pressed={eventInfo.social_style === s.id}
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 4,
                       padding: "6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: "pointer",

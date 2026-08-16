@@ -3,8 +3,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame } from "lucide-react";
 
 const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
-const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", editing: "Editing", delivered: "Delivered" };
-const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76" };
+// Two statuses fall outside the linear happy-path flow above -- pipeline
+// pauses awaiting the host's Roast Reel approval, and host-cancelled --
+// so they're not in STATUS_FLOW (nothing to click through), but still need
+// a real label/color instead of falling back to the raw DB string.
+const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", editing: "Editing", delivered: "Delivered", awaiting_roast_approval: "Awaiting Roast Reel approval", cancelled: "Cancelled" };
+const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76", awaiting_roast_approval: "#C97A3D", cancelled: "#8a857d" };
 const TIER_LABEL = { free: "Free", standard: "Classic", premium: "Signature", keepsake: "Luxe" };
 const ROAST_LABEL = { light: "Light Roasting", lukewarm: "Lukewarm Roasting", hot: "Hot Roasting" };
 // Keep in sync with GALLERY_EXPIRY_MONTHS in scripts/auto-recap.js.
@@ -137,12 +141,18 @@ export default function Dashboard() {
 
             <div style={{ marginTop: "24px" }}>
               <div style={{ fontSize: "12px", color: "#a8a29a", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {!STATUS_FLOW.includes(selected.status) && (
+                <div style={{ padding: "10px 12px", borderRadius: "10px", background: "#332e28", border: `1px solid ${STATUS_COLOR[selected.status] || "#4a4642"}`, marginBottom: "10px", fontSize: "14px", color: STATUS_COLOR[selected.status] || "#F7F3EC", fontWeight: 600 }}>
+                  {STATUS_LABEL[selected.status] || selected.status}
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", opacity: STATUS_FLOW.includes(selected.status) ? 1 : 0.5 }}>
                 {STATUS_FLOW.map((s) => {
                   const active = s === selected.status;
-                  const done = STATUS_FLOW.indexOf(s) < STATUS_FLOW.indexOf(selected.status);
+                  const inFlow = STATUS_FLOW.includes(selected.status);
+                  const done = inFlow && STATUS_FLOW.indexOf(s) < STATUS_FLOW.indexOf(selected.status);
                   return (
-                    <button key={s} onClick={() => updateStatus(selected.id, s)} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", cursor: "pointer", textAlign: "left", background: active ? "#332e28" : "transparent", border: active ? "1px solid #C97A3D" : "1px solid transparent" }}>
+                    <button key={s} disabled={!inFlow} onClick={() => updateStatus(selected.id, s)} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", cursor: inFlow ? "pointer" : "default", textAlign: "left", background: active ? "#332e28" : "transparent", border: active ? "1px solid #C97A3D" : "1px solid transparent" }}>
                       {done || active ? <CheckCircle2 size={16} color={active ? "#C97A3D" : "#7A8B76"} /> : <Circle size={16} color="#4a4642" />}
                       <span style={{ fontSize: "14px", color: active ? "#F7F3EC" : "#a8a29a" }}>{STATUS_LABEL[s]}</span>
                     </button>
@@ -163,6 +173,8 @@ export default function Dashboard() {
               Raw uploads auto-remove 30 days after delivery. Gallery link stays live{" "}
               {selected.gallery_expires_at
                 ? `until ${formatExpiryDate(selected.gallery_expires_at)}`
+                : selected.tier === "free"
+                ? "7 days after delivery (photos stay downloadable after that)"
                 : `${GALLERY_RETENTION[selected.tier] || "90 days"} after delivery`}.
             </div>
           </div>

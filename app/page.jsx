@@ -238,7 +238,7 @@ export default function HomePage() {
           hello@recappedforyou.com
         </a>
         <p style={{ fontSize: 12.5, color: "#8a857d", marginTop: 16 }}>
-          📱 Or reach us on WhatsApp: <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>
+          <span aria-hidden="true">📱</span> Or reach us on WhatsApp: <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>
         </p>
       </Section>
 

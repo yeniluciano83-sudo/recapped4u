@@ -16,7 +16,7 @@ export async function GET(req, { params }) {
 
   const { data: booking, error } = await supabase
     .from("bookings")
-    .select("host_name, event_type, event_date, tier, status, cancelled_at")
+    .select("host_name, event_type, event_date, tier, status, cancelled_at, stripe_payment_status")
     .eq("upload_slug", eventId)
     .single();
 

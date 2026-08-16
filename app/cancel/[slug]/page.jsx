@@ -66,14 +66,15 @@ export default function CancelBookingPage() {
   const booking = info?.booking;
 
   if (result || booking?.status === "cancelled") {
+    const refunded = result ? result.refunded : booking.stripe_payment_status === "refunded";
     return (
       <PageShell>
         <CheckCircle2 size={32} color="#7A8B76" style={{ marginBottom: 14 }} />
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: "24px", margin: "0 0 10px" }}>Booking cancelled</h1>
         <p style={{ color: "#a8a29a", fontSize: "14px", lineHeight: 1.6 }}>
-          {result?.refunded
-            ? `A full refund of ${result.amountRefunded} is on its way to your original payment method.`
-            : "A confirmation email is on its way. Since this cancellation is within 24 hours of your event, it isn't eligible for a refund."}
+          {refunded
+            ? `A full refund${result?.amountRefunded ? ` of ${result.amountRefunded}` : ""} is on its way to your original payment method.`
+            : "A confirmation email is on its way. This cancellation wasn't eligible for a refund."}
         </p>
       </PageShell>
     );

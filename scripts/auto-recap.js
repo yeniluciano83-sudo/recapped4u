@@ -141,7 +141,7 @@ async function finishAfterRoastApproval(booking) {
 
   const enhancedKeys = roastScript.script.map((entry) => entry.storage_key);
   const musicPath = STYLE_MUSIC[booking.style];
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name);
 }
 
 async function runFullPipeline(booking) {
@@ -210,13 +210,23 @@ async function runFullPipeline(booking) {
     await supabase.from("roast_scripts").insert({ booking_id: bookingId, script: scriptWithKeys, status: "pending" });
     await supabase.from("bookings").update({ status: "awaiting_roast_approval" }).eq("id", bookingId);
 
-    const { sendRoastApprovalRequest } = require("../lib/email");
-    await sendRoastApprovalRequest({
-      to: booking.email,
-      hostName: booking.host_name,
-      eventName: `${booking.host_name}'s ${booking.event_type}`,
-      reviewUrl: `${process.env.APP_URL}/roast/${bookingId}`,
-    }).catch((err) => console.error("Roast approval email failed:", err));
+    // Constructing the Resend client throws synchronously when
+    // RESEND_API_KEY is unset (e.g. local dev), which would otherwise
+    // crash the pipeline here -- after the script and the
+    // awaiting_roast_approval status are already saved. The script itself
+    // is still valid and reviewable without the notification email, so a
+    // send failure should be a warning, not a fatal error.
+    try {
+      const { sendRoastApprovalRequest } = require("../lib/email");
+      await sendRoastApprovalRequest({
+        to: booking.email,
+        hostName: booking.host_name,
+        eventName: `${booking.host_name}'s ${booking.event_type}`,
+        reviewUrl: `${process.env.APP_URL}/roast/${bookingId}`,
+      });
+    } catch (err) {
+      console.error(`Roast approval email failed (booking is still paused for approval): ${err.message}`);
+    }
 
     fs.rmSync(tmpDir, { recursive: true, force: true });
     console.log(`Roast script generated for booking ${bookingId}. Paused for host approval at ${process.env.APP_URL}/roast/${bookingId}`);
@@ -224,10 +234,10 @@ async function runFullPipeline(booking) {
   }
 
   const musicPath = STYLE_MUSIC[booking.style];
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, null);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name);
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines) {
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName) {
   console.log("Assembling automated slideshow video...");
   const videoLocalPath = path.join(tmpDir, "recap.mp4");
   await assembleSlideshow(localPaths, videoLocalPath, musicPath, roastLines);
@@ -250,6 +260,21 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     .from("bookings")
     .update({ status: "delivered", delivered_at: new Date().toISOString(), gallery_expires_at: expiresAt.toISOString() })
     .eq("id", bookingId);
+
+  // Same reasoning as the roast approval email: the deliverable and the
+  // "delivered" status are already saved at this point, so a missing
+  // RESEND_API_KEY/APP_URL should be a warning, not a crash.
+  try {
+    const { sendDeliveryNotification } = require("../lib/email");
+    await sendDeliveryNotification({
+      to: hostEmail,
+      hostName,
+      galleryUrl: `${process.env.APP_URL}/gallery/${bookingId}`,
+      expiresDate: expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    });
+  } catch (err) {
+    console.error(`Delivery email failed (booking is still marked delivered): ${err.message}`);
+  }
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 

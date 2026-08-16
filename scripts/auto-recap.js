@@ -22,6 +22,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { enhancePhoto } = require("../lib/photo-enhance");
 const { assembleSlideshow } = require("../lib/video-assemble");
+const { generateRoastScript } = require("../lib/roast");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -96,6 +97,56 @@ async function runAutoRecap(bookingId) {
   const { data: booking, error: bookingErr } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
   if (bookingErr || !booking) throw new Error("Booking not found");
 
+  // A booking paused for Roast Reel approval has already been analyzed and
+  // enhanced -- re-running the full pipeline would redo that (wasted Claude
+  // spend) and generate a second, conflicting script. Resume at final
+  // rendering instead once the host has approved.
+  if (booking.status === "awaiting_roast_approval") {
+    return finishAfterRoastApproval(booking);
+  }
+
+  return runFullPipeline(booking);
+}
+
+async function finishAfterRoastApproval(booking) {
+  const bookingId = booking.id;
+
+  const { data: roastScript, error } = await supabase
+    .from("roast_scripts")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !roastScript) throw new Error("No Roast Reel script found for this booking");
+
+  if (roastScript.status !== "approved") {
+    console.log(`Booking ${bookingId} is still awaiting host approval of its Roast Reel script. Nothing to do yet.`);
+    return;
+  }
+
+  console.log("Roast Reel script approved -- downloading enhanced photos and finishing the video...");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-roast-"));
+  const localPaths = [];
+  const roastLines = [];
+
+  for (const entry of roastScript.script) {
+    const buffer = await downloadFromR2(entry.storage_key);
+    const localPath = path.join(tmpDir, path.basename(entry.storage_key));
+    fs.writeFileSync(localPath, buffer);
+    localPaths.push(localPath);
+    roastLines.push(entry.line);
+  }
+
+  const enhancedKeys = roastScript.script.map((entry) => entry.storage_key);
+  const musicPath = STYLE_MUSIC[booking.style];
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines);
+}
+
+async function runFullPipeline(booking) {
+  const bookingId = booking.id;
+
   await supabase.from("bookings").update({ status: "editing" }).eq("id", bookingId);
 
   const { data: uploads, error: uploadsErr } = await supabase.from("uploads").select("*").eq("booking_id", bookingId).eq("file_type", "photo");
@@ -147,10 +198,39 @@ async function runAutoRecap(bookingId) {
     localPaths.push(localPath);
   }
 
-  console.log("Assembling automated slideshow video...");
+  if (booking.roast_enabled) {
+    console.log("Roast Reel add-on enabled -- generating script for host approval...");
+    const roastPhotos = localPaths.map((p, i) => ({ buffer: fs.readFileSync(p), storageKey: enhancedKeys[i] }));
+    const script = await generateRoastScript(roastPhotos, {
+      eventType: booking.event_type,
+      roastLevel: booking.roast_level || "light",
+    });
+    const scriptWithKeys = script.map((line, i) => ({ ...line, storage_key: enhancedKeys[i] }));
+
+    await supabase.from("roast_scripts").insert({ booking_id: bookingId, script: scriptWithKeys, status: "pending" });
+    await supabase.from("bookings").update({ status: "awaiting_roast_approval" }).eq("id", bookingId);
+
+    const { sendRoastApprovalRequest } = require("../lib/email");
+    await sendRoastApprovalRequest({
+      to: booking.email,
+      hostName: booking.host_name,
+      eventName: `${booking.host_name}'s ${booking.event_type}`,
+      reviewUrl: `${process.env.APP_URL}/roast/${bookingId}`,
+    }).catch((err) => console.error("Roast approval email failed:", err));
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    console.log(`Roast script generated for booking ${bookingId}. Paused for host approval at ${process.env.APP_URL}/roast/${bookingId}`);
+    return;
+  }
+
   const musicPath = STYLE_MUSIC[booking.style];
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, null);
+}
+
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines) {
+  console.log("Assembling automated slideshow video...");
   const videoLocalPath = path.join(tmpDir, "recap.mp4");
-  await assembleSlideshow(localPaths, videoLocalPath, musicPath);
+  await assembleSlideshow(localPaths, videoLocalPath, musicPath, roastLines);
   const videoBuffer = fs.readFileSync(videoLocalPath);
   const videoKey = `deliverable/${bookingId}/full-cut.mp4`;
   await uploadToR2(videoKey, videoBuffer, "video/mp4");

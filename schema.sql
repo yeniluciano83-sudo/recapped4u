@@ -15,7 +15,7 @@ create table bookings (
   style text check (style in ('cinematic', 'upbeat', 'documentary')),
   notes text,
   status text not null default 'booked'
-    check (status in ('booked', 'collecting', 'editing', 'delivered')),
+    check (status in ('booked', 'collecting', 'editing', 'awaiting_roast_approval', 'delivered')),
   stripe_payment_status text default 'unpaid'
     check (stripe_payment_status in ('unpaid', 'paid', 'refunded')),
   stripe_session_id text,
@@ -69,10 +69,22 @@ create table deliverables (
   delivered_at timestamptz not null default now()
 );
 
+-- Draft Roast Reel scripts awaiting host review, separate from `deliverables`
+-- (the final, already-approved/rendered assets).
+create table roast_scripts (
+  id uuid primary key default uuid_generate_v4(),
+  booking_id uuid not null references bookings(id) on delete cascade,
+  script jsonb not null, -- [{ photo_index, storage_key, line }]
+  status text not null default 'pending' check (status in ('pending', 'approved')),
+  created_at timestamptz not null default now(),
+  approved_at timestamptz
+);
+
 -- Helpful index for the dashboard's default sort/filter
 create index bookings_status_idx on bookings(status);
 create index bookings_event_date_idx on bookings(event_date);
 create index uploads_booking_id_idx on uploads(booking_id);
+create index roast_scripts_booking_id_idx on roast_scripts(booking_id);
 
 -- Row Level Security: lock everything down by default.
 -- The app will use the Supabase service role key on the server side,
@@ -82,3 +94,4 @@ alter table uploads enable row level security;
 alter table photo_analysis enable row level security;
 alter table curation_reports enable row level security;
 alter table deliverables enable row level security;
+alter table roast_scripts enable row level security;

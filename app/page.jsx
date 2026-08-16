@@ -35,7 +35,7 @@ const FAQS = [
   { q: "Is there a limit on how many guests can upload?", a: "No hard limit — the QR link works for any size gathering, from a small family dinner to a large corporate event." },
   { q: "What if we need to cancel or reschedule?", a: "Your booking confirmation email includes a cancellation link — cancel more than 24 hours before your event and you'll get a full refund automatically; cancellations inside 24 hours aren't eligible for a refund since guest uploads may already be underway. Prefer to reschedule instead? Just reach out and we'll move your date at no extra cost." },
   { q: "How do we pay?", a: "Payment is collected securely at booking through Stripe. We accept all major credit and debit cards." },
-  { q: "Can we pick which photos and clips make the final cut?", a: "Our automated curation selects the best moments for you, but you can flag must-include moments and people in your booking notes and we'll make sure those are prioritized." },
+  { q: "Can we pick which photos and clips make the final cut?", a: "Our automated curation selects the best moments for your main video. On Signature and Luxe, you can also star must-include photos for your social cut from your QR share page." },
   { q: "Do you travel, or is this remote-only?", a: "Fully remote — there's no need for us to be physically present. Guests upload directly, and our editing happens entirely online, so we can work with events anywhere." },
   { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests. Currently offered for parties, family reunions, anniversaries, and bachelor/bachelorette parties." },
 ];
@@ -128,7 +128,7 @@ export default function HomePage() {
             <span style={{ fontSize: 11.5, color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Specialty add-on</span>
           </div>
           <p style={{ fontSize: 13, color: "#a8a29a", margin: "0 0 14px", maxWidth: 520 }}>
-            Witty, affectionate commentary layered over your photos and guests — you pick how far to take it, and you approve the full script before anyone sees it. Available on Signature and Luxe for parties, reunions, anniversaries, and bachelor/bachelorette events.
+            Witty, affectionate commentary layered over your photos — you pick how far to take it, and you approve the full script before anyone sees it. Available on Signature and Luxe for parties, reunions, anniversaries, and bachelor/bachelorette events.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[

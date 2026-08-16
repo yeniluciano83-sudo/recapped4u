@@ -72,10 +72,11 @@ export async function PATCH(req, { params }) {
 
     if (updateError) throw updateError;
 
-    // Approval clears the way for final render, but the actual re-assembly
-    // with the approved lines burned in isn't wired up yet -- this just
-    // moves the booking out of the approval gate.
-    await supabase.from("bookings").update({ status: "editing" }).eq("id", bookingId);
+    // Leave booking.status as "awaiting_roast_approval" -- that's what
+    // tells scripts/auto-recap.js to resume at finishAfterRoastApproval
+    // (final render only) instead of re-running the full analysis pipeline
+    // and generating a second, conflicting script. finishAfterRoastApproval
+    // itself gates on roast_scripts.status === "approved", which is now set.
 
     return NextResponse.json({ success: true });
   } catch (err) {

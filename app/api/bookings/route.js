@@ -66,7 +66,7 @@ export async function POST(req) {
       // throws synchronously when RESEND_API_KEY is unset, which would
       // otherwise break booking creation for every tier, not just free.
       try {
-        const { sendBookingConfirmation } = await import("@/lib/email");
+        const { sendBookingConfirmation, sendServiceAgreement } = await import("@/lib/email");
         await sendBookingConfirmation({
           to: email,
           hostName,
@@ -77,6 +77,16 @@ export async function POST(req) {
           style,
           amountPaid: "$0.00",
           uploadUrl: `${process.env.APP_URL}/event/${uploadSlug}`,
+          uploadSlug,
+        });
+        await sendServiceAgreement({
+          to: email,
+          hostName,
+          eventDate,
+          eventType,
+          tier,
+          amountPaid: "$0.00",
+          roastEnabled: body.roastEnabled || false,
           uploadSlug,
         });
       } catch (err) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, sendServiceAgreement } from "@/lib/email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -56,6 +56,19 @@ export async function POST(req) {
           return null;
         });
         console.log("Email send result:", emailResult);
+
+        await sendServiceAgreement({
+          to: booking.email,
+          hostName: booking.host_name,
+          eventDate: booking.event_date,
+          eventType: booking.event_type,
+          tier: booking.tier,
+          amountPaid,
+          roastEnabled: booking.roast_enabled,
+          uploadSlug: booking.upload_slug,
+        }).catch((err) => {
+          console.error("Service agreement email failed:", err);
+        });
       } else {
         console.log("Skipped email — condition failed. error:", error, "booking exists:", !!booking);
       }

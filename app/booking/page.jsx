@@ -8,9 +8,9 @@ const TIERS = [
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "AI-curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
-    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for select event types (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for select event types", "2-week upload deadline", "Downloadable gallery for 6 months"] },
   { id: "custom", name: "Custom Package", price: "Contact us", tagline: "Built entirely around your event",
     features: ["Tailored scope, pricing, and timeline", "Choose your editing style (optional)", "For large events, multi-day coverage, or special requests", "We'll follow up by email to work out the details"] },
 ];
@@ -203,7 +203,7 @@ export default function BookingForm() {
                 </span>
               </label>
               <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: "8px 0 0", lineHeight: 1.5 }}>
-                Witty commentary layered over your photos and guests. You approve the full script before anyone sees it.
+                Witty commentary layered over your photos. You approve the full script before anyone sees it.
               </p>
               {form.roastEnabled && (
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>

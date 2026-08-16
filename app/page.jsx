@@ -18,9 +18,9 @@ const TIERS = [
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "AI-curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours", highlight: true,
-    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"] },
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for select event types (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"] },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for select event types", "2-week upload deadline", "Downloadable gallery for 6 months"] },
 ];
 
 const EVENT_TYPES = ["Parties", "Birthdays", "Corporate Events", "Family Reunions", "Housewarmings", "Retirement Parties", "Baby Showers", "Graduations", "Anniversaries", "Bachelor/Bachelorette Parties", "Vacations","Holiday Celebrations","Something Else? Ask Us"];

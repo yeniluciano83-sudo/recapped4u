@@ -34,7 +34,7 @@ export default function DashboardLogin() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", outline: "none", boxSizing: "border-box", marginBottom: "12px" }}
+          style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", boxSizing: "border-box", marginBottom: "12px" }}
         />
         <button type="submit" disabled={loading} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>
           {loading ? "Checking..." : "Enter"}

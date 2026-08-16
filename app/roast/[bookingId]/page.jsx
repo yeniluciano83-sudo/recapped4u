@@ -113,7 +113,7 @@ export default function RoastApprovalPage() {
                 <textarea
                   value={l.line}
                   onChange={(e) => updateLine(i, e.target.value)}
-                  style={{ width: "100%", minHeight: 60, padding: "10px 12px", borderRadius: 8, border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: 14, lineHeight: 1.5, fontFamily: "inherit", resize: "vertical", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", minHeight: 60, padding: "10px 12px", borderRadius: 8, border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: 14, lineHeight: 1.5, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box" }}
                 />
               </div>
             </div>

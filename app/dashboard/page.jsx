@@ -79,7 +79,7 @@ export default function Dashboard() {
 
         <div style={{ position: "relative", marginBottom: "20px" }}>
           <Search size={16} color="#8a857d" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by host or event type" style={{ width: "100%", padding: "12px 14px 12px 40px", borderRadius: "10px", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", outline: "none", boxSizing: "border-box" }} />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by host or event type" style={{ width: "100%", padding: "12px 14px 12px 40px", borderRadius: "10px", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", boxSizing: "border-box" }} />
         </div>
 
         {loading ? (

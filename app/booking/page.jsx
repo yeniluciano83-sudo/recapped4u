@@ -281,7 +281,7 @@ const visuallyHidden = { position: "absolute", width: "1px", height: "1px", padd
 
 function Shell({ children }) {
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
+    <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: "460px" }}>
         <h1 style={visuallyHidden}>Book your event recap</h1>
         <div style={{ textAlign: "center", marginBottom: "28px" }}>
@@ -289,7 +289,7 @@ function Shell({ children }) {
         </div>
         {children}
       </div>
-    </div>
+    </main>
   );
 }
 

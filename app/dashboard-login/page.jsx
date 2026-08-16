@@ -24,7 +24,7 @@ export default function DashboardLogin() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+    <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
       <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: 320 }}>
         <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: "20px", textAlign: "center" }}>
           Recapped For You — Staff Access
@@ -39,8 +39,8 @@ export default function DashboardLogin() {
         <button type="submit" disabled={loading} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>
           {loading ? "Checking..." : "Enter"}
         </button>
-        {error && <p style={{ color: "#e07a5f", fontSize: "13px", textAlign: "center", marginTop: "12px" }}>Incorrect password.</p>}
+        {error && <p role="alert" style={{ color: "#e07a5f", fontSize: "13px", textAlign: "center", marginTop: "12px" }}>Incorrect password.</p>}
       </form>
-    </div>
+    </main>
   );
 }

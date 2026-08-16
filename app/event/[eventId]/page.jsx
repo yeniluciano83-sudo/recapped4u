@@ -66,7 +66,7 @@ export default function EventUploadPage() {
   const eventDate = eventInfo?.event_date || "";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>
+    <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>
       <div style={{ width: "100%", height: "10px", display: "flex", gap: "3px", padding: "0 12px", background: "#F0EAE0" }}>
         {Array.from({ length: 24 }).map((_, i) => (
           <div key={i} style={{ flex: 1, height: "10px", borderRadius: "1px", background: i < reelSegments ? "#C97A3D" : "#E4DED2", transition: "background 0.4s ease" }} />
@@ -143,6 +143,6 @@ export default function EventUploadPage() {
       </div>
 
       <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }`}</style>
-    </div>
+    </main>
   );
 }

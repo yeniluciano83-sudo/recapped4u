@@ -96,6 +96,7 @@ export default function HomePage() {
         }
       `}</style>
 
+      <main>
       <section style={{ maxWidth: 640, margin: "0 auto", padding: "64px 24px 56px", textAlign: "center" }}>
         <p style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 16 }}>
           Event recap videos & photo galleries
@@ -241,6 +242,7 @@ export default function HomePage() {
           <span aria-hidden="true">📱</span> Or reach us on WhatsApp: <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>
         </p>
       </Section>
+      </main>
 
       <footer style={{ textAlign: "center", padding: "40px 20px", color: "#8a857d", fontSize: 12.5, borderTop: "1px solid #E4DED2" }}>
         © {new Date().getFullYear()} Recapped For You

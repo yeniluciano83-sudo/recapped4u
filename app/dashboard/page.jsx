@@ -66,7 +66,7 @@ export default function Dashboard() {
   const counts = STATUS_FLOW.reduce((acc, s) => { acc[s] = bookings.filter((b) => b.status === s).length; return acc; }, {});
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+    <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <div {...(selected ? { inert: "" } : {})} style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 20px 60px" }}>
         <div style={{ marginBottom: "28px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 6px" }}>Recapped For You</p>
@@ -189,7 +189,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 

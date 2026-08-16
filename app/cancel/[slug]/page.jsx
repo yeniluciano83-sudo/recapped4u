@@ -127,8 +127,8 @@ export default function CancelBookingPage() {
 
 function PageShell({ children }) {
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+    <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
       <div style={{ maxWidth: "420px", textAlign: "center" }}>{children}</div>
-    </div>
+    </main>
   );
 }

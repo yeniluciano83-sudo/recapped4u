@@ -59,17 +59,17 @@ export default function RoastApprovalPage() {
 
   if (loading) {
     return (
-      <div style={shellStyle}>
+      <main style={shellStyle}>
         <p style={{ color: "#4a4642" }}>Loading your Roast Reel script…</p>
-      </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div style={shellStyle}>
+      <main style={shellStyle}>
         <p style={{ color: "#4a4642" }}>{error}</p>
-      </div>
+      </main>
     );
   }
 
@@ -77,7 +77,7 @@ export default function RoastApprovalPage() {
 
   if (approved) {
     return (
-      <div style={shellStyle}>
+      <main style={shellStyle}>
         <div style={{ textAlign: "center", maxWidth: 380 }}>
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
             <Check size={28} color="#211F1D" strokeWidth={2.5} />
@@ -87,12 +87,12 @@ export default function RoastApprovalPage() {
             Thanks, {data.booking.host_name.split(" ")[0]}. We'll finish producing your video with this Roast Reel script and let you know when it's ready.
           </p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+    <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "48px 20px 100px" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <p style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C97A3D", fontWeight: 600, margin: "0 0 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
@@ -126,7 +126,7 @@ export default function RoastApprovalPage() {
         </button>
       </div>
       <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }`}</style>
-    </div>
+    </main>
   );
 }
 

@@ -60,9 +60,9 @@ export default function GalleryDeliveryPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
         Loading your recap…
-      </div>
+      </main>
     );
   }
 
@@ -73,7 +73,7 @@ export default function GalleryDeliveryPage() {
   const isDownloadOnly = booking.tier === "free" && isExpired;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+    <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <div {...(lightbox ? { inert: "" } : {})} style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
@@ -170,7 +170,7 @@ export default function GalleryDeliveryPage() {
           <img src={lightbox} alt="" style={{ width: "min(500px, 90vw)", borderRadius: "14px" }} />
         </div>
       )}
-    </div>
+    </main>
   );
 }
 

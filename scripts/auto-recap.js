@@ -65,7 +65,7 @@ async function callClaude(messages, maxTokens = 1024) {
       "x-api-key": process.env.ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01",
     },
-    body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: maxTokens, messages }),
+    body: JSON.stringify({ model: "claude-opus-5", max_tokens: maxTokens, messages }),
   });
   if (!res.ok) throw new Error(`Claude API error ${res.status}: ${await res.text()}`);
   const data = await res.json();

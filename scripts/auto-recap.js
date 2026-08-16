@@ -471,6 +471,11 @@ async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedK
     .update({ status: "delivered", delivered_at: new Date().toISOString(), gallery_expires_at: expiresAt.toISOString() })
     .eq("id", bookingId);
 
+  // Raw guest uploads get permanently deleted 30 days from here -- see
+  // purgeExpiredUploads() in scripts/poll-and-recap.js, which reads this.
+  const purgeAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase.from("uploads").update({ purge_at: purgeAt }).eq("booking_id", bookingId);
+
   // Same reasoning as the roast approval email: the deliverable and the
   // "delivered" status are already saved at this point, so a missing
   // RESEND_API_KEY/APP_URL should be a warning, not a crash.

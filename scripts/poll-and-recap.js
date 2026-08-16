@@ -13,6 +13,9 @@
  *      and emails the host a heads-up that processing starts soon.
  *   3. Finds bookings paused at "awaiting_roast_approval" whose script has
  *      since been approved, and resumes them to finish rendering.
+ *   4. Permanently deletes raw guest uploads whose purge_at (set to 30 days
+ *      after delivery, see finalizeDelivery in auto-recap.js) has passed --
+ *      matching the retention policy already promised in the UI copy.
  *
  * If any booking's pipeline run fails, it's logged and the run moves on to
  * the next one -- at the end, if ADMIN_ALERT_EMAIL is set, one summary
@@ -135,11 +138,38 @@ async function resumeApprovedRoastBookings(failures) {
   }
 }
 
+async function purgeExpiredUploads(failures) {
+  const { data: expired, error } = await supabase
+    .from("uploads")
+    .select("id, booking_id, storage_key")
+    .lte("purge_at", new Date().toISOString())
+    .limit(200); // batched -- a single run only needs to make a dent, not clear a backlog in one shot
+
+  if (error) {
+    console.error("Failed to query uploads past their purge date:", error.message);
+    return;
+  }
+  if (!expired || expired.length === 0) return;
+
+  console.log(`\nPurging ${expired.length} raw upload(s) past their 30-day retention window...`);
+  const { deleteFile } = require("../lib/storage");
+  for (const upload of expired) {
+    try {
+      await deleteFile(upload.storage_key);
+      await supabase.from("uploads").delete().eq("id", upload.id);
+    } catch (err) {
+      console.error(`Failed to purge upload ${upload.id}:`, err.message);
+      failures.push({ bookingId: upload.booking_id, error: `Raw upload purge failed (upload ${upload.id}): ${err.message}` });
+    }
+  }
+}
+
 async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
   const failures = [];
   await processCollectingBookings(failures);
   await resumeApprovedRoastBookings(failures);
+  await purgeExpiredUploads(failures);
 
   if (failures.length > 0 && process.env.ADMIN_ALERT_EMAIL) {
     console.log(`Sending failure alert for ${failures.length} booking(s) to ${process.env.ADMIN_ALERT_EMAIL}...`);

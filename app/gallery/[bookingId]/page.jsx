@@ -132,7 +132,10 @@ export default function GalleryDeliveryPage() {
           <div style={{ padding: "14px 16px", background: "#2a2723", borderRadius: "10px", border: "1px solid #3a3733", display: "flex", gap: "10px" }}>
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
             <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: 0, lineHeight: 1.6 }}>
-              This gallery and video stay available for 90 days after delivery. Please download everything you'd like to keep — raw guest uploads have already been removed per our data policy.
+              {booking.gallery_expires_at
+                ? `This gallery and video stay available until ${formatExpiryDate(booking.gallery_expires_at)}.`
+                : "This gallery and video stay available for a limited time."}{" "}
+              Please download everything you'd like to keep — raw guest uploads have already been removed per our data policy.
             </p>
           </div>
         </div>
@@ -200,6 +203,11 @@ function PolaroidLayout({ photos, onSelect }) {
       ))}
     </div>
   );
+}
+
+function formatExpiryDate(dateStr) {
+  try { return new Date(dateStr).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
+  catch { return dateStr; }
 }
 
 function LengthToggle({ active, onClick, label }) {

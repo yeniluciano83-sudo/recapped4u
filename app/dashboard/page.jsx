@@ -7,6 +7,8 @@ const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", editi
 const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76" };
 const TIER_LABEL = { free: "Free", standard: "Classic", premium: "Signature", keepsake: "Luxe" };
 const ROAST_LABEL = { light: "Light Roasting", lukewarm: "Lukewarm Roasting", hot: "Hot Roasting" };
+// Keep in sync with GALLERY_EXPIRY_MONTHS in scripts/auto-recap.js.
+const GALLERY_RETENTION = { premium: "4 months", keepsake: "6 months" };
 
 export default function Dashboard() {
   const [bookings, setBookings] = useState([]);
@@ -158,7 +160,10 @@ export default function Dashboard() {
 
             <div style={{ marginTop: "18px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>
               <Clock size={12} style={{ marginRight: "5px", verticalAlign: "-1px" }} />
-              Raw uploads auto-remove 30 days after delivery. Gallery link stays live 90 days.
+              Raw uploads auto-remove 30 days after delivery. Gallery link stays live{" "}
+              {selected.gallery_expires_at
+                ? `until ${formatExpiryDate(selected.gallery_expires_at)}`
+                : `${GALLERY_RETENTION[selected.tier] || "90 days"} after delivery`}.
             </div>
           </div>
         </div>
@@ -174,5 +179,13 @@ function DetailRow({ label, value }) {
 function formatDate(dateStr) {
   if (!dateStr) return "—";
   try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
+  catch { return dateStr; }
+}
+
+// For full ISO timestamps (e.g. gallery_expires_at) -- unlike event_date,
+// these already include a time/offset, so appending "T00:00:00" the way
+// formatDate does would corrupt the string instead of parsing it.
+function formatExpiryDate(dateStr) {
+  try { return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
   catch { return dateStr; }
 }

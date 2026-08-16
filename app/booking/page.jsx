@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft } from "lucide-react";
+import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame } from "lucide-react";
 
 const TIERS = [
   { id: "standard", name: "Standard", price: "$275", tagline: "One video, one style",
@@ -21,13 +21,24 @@ const STYLES = [
 
 const EVENT_TYPES = ["Party", "Birthday", "Corporate Event", "Family Reunion", "Housewarming", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Bachelor/Bachelorette Party", "Vacation", "Holiday Celebration", "Other"];
 
+// Matches what the homepage's Roast Reel card actually advertises --
+// Premium/Keepsake tiers, and this specific set of event types.
+const ROAST_ELIGIBLE_TIERS = ["premium", "keepsake"];
+const ROAST_ELIGIBLE_EVENT_TYPES = ["Party", "Family Reunion", "Anniversary", "Bachelor/Bachelorette Party"];
+const ROAST_LEVELS = [
+  { id: "light", label: "Light", desc: "Playful, gentle teasing" },
+  { id: "lukewarm", label: "Lukewarm", desc: "Sharper, inside-joke energy" },
+  { id: "hot", label: "Hot", desc: "Full send, close friends only" },
+];
+
 export default function BookingForm() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", notes: "" });
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", notes: "", roastEnabled: false, roastLevel: "light" });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier) && ROAST_ELIGIBLE_EVENT_TYPES.includes(form.eventType);
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()
     : form.eventType;
@@ -41,7 +52,7 @@ export default function BookingForm() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, eventType: effectiveEventType }) });
+      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled }) });
       const data = await res.json();
       if (!res.ok) {
         alert("Booking failed: " + (data.error || "Unknown error"));
@@ -130,6 +141,31 @@ export default function BookingForm() {
               </button>
             ))}
           </div>
+
+          {isRoastEligible && (
+            <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#2a2723", border: form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #3a3733" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                <input type="checkbox" checked={form.roastEnabled} onChange={(e) => update("roastEnabled", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
+                <Flame size={17} color="#C97A3D" />
+                <span style={{ fontWeight: 700, fontSize: "15px" }}>Add Roast Reel</span>
+                <span style={{ fontSize: "10.5px", color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Free add-on</span>
+              </label>
+              <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: "8px 0 0", lineHeight: 1.5 }}>
+                Witty commentary layered over your photos and guests. You approve the full script before anyone sees it.
+              </p>
+              {form.roastEnabled && (
+                <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+                  {ROAST_LEVELS.map((r) => (
+                    <button key={r.id} onClick={() => update("roastLevel", r.id)} style={{ flex: "1 1 110px", textAlign: "left", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: form.roastLevel === r.id ? "#332e28" : "#211F1D", border: form.roastLevel === r.id ? "1.5px solid #C97A3D" : "1px solid #4a4642" }}>
+                      <div style={{ fontWeight: 600, fontSize: "12.5px" }}>{r.label}</div>
+                      <div style={{ fontSize: "11px", color: "#8a857d", marginTop: "2px" }}>{r.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <Field label="Anything we should know? (optional)">
             <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical", fontFamily: "inherit" }} value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Key moments to look for, songs you love, people to feature..." />
           </Field>
@@ -143,6 +179,9 @@ export default function BookingForm() {
           <SummaryRow label="Event" value={`${effectiveEventType} — ${form.eventDate}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
           <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />
+          {isRoastEligible && form.roastEnabled && (
+            <SummaryRow label="Roast Reel" value={ROAST_LEVELS.find((r) => r.id === form.roastLevel)?.label} />
+          )}
           <div style={{ marginTop: "20px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>
             By booking, you'll receive a service agreement by email. Your event gallery and video stay accessible for 90 days after delivery; raw guest uploads are removed 30 days after final delivery.
           </div>

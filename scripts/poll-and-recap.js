@@ -1,42 +1,134 @@
+/**
+ * Recapped For You — Scheduled recap runner
+ * -------------------------------------------
+ * Meant to run on a schedule (see .github/workflows/recap-scheduler.yml).
+ * Each run:
+ *
+ *   1. Finds bookings still "collecting" whose event was >= that tier's
+ *      upload deadline ago (see TIER_SCHEDULE) and runs the full
+ *      auto-recap pipeline for them.
+ *   2. Finds bookings still "collecting" past that tier's reminder
+ *      threshold (but before the deadline), with no reminder sent yet,
+ *      and emails the host a heads-up that processing starts soon.
+ *   3. Finds bookings paused at "awaiting_roast_approval" whose script has
+ *      since been approved, and resumes them to finish rendering.
+ *
+ * event_date is a bare DATE column (no time-of-day) -- these thresholds
+ * are measured from midnight UTC of that date, so they're accurate to
+ * within a day, not to the hour.
+ *
+ * Run manually: node scripts/poll-and-recap.js
+ */
 require("dotenv").config({ path: require("path").join(__dirname, "..", ".env.local") });
-const { createClient } = require("@supabase/supabase-js");
+const path = require("path");
 const { execSync } = require("child_process");
+const { createClient } = require("@supabase/supabase-js");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-async function main() {
-  console.log(`[${new Date().toISOString()}] Checking for bookings ready to recap...`);
+// Free's deadline is deliberately tight (encourages upgrading for more
+// time) and skips a reminder entirely -- a same-day heads-up doesn't fit a
+// 24h window. Classic keeps the original 48h/24h pairing. Signature and
+// Luxe get a full week, with a reminder 24h before that cutoff.
+const TIER_SCHEDULE = {
+  free: { processHours: 24, reminderHours: null },
+  standard: { processHours: 48, reminderHours: 24 },
+  premium: { processHours: 24 * 7, reminderHours: 24 * 6 },
+  keepsake: { processHours: 24 * 7, reminderHours: 24 * 6 },
+};
 
-  // ADJUST: table name and column names to match your schema
-  const { data: bookings, error } = await supabase
-    .from("bookings")
-    .select("id")
-    .eq("status", "ready_for_recap"); // ADJUST: your actual status value
+function hoursSinceEvent(eventDate) {
+  return (Date.now() - new Date(eventDate).getTime()) / (1000 * 60 * 60);
+}
 
+function runRecap(bookingId) {
+  execSync(`node "${path.join(__dirname, "auto-recap.js")}" ${bookingId}`, {
+    stdio: "inherit",
+    cwd: path.join(__dirname, ".."),
+  });
+}
+
+async function processCollectingBookings() {
+  const { data: bookings, error } = await supabase.from("bookings").select("*").eq("status", "collecting");
   if (error) {
-    console.error("Failed to query bookings:", error.message);
+    console.error("Failed to query collecting bookings:", error.message);
     return;
   }
 
-  if (!bookings || bookings.length === 0) {
-    console.log("No bookings ready. Done.");
-    return;
-  }
+  for (const booking of bookings || []) {
+    const schedule = TIER_SCHEDULE[booking.tier];
+    if (!schedule) {
+      console.error(`Booking ${booking.id} has unrecognized tier "${booking.tier}" -- skipping.`);
+      continue;
+    }
 
-  console.log(`Found ${bookings.length} booking(s) to process.`);
+    const hours = hoursSinceEvent(booking.event_date);
 
-  for (const booking of bookings) {
-    console.log(`\nProcessing booking ${booking.id}...`);
-    try {
-      execSync(`node "${__dirname}\\auto-recap.js" ${booking.id}`, {
-        stdio: "inherit",
-        cwd: require("path").join(__dirname, ".."),
-      });
-    } catch (err) {
-      console.error(`Booking ${booking.id} failed:`, err.message);
-      // continue to next booking instead of stopping the whole batch
+    if (hours >= schedule.processHours) {
+      console.log(`\nProcessing booking ${booking.id} (${booking.tier}, event was ~${Math.round(hours)}h ago)...`);
+      try {
+        runRecap(booking.id);
+      } catch (err) {
+        console.error(`Booking ${booking.id} failed:`, err.message);
+      }
+      continue;
+    }
+
+    if (schedule.reminderHours !== null && hours >= schedule.reminderHours && !booking.reminder_sent_at) {
+      console.log(`Sending upload reminder for booking ${booking.id}...`);
+      try {
+        // Lazy require: constructing the Resend client throws synchronously
+        // when RESEND_API_KEY is unset, which would otherwise crash this
+        // whole poll run (including bookings that don't need an email at
+        // all) rather than just this one reminder.
+        const { sendUploadReminder } = require("../lib/email");
+        await sendUploadReminder({
+          to: booking.email,
+          hostName: booking.host_name,
+          eventDate: booking.event_date,
+          uploadUrl: `${process.env.APP_URL}/event/${booking.upload_slug}`,
+          uploadSlug: booking.upload_slug,
+        });
+        await supabase.from("bookings").update({ reminder_sent_at: new Date().toISOString() }).eq("id", booking.id);
+      } catch (err) {
+        console.error(`Reminder email failed for booking ${booking.id}: ${err.message}`);
+      }
     }
   }
+}
+
+async function resumeApprovedRoastBookings() {
+  const { data: bookings, error } = await supabase.from("bookings").select("id").eq("status", "awaiting_roast_approval");
+  if (error) {
+    console.error("Failed to query awaiting-approval bookings:", error.message);
+    return;
+  }
+
+  for (const booking of bookings || []) {
+    const { data: script } = await supabase
+      .from("roast_scripts")
+      .select("status")
+      .eq("booking_id", booking.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (script?.status === "approved") {
+      console.log(`\nResuming approved booking ${booking.id}...`);
+      try {
+        runRecap(booking.id);
+      } catch (err) {
+        console.error(`Booking ${booking.id} failed:`, err.message);
+      }
+    }
+  }
+}
+
+async function main() {
+  console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
+  await processCollectingBookings();
+  await resumeApprovedRoastBookings();
+  console.log("Done.");
 }
 
 main();

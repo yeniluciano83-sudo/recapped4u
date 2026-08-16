@@ -1,0 +1,33 @@
+name: Recap scheduler
+
+on:
+  schedule:
+    # Every 3 hours. Bookings become eligible in 24h/48h windows (see
+    # scripts/poll-and-recap.js), so this cadence catches both thresholds
+    # promptly without running excessively often.
+    - cron: "0 */3 * * *"
+  workflow_dispatch: {} # allows manually triggering a run from the Actions tab
+
+jobs:
+  poll-and-recap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm ci
+
+      - run: node scripts/poll-and-recap.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}

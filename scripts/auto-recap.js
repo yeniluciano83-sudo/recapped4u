@@ -46,6 +46,22 @@ const STYLE_MUSIC = {
 // video's length and this run's Claude spend both stay bounded.
 const MAX_VIDEO_CLIPS = 5;
 
+// Signature's gallery stays downloadable for 4 months and Luxe's for 12,
+// instead of the default 90 days. Anything not listed here falls back to
+// 90 days.
+const GALLERY_EXPIRY_MONTHS = { premium: 4, keepsake: 12 };
+
+function computeGalleryExpiry(tier) {
+  const expiresAt = new Date();
+  const months = GALLERY_EXPIRY_MONTHS[tier];
+  if (months) {
+    expiresAt.setMonth(expiresAt.getMonth() + months);
+  } else {
+    expiresAt.setDate(expiresAt.getDate() + 90);
+  }
+  return expiresAt;
+}
+
 const s3 = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -210,7 +226,7 @@ async function finishAfterRoastApproval(booking) {
 
   const enhancedKeys = roastScript.script.map((entry) => entry.storage_key);
   const musicPath = STYLE_MUSIC[booking.style];
-  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name);
+  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier);
 }
 
 async function runFullPipeline(booking) {
@@ -337,10 +353,10 @@ async function runFullPipeline(booking) {
   }
 
   const musicPath = STYLE_MUSIC[booking.style];
-  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name);
+  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name, booking.tier);
 }
 
-async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName) {
+async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier) {
   console.log("Assembling automated slideshow video...");
   const videoLocalPath = path.join(tmpDir, "recap.mp4");
   await assembleSlideshow(localPaths, clipLocalPaths, videoLocalPath, musicPath, roastLines);
@@ -356,8 +372,7 @@ async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedK
     gallery_photo_keys: enhancedKeys,
   });
 
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 90);
+  const expiresAt = computeGalleryExpiry(tier);
 
   await supabase
     .from("bookings")

@@ -28,13 +28,14 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 // Free's deadline is deliberately tight (encourages upgrading for more
 // time) and skips a reminder entirely -- a same-day heads-up doesn't fit a
-// 24h window. Classic keeps the original 48h/24h pairing. Signature and
-// Luxe get a full week, with a reminder 24h before that cutoff.
+// 24h window. Classic keeps the original 48h/24h pairing. Signature gets a
+// week (reminder a day before). Luxe gets two weeks, reminded after the
+// first week.
 const TIER_SCHEDULE = {
   free: { processHours: 24, reminderHours: null },
   standard: { processHours: 48, reminderHours: 24 },
   premium: { processHours: 24 * 7, reminderHours: 24 * 6 },
-  keepsake: { processHours: 24 * 7, reminderHours: 24 * 6 },
+  keepsake: { processHours: 24 * 14, reminderHours: 24 * 7 },
 };
 
 function hoursSinceEvent(eventDate) {

@@ -8,9 +8,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const TIER_PRICES = {
   free: { amount: 0, label: "Free Package" },
   standard: { amount: 3500, label: "Classic Package" },
-  premium: { amount: 42500, label: "Signature Package" },
+  premium: { amount: 7500, label: "Signature Package" },
   keepsake: { amount: 55000, label: "Luxe Package" },
 };
+
+// Signature charges extra for Roast Reel; Luxe includes it at no
+// additional charge (no entry here).
+const ROAST_ADDON_PRICE = { premium: 2000 };
 
 export async function POST(req) {
   try {
@@ -79,18 +83,32 @@ export async function POST(req) {
       return NextResponse.json({ bookingId: booking.id });
     }
 
+    const lineItems = [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: { name: `Recapped For You — ${price.label}` },
+          unit_amount: price.amount,
+        },
+        quantity: 1,
+      },
+    ];
+
+    const roastAddonAmount = body.roastEnabled ? ROAST_ADDON_PRICE[tier] : undefined;
+    if (roastAddonAmount) {
+      lineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Roast Reel add-on" },
+          unit_amount: roastAddonAmount,
+        },
+        quantity: 1,
+      });
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: { name: `Recapped For You — ${price.label}` },
-            unit_amount: price.amount,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       customer_email: email,
       success_url: `${process.env.APP_URL}/booking/success?booking_id=${booking.id}`,
       cancel_url: `${process.env.APP_URL}/booking?canceled=1`,

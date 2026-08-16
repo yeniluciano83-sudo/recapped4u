@@ -7,10 +7,10 @@ const TIERS = [
     features: ["AI-curated gallery (up to 10 photos)", "Short highlight video (60-90 sec)", "One editing style", "Digital delivery", "Guests have 24hrs after the event to upload"] },
   { id: "standard", name: "Classic", price: "$35", tagline: "One video, one style",
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "AI-curated photo gallery", "One recap video (5-10 min)", "One editing style", "Digital delivery"] },
-  { id: "premium", name: "Signature", price: "$425", tagline: "Two cuts, your style, your name in it",
-    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style"], highlight: true },
+  { id: "premium", name: "Signature", price: "$75", tagline: "Two cuts, your style, your name in it",
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$550", tagline: "Something to hold, not just watch",
-    features: ["Everything in Signature", "Printed photo book", "Priority 48-72hr turnaround"] },
+    features: ["Everything in Signature", "Printed photo book", "Priority 48-72hr turnaround", "Complementary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 12 months"] },
 ];
 
 const STYLES = [
@@ -27,6 +27,11 @@ const EVENT_TYPES = ["Party", "Birthday", "Corporate Event", "Family Reunion", "
 // Premium/Keepsake tiers, and this specific set of event types.
 const ROAST_ELIGIBLE_TIERS = ["premium", "keepsake"];
 const ROAST_ELIGIBLE_EVENT_TYPES = ["Party", "Family Reunion", "Anniversary", "Bachelor/Bachelorette Party"];
+// Signature charges extra for Roast Reel; Luxe includes it -- no entry
+// here means "included, no extra charge."
+const ROAST_ADDON_PRICE = { premium: 20 };
+// Keep in sync with GALLERY_EXPIRY_MONTHS in scripts/auto-recap.js.
+const GALLERY_RETENTION = { premium: "4 months", keepsake: "12 months" };
 const ROAST_LEVELS = [
   { id: "light", label: "Light", desc: "Playful, gentle teasing" },
   { id: "lukewarm", label: "Lukewarm", desc: "Sharper, inside-joke energy" },
@@ -150,7 +155,9 @@ export default function BookingForm() {
                 <input type="checkbox" checked={form.roastEnabled} onChange={(e) => update("roastEnabled", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
                 <Flame size={17} color="#C97A3D" />
                 <span style={{ fontWeight: 700, fontSize: "15px" }}>Add Roast Reel</span>
-                <span style={{ fontSize: "10.5px", color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Free add-on</span>
+                <span style={{ fontSize: "10.5px", color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  {ROAST_ADDON_PRICE[form.tier] ? `+$${ROAST_ADDON_PRICE[form.tier]}` : "Included"}
+                </span>
               </label>
               <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: "8px 0 0", lineHeight: 1.5 }}>
                 Witty commentary layered over your photos and guests. You approve the full script before anyone sees it.
@@ -182,10 +189,14 @@ export default function BookingForm() {
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
           <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />
           {isRoastEligible && form.roastEnabled && (
-            <SummaryRow label="Roast Reel" value={ROAST_LEVELS.find((r) => r.id === form.roastLevel)?.label} />
+            <SummaryRow
+              label="Roast Reel"
+              value={`${ROAST_LEVELS.find((r) => r.id === form.roastLevel)?.label}${ROAST_ADDON_PRICE[form.tier] ? ` (+$${ROAST_ADDON_PRICE[form.tier]})` : " (included)"}`}
+            />
           )}
+          <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
           <div style={{ marginTop: "20px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>
-            By booking, you'll receive a service agreement by email. Your event gallery and video stay accessible for 90 days after delivery; raw guest uploads are removed 30 days after final delivery.
+            By booking, you'll receive a service agreement by email. Your event gallery and video stay accessible for {GALLERY_RETENTION[form.tier] || "90 days"} after delivery; raw guest uploads are removed 30 days after final delivery.
           </div>
         </StepBlock>
       )}

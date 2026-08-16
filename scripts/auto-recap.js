@@ -46,6 +46,28 @@ const STYLE_MUSIC = {
 // video's length and this run's Claude spend both stay bounded.
 const MAX_VIDEO_CLIPS = 5;
 
+// Signature/Luxe only, matching what those tiers actually advertise.
+const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
+const TARGET_SOCIAL_SECONDS = 75; // middle of the advertised 60-90s range
+const MAX_SOCIAL_PHOTOS = 15;
+
+// Free's gallery/video allows more photos than the 15 default (its own
+// advertised cap, not the general shortlist size), and its short highlight
+// video targets a duration like the social cut rather than the other
+// tiers' fixed per-photo pacing. Tiers not listed here keep the defaults.
+const SHORTLIST_CAP = { free: 20 };
+const FULL_CUT_TARGET_SECONDS = { free: 75 }; // middle of the advertised 60-90s range
+
+// Host-starred "must include" photos always make the social cut,
+// regardless of their AI quality score -- filled out with the
+// highest-scoring remaining shortlist photos up to MAX_SOCIAL_PHOTOS.
+function buildSocialSelection(analyzed, shortlist) {
+  const mustInclude = analyzed.filter((a) => a.upload.must_include_social).slice(0, MAX_SOCIAL_PHOTOS);
+  const mustIncludeIds = new Set(mustInclude.map((a) => a.upload.id));
+  const fill = shortlist.filter((s) => !mustIncludeIds.has(s.upload.id)).slice(0, MAX_SOCIAL_PHOTOS - mustInclude.length);
+  return [...mustInclude, ...fill];
+}
+
 // Signature's gallery stays downloadable for 4 months and Luxe's for 6,
 // instead of the default 90 days. Anything not listed here falls back to
 // 90 days.
@@ -84,11 +106,12 @@ async function uploadToR2(key, buffer, contentType) {
   return key;
 }
 
-// Video clips never go through roast approval (they're never roasted), so
-// on resume they're recovered by listing what a prior run already uploaded
-// rather than re-analyzing them -- avoids paying for clip analysis twice.
-async function listDeliverableClips(bookingId) {
-  const res = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: `deliverable/${bookingId}/clip-` }));
+// Used to recover things a prior run already uploaded (video clips, the
+// social cut's photo selection) without re-analyzing/re-enhancing them --
+// both survive a roast-approval pause this way, since finalizeDelivery may
+// run in a completely separate process invocation after approval.
+async function listDeliverableFiles(bookingId, prefix) {
+  const res = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: `deliverable/${bookingId}/${prefix}` }));
   return (res.Contents || []).map((o) => o.Key).sort();
 }
 
@@ -214,7 +237,7 @@ async function finishAfterRoastApproval(booking) {
   // uploaded to R2 earlier in the run that generated this script. Recover
   // them by listing rather than re-analyzing, so resuming doesn't pay for
   // clip analysis twice.
-  const clipKeys = await listDeliverableClips(bookingId);
+  const clipKeys = await listDeliverableFiles(bookingId, "clip-");
   const clipLocalPaths = [];
   for (const key of clipKeys) {
     const buffer = await downloadFromR2(key);
@@ -226,7 +249,8 @@ async function finishAfterRoastApproval(booking) {
 
   const enhancedKeys = roastScript.script.map((entry) => entry.storage_key);
   const musicPath = STYLE_MUSIC[booking.style];
-  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier);
+  const socialMusicPath = STYLE_MUSIC[booking.social_style || booking.style];
+  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath);
 }
 
 async function runFullPipeline(booking) {
@@ -272,7 +296,7 @@ async function runFullPipeline(booking) {
     }
   }
 
-  const shortlist = await buildShortlist(analyzed);
+  const shortlist = await buildShortlist(analyzed, SHORTLIST_CAP[booking.tier] || 15);
   const clipShortlist = await buildShortlist(analyzedClips, MAX_VIDEO_CLIPS);
   console.log(`Shortlisted ${shortlist.length} photos and ${clipShortlist.length} video clip(s) for the final cut.`);
 
@@ -287,23 +311,40 @@ async function runFullPipeline(booking) {
   console.log("Auto-enhancing shortlisted photos...");
   const enhancedKeys = [];
   const localPaths = [];
+  const enhancedByUploadId = new Map(); // reused below for the social cut selection, so must-include photos already in the main shortlist aren't enhanced twice
 
   for (let i = 0; i < shortlist.length; i++) {
-    const { buffer } = shortlist[i];
+    const { buffer, upload } = shortlist[i];
     const enhanced = await enhancePhoto(buffer, booking.style);
     const key = `deliverable/${bookingId}/photo-${i + 1}.jpg`;
     await uploadToR2(key, enhanced, "image/jpeg");
     enhancedKeys.push(key);
+    enhancedByUploadId.set(upload.id, enhanced);
 
     const localPath = path.join(tmpDir, `photo-${i + 1}.jpg`);
     fs.writeFileSync(localPath, enhanced);
     localPaths.push(localPath);
   }
 
+  // The social cut's photo selection can include host-starred photos that
+  // didn't make the main shortlist -- upload the whole selection under its
+  // own R2 prefix now (same reasoning as video clips: this survives a
+  // roast-approval pause, since finalizeDelivery recovers it by listing
+  // rather than needing anything still in memory from this run).
+  if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier)) {
+    const socialSelection = buildSocialSelection(analyzed, shortlist);
+    console.log(`Uploading ${socialSelection.length} photo(s) for the social cut selection...`);
+    for (let i = 0; i < socialSelection.length; i++) {
+      const { buffer, upload } = socialSelection[i];
+      const enhanced = enhancedByUploadId.get(upload.id) || (await enhancePhoto(buffer, booking.style));
+      await uploadToR2(`deliverable/${bookingId}/social-${i + 1}.jpg`, enhanced, "image/jpeg");
+    }
+  }
+
   // Video clips don't go through photo-style enhancement (that's sharp's
   // image-only pipeline) -- upload as-is. They're stored now, before the
   // roast-approval pause below, so finishAfterRoastApproval can recover
-  // them later via listDeliverableClips without re-downloading/re-analyzing.
+  // them later via listDeliverableFiles without re-downloading/re-analyzing.
   console.log("Uploading shortlisted video clips...");
   const clipLocalPaths = [];
   for (let i = 0; i < clipShortlist.length; i++) {
@@ -353,22 +394,66 @@ async function runFullPipeline(booking) {
   }
 
   const musicPath = STYLE_MUSIC[booking.style];
-  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name, booking.tier);
+  const socialMusicPath = STYLE_MUSIC[booking.social_style || booking.style];
+  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name, booking.tier, socialMusicPath);
 }
 
-async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier) {
+async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath) {
   console.log("Assembling automated slideshow video...");
   const videoLocalPath = path.join(tmpDir, "recap.mp4");
-  await assembleSlideshow(localPaths, clipLocalPaths, videoLocalPath, musicPath, roastLines);
+
+  // Free's highlight video targets a duration (like the social cut) rather
+  // than the other tiers' fixed per-photo pacing that scales with however
+  // many photos made the shortlist. Same duration-solving math as the
+  // social cut; see the comment further down for the formula itself.
+  const fullCutTarget = FULL_CUT_TARGET_SECONDS[tier];
+  const fullCutSlotCount = localPaths.length + clipLocalPaths.length;
+  const fullCutSlotSeconds = fullCutTarget ? (fullCutTarget + (fullCutSlotCount - 1) * 0.6) / fullCutSlotCount : undefined;
+
+  await assembleSlideshow(localPaths, clipLocalPaths, videoLocalPath, musicPath, roastLines, fullCutSlotSeconds);
   const videoBuffer = fs.readFileSync(videoLocalPath);
   const videoKey = `deliverable/${bookingId}/full-cut.mp4`;
   await uploadToR2(videoKey, videoBuffer, "video/mp4");
+
+  // The social cut's photo selection was already uploaded to R2 in
+  // runFullPipeline (before any roast-approval pause) -- recover it here
+  // rather than needing anything still in memory from that run. No roast
+  // lines: the social cut never carries Roast Reel captions. Duration is
+  // hit by solving for a per-slot length that lands the whole sequence
+  // near TARGET_SOCIAL_SECONDS, rather than using the full cut's fixed
+  // per-slot pacing.
+  let socialVideoKey = null;
+  if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier)) {
+    const socialKeys = await listDeliverableFiles(bookingId, "social-");
+    if (socialKeys.length > 0) {
+      console.log(`Assembling social cut from ${socialKeys.length} photo(s)...`);
+      const socialLocalPaths = [];
+      for (const key of socialKeys) {
+        const buffer = await downloadFromR2(key);
+        const localPath = path.join(tmpDir, path.basename(key));
+        fs.writeFileSync(localPath, buffer);
+        socialLocalPaths.push(localPath);
+      }
+      // Solve for the per-slot duration that lands the whole crossfaded
+      // sequence at TARGET_SOCIAL_SECONDS: total = n*d - (n-1)*transition,
+      // so d = (target + (n-1)*transition) / n. 0.6 here must match
+      // TRANSITION_SECONDS in lib/video-assemble.js (not exported -- it's
+      // a small, stable constant, not worth an export for one call site).
+      const CROSSFADE_TRANSITION_SECONDS = 0.6;
+      const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * CROSSFADE_TRANSITION_SECONDS) / socialLocalPaths.length;
+      const socialVideoLocalPath = path.join(tmpDir, "social-cut.mp4");
+      await assembleSlideshow(socialLocalPaths, [], socialVideoLocalPath, socialMusicPath, null, slotSeconds);
+      const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
+      socialVideoKey = `deliverable/${bookingId}/social-cut.mp4`;
+      await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
+    }
+  }
 
   console.log("Writing deliverable record...");
   await supabase.from("deliverables").insert({
     booking_id: bookingId,
     full_video_key: videoKey,
-    social_video_key: null,
+    social_video_key: socialVideoKey,
     gallery_photo_keys: enhancedKeys,
   });
 

@@ -1,7 +1,17 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star } from "lucide-react";
+
+// Signature/Luxe only, matching what those tiers actually advertise.
+const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
+const STYLES = [
+  { id: "cinematic", label: "Cinematic" },
+  { id: "upbeat", label: "Upbeat" },
+  { id: "documentary", label: "Documentary" },
+  { id: "retro", label: "Nostalgic / Retro" },
+  { id: "highlight", label: "Highlight Reel" },
+];
 
 export default function QrSharePage() {
   const params = useParams();
@@ -10,6 +20,11 @@ export default function QrSharePage() {
   const [eventInfo, setEventInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [closingUploads, setClosingUploads] = useState(false);
+  const [savingStyle, setSavingStyle] = useState(false);
+  const [photos, setPhotos] = useState([]);
+  const [photosLoading, setPhotosLoading] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -24,6 +39,18 @@ export default function QrSharePage() {
   }, [slug]);
 
   useEffect(() => { if (slug) load(); }, [slug, load]);
+
+  const isSocialCutEligible = eventInfo && SOCIAL_CUT_ELIGIBLE_TIERS.includes(eventInfo.tier);
+
+  useEffect(() => {
+    if (!slug || !isSocialCutEligible || eventInfo?.status !== "collecting") return;
+    setPhotosLoading(true);
+    fetch(`/api/events/${slug}/uploads`)
+      .then((res) => res.json())
+      .then((data) => setPhotos(data.photos || []))
+      .catch((err) => console.error("Failed to load photos", err))
+      .finally(() => setPhotosLoading(false));
+  }, [slug, isSocialCutEligible, eventInfo?.status]);
 
   const qrImageUrl = slug ? `/api/qrcode/${slug}` : "";
   const uploadUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/event/${slug}` : "";
@@ -53,6 +80,62 @@ export default function QrSharePage() {
 
   const handlePrint = () => window.print();
 
+  const handleSetSocialStyle = async (styleId) => {
+    const next = eventInfo.social_style === styleId ? null : styleId; // click again to clear back to "same as full cut"
+    setSavingStyle(true);
+    setEventInfo((prev) => ({ ...prev, social_style: next }));
+    try {
+      await fetch(`/api/events/${slug}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ socialStyle: next }),
+      });
+    } catch (err) {
+      console.error("Failed to save social cut style", err);
+    } finally {
+      setSavingStyle(false);
+    }
+  };
+
+  const handleToggleMustInclude = async (photo) => {
+    const next = !photo.mustIncludeSocial;
+    setTogglingId(photo.id);
+    setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustIncludeSocial: next } : p)));
+    try {
+      await fetch(`/api/events/${slug}/uploads/${photo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mustIncludeSocial: next }),
+      });
+    } catch (err) {
+      console.error("Failed to update photo", err);
+      setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustIncludeSocial: !next } : p))); // revert on failure
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleCloseUploads = async () => {
+    if (!window.confirm("Once you close uploads, anything guests add after this point won't make it into the recap, and processing will begin within a few hours (not instantly). Continue?")) {
+      return;
+    }
+    setClosingUploads(true);
+    try {
+      const res = await fetch(`/api/events/${slug}/close-uploads`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to close uploads. Please try again.");
+        return;
+      }
+      setEventInfo((prev) => ({ ...prev, uploads_closed_at: data.uploadsClosedAt }));
+    } catch (err) {
+      console.error("Failed to close uploads", err);
+      alert("Failed to close uploads. Please try again.");
+    } finally {
+      setClosingUploads(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -72,7 +155,7 @@ export default function QrSharePage() {
   return (
     <>
       <div className="no-print" style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
-        <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
+        <div style={{ width: "100%", maxWidth: 480, textAlign: "center" }}>
           <p style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 10 }}>Your guest QR code</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 28, margin: "0 0 6px" }}>{eventName}</h1>
           <p style={{ color: "#a8a29a", fontSize: 14, marginBottom: 28 }}>{formatDate(eventInfo.event_date)}</p>
@@ -99,6 +182,70 @@ export default function QrSharePage() {
               <Download size={16} /> Download QR image
             </a>
           </div>
+
+          {eventInfo.status === "collecting" && (
+            <div style={{ marginTop: 24, padding: 16, borderRadius: 12, background: "#2a2723", border: "1px solid #3a3733", textAlign: "left" }}>
+              {eventInfo.uploads_closed_at ? (
+                <p style={{ fontSize: 13, color: "#7A8B76", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+                  <CheckCircle2 size={16} /> Uploads closed — your recap will start processing within a few hours.
+                </p>
+              ) : (
+                <>
+                  <p style={{ fontSize: 13, color: "#a8a29a", margin: "0 0 10px", lineHeight: 1.5 }}>
+                    All your guests already uploaded? You don't have to wait for the deadline.
+                  </p>
+                  <button onClick={handleCloseUploads} disabled={closingUploads} style={{ ...secondaryBtnStyle, width: "100%" }}>
+                    {closingUploads ? "Closing…" : "Close uploads & process now"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {isSocialCutEligible && eventInfo.status === "collecting" && (
+            <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#2a2723", border: "1px solid #3a3733", textAlign: "left" }}>
+              <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px" }}>Your social cut</p>
+              <p style={{ fontSize: 12.5, color: "#a8a29a", margin: "0 0 12px", lineHeight: 1.5 }}>
+                Pick a theme for the short cut (defaults to your main style if you don't choose one), and star any photos that absolutely have to be in it.
+              </p>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                {STYLES.map((s) => (
+                  <button key={s.id} onClick={() => handleSetSocialStyle(s.id)} disabled={savingStyle}
+                    style={{
+                      padding: "6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+                      border: eventInfo.social_style === s.id ? "1px solid #C97A3D" : "1px solid #4a4642",
+                      background: eventInfo.social_style === s.id ? "#332e28" : "transparent",
+                      color: eventInfo.social_style === s.id ? "#C97A3D" : "#a8a29a",
+                    }}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              {photosLoading ? (
+                <p style={{ fontSize: 12.5, color: "#6a655e", margin: 0 }}>Loading photos…</p>
+              ) : photos.length === 0 ? (
+                <p style={{ fontSize: 12.5, color: "#6a655e", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                  {photos.map((photo) => (
+                    <button key={photo.id} onClick={() => handleToggleMustInclude(photo)} disabled={togglingId === photo.id}
+                      style={{
+                        position: "relative", aspectRatio: "1", borderRadius: 8, border: photo.mustIncludeSocial ? "2px solid #C97A3D" : "1px solid #3a3733",
+                        padding: 0, cursor: "pointer", overflow: "hidden", backgroundImage: `url(${photo.url})`, backgroundSize: "cover", backgroundPosition: "center",
+                      }}>
+                      {photo.mustIncludeSocial && (
+                        <div style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Star size={11} color="#211F1D" fill="#211F1D" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

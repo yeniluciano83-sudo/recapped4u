@@ -1,0 +1,41 @@
+import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
+import { getSignedDownloadUrl } from "@/lib/storage";
+
+// Lists a booking's uploaded photos for the host's must-include picker.
+// Photos only -- must-include is specifically for the social cut's photo
+// selection, not the separate video-clip lane.
+export async function GET(req, { params }) {
+  const { eventId } = params;
+
+  const { data: booking, error: bookingError } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("upload_slug", eventId)
+    .single();
+
+  if (bookingError || !booking) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  const { data: uploads, error } = await supabase
+    .from("uploads")
+    .select("id, storage_key, must_include_social, uploaded_at")
+    .eq("booking_id", booking.id)
+    .eq("file_type", "photo")
+    .order("uploaded_at", { ascending: true });
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to load photos" }, { status: 500 });
+  }
+
+  const photos = await Promise.all(
+    (uploads || []).map(async (u) => ({
+      id: u.id,
+      mustIncludeSocial: u.must_include_social,
+      url: await getSignedDownloadUrl(u.storage_key, 3600),
+    }))
+  );
+
+  return NextResponse.json({ photos });
+}

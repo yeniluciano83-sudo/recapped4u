@@ -5,8 +5,9 @@
  * Each run:
  *
  *   1. Finds bookings still "collecting" whose event was >= that tier's
- *      upload deadline ago (see TIER_SCHEDULE) and runs the full
- *      auto-recap pipeline for them.
+ *      upload deadline ago (see TIER_SCHEDULE) -- or whose host has
+ *      manually closed uploads early via the QR share page -- and runs
+ *      the full auto-recap pipeline for them.
  *   2. Finds bookings still "collecting" past that tier's reminder
  *      threshold (but before the deadline), with no reminder sent yet,
  *      and emails the host a heads-up that processing starts soon.
@@ -69,9 +70,11 @@ async function processCollectingBookings(failures) {
     }
 
     const hours = hoursSinceEvent(booking.event_date);
+    const closedEarly = Boolean(booking.uploads_closed_at);
 
-    if (hours >= schedule.processHours) {
-      console.log(`\nProcessing booking ${booking.id} (${booking.tier}, event was ~${Math.round(hours)}h ago)...`);
+    if (hours >= schedule.processHours || closedEarly) {
+      const reason = closedEarly ? "host closed uploads early" : `event was ~${Math.round(hours)}h ago`;
+      console.log(`\nProcessing booking ${booking.id} (${booking.tier}, ${reason})...`);
       try {
         runRecap(booking.id);
       } catch (err) {

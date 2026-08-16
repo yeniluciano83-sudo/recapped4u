@@ -7,12 +7,19 @@ export async function POST(req, { params }) {
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
-    .select("id")
+    .select("id, uploads_closed_at")
     .eq("upload_slug", eventId)
     .single();
 
   if (bookingError || !booking) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  if (booking.uploads_closed_at) {
+    return NextResponse.json(
+      { error: "The host has closed uploads for this event -- the recap is already being put together." },
+      { status: 400 }
+    );
   }
 
   const formData = await req.formData();

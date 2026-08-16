@@ -12,7 +12,8 @@ create table bookings (
   event_date date not null,
   guest_count integer,
   tier text not null check (tier in ('free', 'standard', 'premium', 'keepsake')),
-  style text check (style in ('cinematic', 'upbeat', 'documentary')),
+  style text check (style in ('cinematic', 'upbeat', 'documentary', 'retro', 'highlight')),
+  social_style text check (social_style in ('cinematic', 'upbeat', 'documentary', 'retro', 'highlight')), -- optional separate theme for the social cut (Signature/Luxe only); falls back to `style` if unset
   notes text,
   status text not null default 'booked'
     check (status in ('booked', 'collecting', 'editing', 'awaiting_roast_approval', 'delivered')),
@@ -26,6 +27,7 @@ create table bookings (
   roast_level text check (roast_level in ('light', 'lukewarm', 'hot')),
   gallery_template text not null default 'grid' check (gallery_template in ('grid', 'masonry', 'slideshow', 'polaroid')),
   reminder_sent_at timestamptz, -- set when the 24h-post-event upload reminder email is sent
+  uploads_closed_at timestamptz, -- set when the host signals guests are done uploading, ahead of the tier's deadline
   created_at timestamptz not null default now()
 );
 
@@ -36,6 +38,7 @@ create table uploads (
   uploader_name text,
   storage_key text not null, -- path in R2/S3
   file_type text check (file_type in ('photo', 'video')),
+  must_include_social boolean not null default false, -- host-flagged "must appear in the social cut" (Signature/Luxe)
   uploaded_at timestamptz not null default now(),
   purge_at timestamptz -- set to uploaded_at + 30 days after delivery, for cleanup job
 );

@@ -4,11 +4,11 @@ import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame
 
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
-    features: ["AI-curated gallery (up to 10 photos)", "Short highlight video (60-90 sec)", "One editing style", "Digital delivery", "Guests have 24hrs after the event to upload"] },
+    features: ["AI-curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "One editing style", "Digital delivery", "Guests have 24hrs after the event to upload"] },
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "AI-curated photo gallery", "One recap video", "One editing style", "Digital delivery"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
-    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Pick a theme and must-include photos for your social cut", "Choose your editing style", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
     features: ["Everything in Signature", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
   { id: "custom", name: "Custom Package", price: "Contact us", tagline: "Built entirely around your event",
@@ -25,6 +25,10 @@ const STYLES = [
 
 const EVENT_TYPES = ["Party", "Birthday", "Corporate Event", "Family Reunion", "Housewarming", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Bachelor/Bachelorette Party", "Vacation", "Holiday Celebration", "Other"];
 
+// Signature/Luxe only, per what those tiers actually advertise
+// ("Social cut (60-90 sec) + full cut"). Roast eligibility happens to use
+// the same two tiers but is a separate concern (also gated by event type).
+const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 // Matches what the homepage's Roast Reel card actually advertises --
 // Premium/Keepsake tiers, and this specific set of event types.
 const ROAST_ELIGIBLE_TIERS = ["premium", "keepsake"];

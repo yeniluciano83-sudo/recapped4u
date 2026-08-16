@@ -62,6 +62,8 @@ export default function GalleryDeliveryPage() {
   const booking = data?.booking || {};
   const photos = data?.photos || [];
   const eventName = booking.host_name ? `${booking.host_name}'s ${booking.event_type}` : "Your Recap";
+  const isExpired = booking.gallery_expires_at && new Date(booking.gallery_expires_at) < new Date();
+  const isDownloadOnly = booking.tier === "free" && isExpired;
 
   return (
     <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -98,32 +100,43 @@ export default function GalleryDeliveryPage() {
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: "20px", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
             <ImageIcon size={18} color="#C97A3D" /> Photo gallery
           </h2>
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-            {TEMPLATES.map((t) => {
-              const Icon = t.icon;
-              return (
-                <button key={t.id} onClick={() => changeTemplate(t.id)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
-                    fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
-                    border: template === t.id ? "1px solid #C97A3D" : "1px solid #3a3733",
-                    background: template === t.id ? "#332e28" : "transparent",
-                    color: template === t.id ? "#C97A3D" : "#8a857d",
-                  }}>
-                  <Icon size={13} /> {t.label}
-                </button>
-              );
-            })}
-          </div>
+          {!isDownloadOnly && (
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              {TEMPLATES.map((t) => {
+                const Icon = t.icon;
+                return (
+                  <button key={t.id} onClick={() => changeTemplate(t.id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
+                      fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
+                      border: template === t.id ? "1px solid #C97A3D" : "1px solid #3a3733",
+                      background: template === t.id ? "#332e28" : "transparent",
+                      color: template === t.id ? "#C97A3D" : "#8a857d",
+                    }}>
+                    <Icon size={13} /> {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
         {savingTemplate && <p style={{ fontSize: "11.5px", color: "#6a655e", marginTop: "-8px", marginBottom: "14px" }}>Saving your layout choice…</p>}
 
-        <div style={{ marginBottom: "36px" }}>
-          {template === "grid" && <GridLayout photos={photos} onSelect={setLightbox} />}
-          {template === "masonry" && <MasonryLayout photos={photos} onSelect={setLightbox} />}
-          {template === "slideshow" && <SlideshowLayout photos={photos} index={slideIndex} setIndex={setSlideIndex} />}
-          {template === "polaroid" && <PolaroidLayout photos={photos} onSelect={setLightbox} />}
-        </div>
+        {isDownloadOnly ? (
+          <div style={{ marginBottom: "36px" }}>
+            <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: "0 0 14px", lineHeight: 1.6 }}>
+              The interactive gallery view has ended, but your photos are still yours — download them below.
+            </p>
+            <DownloadOnlyLayout photos={photos} />
+          </div>
+        ) : (
+          <div style={{ marginBottom: "36px" }}>
+            {template === "grid" && <GridLayout photos={photos} onSelect={setLightbox} />}
+            {template === "masonry" && <MasonryLayout photos={photos} onSelect={setLightbox} />}
+            {template === "slideshow" && <SlideshowLayout photos={photos} index={slideIndex} setIndex={setSlideIndex} />}
+            {template === "polaroid" && <PolaroidLayout photos={photos} onSelect={setLightbox} />}
+          </div>
+        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <button style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #4a4642", background: "transparent", color: "#F7F3EC", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer" }}>
@@ -132,7 +145,9 @@ export default function GalleryDeliveryPage() {
           <div style={{ padding: "14px 16px", background: "#2a2723", borderRadius: "10px", border: "1px solid #3a3733", display: "flex", gap: "10px" }}>
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
             <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: 0, lineHeight: 1.6 }}>
-              {booking.gallery_expires_at
+              {isDownloadOnly
+                ? "The interactive gallery has closed, but your photos and video remain downloadable."
+                : booking.gallery_expires_at
                 ? `This gallery and video stay available until ${formatExpiryDate(booking.gallery_expires_at)}.`
                 : "This gallery and video stay available for a limited time."}{" "}
               Please download everything you'd like to keep — raw guest uploads have already been removed per our data policy.
@@ -187,6 +202,20 @@ function SlideshowLayout({ photos, index, setIndex }) {
           style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>›</button>
       </div>
       <p style={{ textAlign: "center", fontSize: "12.5px", color: "#8a857d", marginTop: "10px" }}>{index + 1} / {photos.length}</p>
+    </div>
+  );
+}
+
+function DownloadOnlyLayout({ photos }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+      {photos.map((url, i) => (
+        <a key={i} href={url} download style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#151412", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center", textDecoration: "none" }}>
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "6px", background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+            <Download size={12} color="#F7F3EC" />
+          </div>
+        </a>
+      ))}
     </div>
   );
 }

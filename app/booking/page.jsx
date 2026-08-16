@@ -277,10 +277,13 @@ export default function BookingForm() {
   );
 }
 
+const visuallyHidden = { position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 };
+
 function Shell({ children }) {
   return (
     <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: "460px" }}>
+        <h1 style={visuallyHidden}>Book your event recap</h1>
         <div style={{ textAlign: "center", marginBottom: "28px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: 0 }}>Recapped For You</p>
         </div>

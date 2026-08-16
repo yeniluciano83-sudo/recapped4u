@@ -192,10 +192,10 @@ export default function HomePage() {
       {/* About */}
       <Section id="about" refs={sectionRefs} title="About" icon={<Star size={20} color="#C97A3D" />}>
         <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600, marginBottom: 16 }}>
-          Somewhere across your guests' phones is the real story of your event — the candid laugh, the toast, the moment the whole room lit up at once. It's just scattered across forty different camera rolls, most of it destined to be seen once and forgotten.
+          Somewhere across your guests' phones is the real story of your event — the candid laugh, the toast, the moment the whole room lit up at once. It's just scattered across many different camera rolls, most of it destined to be seen once and forgotten.
         </p>
         <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600, marginBottom: 16 }}>
-          Recapped For You gathers it, sorts through it, and hands it back as one film worth watching — no stranger holding a camera all night, no editor's inbox to wait on. Every photo and clip is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cut, graded, and paced automatically. Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.
+          Recapped For You gathers it, sorts through it, and hands it back as one film worth watching — no stranger holding a camera all night. Every photo and clip is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cut, graded, and paced automatically. Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.
         </p>
         <p style={{ fontSize: 14.5, color: "#a8a29a", lineHeight: 1.7, maxWidth: 600 }}>
           No crew to coordinate, no camera in anyone's face. Just the party, remembered well.

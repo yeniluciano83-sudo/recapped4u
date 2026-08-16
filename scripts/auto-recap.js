@@ -4,12 +4,16 @@
  * Given a booking ID, this script does everything end-to-end with no
  * human editing step:
  *
- *   1. Pulls the booking's raw uploads from Supabase + R2
- *   2. Sends each photo to Claude for curation (score + shortlist + story arc)
+ *   1. Pulls the booking's raw uploads (photos AND video clips) from
+ *      Supabase + R2
+ *   2. Sends each photo -- and a representative frame from each video clip
+ *      -- to Claude for curation (score + shortlist)
  *   3. Auto-enhances the shortlisted photos (color, sharpness, style grade)
  *   4. Assembles an automated slideshow video (Ken Burns + crossfades + a
- *      royalty-free soundtrack matched to the booking's editing style)
- *   5. Uploads the finished photos + video to R2 under a deliverable/ path
+ *      royalty-free soundtrack matched to the booking's editing style),
+ *      with the best guest video clips appended after the photo montage
+ *   5. Uploads the finished photos + clips + video to R2 under a
+ *      deliverable/ path
  *   6. Writes the `deliverables` row and flips the booking to "delivered"
  *
  * Run: node scripts/auto-recap.js <bookingId>
@@ -18,8 +22,10 @@ require("dotenv").config({ path: require("path").join(__dirname,"..",".env.local
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const ffmpeg = require("fluent-ffmpeg");
+ffmpeg.setFfmpegPath(require("ffmpeg-static"));
 const { createClient } = require("@supabase/supabase-js");
-const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const { enhancePhoto } = require("../lib/photo-enhance");
 const { assembleSlideshow } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
@@ -34,6 +40,11 @@ const STYLE_MUSIC = {
   upbeat: path.join(__dirname, "..", "lib", "music", "upbeat.mp3"),
   documentary: path.join(__dirname, "..", "lib", "music", "documentary.mp3"),
 };
+
+// Video clips get their own, smaller cap -- a handful of the best
+// guest-recorded moments, not every clip anyone uploaded, so the final
+// video's length and this run's Claude spend both stay bounded.
+const MAX_VIDEO_CLIPS = 5;
 
 const s3 = new S3Client({
   region: "auto",
@@ -55,6 +66,50 @@ async function downloadFromR2(key) {
 async function uploadToR2(key, buffer, contentType) {
   await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType }));
   return key;
+}
+
+// Video clips never go through roast approval (they're never roasted), so
+// on resume they're recovered by listing what a prior run already uploaded
+// rather than re-analyzing them -- avoids paying for clip analysis twice.
+async function listDeliverableClips(bookingId) {
+  const res = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: `deliverable/${bookingId}/clip-` }));
+  return (res.Contents || []).map((o) => o.Key).sort();
+}
+
+// Claude's vision input doesn't accept video directly -- pull one
+// representative frame so a video clip can be scored with the same
+// photo-analysis call as an actual photo. Uses a fixed 1s input-side seek
+// (via -ss before -i, not fluent-ffmpeg's .screenshots() helper) because
+// this project only bundles ffmpeg-static, not ffprobe -- .screenshots()'s
+// percentage-based timestamps require ffprobe to resolve the clip's
+// duration first, which isn't available here. A fixed offset needs no
+// duration lookup at all. ffmpeg clamps automatically for clips under 1s.
+function extractVideoFrame(videoBuffer) {
+  return new Promise((resolve, reject) => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "frame-"));
+    const videoPath = path.join(tmpDir, "clip.mp4");
+    const framePath = path.join(tmpDir, "frame.jpg");
+    fs.writeFileSync(videoPath, videoBuffer);
+    ffmpeg(videoPath)
+      .inputOptions(["-ss", "1"])
+      .outputOptions(["-frames:v", "1", "-vf", "scale=1280:-1"])
+      .output(framePath)
+      .on("end", () => {
+        try {
+          const buffer = fs.readFileSync(framePath);
+          resolve(buffer);
+        } catch (err) {
+          reject(err);
+        } finally {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      })
+      .on("error", (err) => {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        reject(err);
+      })
+      .run();
+  });
 }
 
 async function callClaude(messages, maxTokens = 1024) {
@@ -139,9 +194,23 @@ async function finishAfterRoastApproval(booking) {
     roastLines.push(entry.line);
   }
 
+  // Video clips never go through roast approval -- they were already
+  // uploaded to R2 earlier in the run that generated this script. Recover
+  // them by listing rather than re-analyzing, so resuming doesn't pay for
+  // clip analysis twice.
+  const clipKeys = await listDeliverableClips(bookingId);
+  const clipLocalPaths = [];
+  for (const key of clipKeys) {
+    const buffer = await downloadFromR2(key);
+    const localPath = path.join(tmpDir, path.basename(key));
+    fs.writeFileSync(localPath, buffer);
+    clipLocalPaths.push(localPath);
+  }
+  if (clipKeys.length > 0) console.log(`Recovered ${clipKeys.length} previously-uploaded video clip(s).`);
+
   const enhancedKeys = roastScript.script.map((entry) => entry.storage_key);
   const musicPath = STYLE_MUSIC[booking.style];
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name);
+  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name);
 }
 
 async function runFullPipeline(booking) {
@@ -149,16 +218,19 @@ async function runFullPipeline(booking) {
 
   await supabase.from("bookings").update({ status: "editing" }).eq("id", bookingId);
 
-  const { data: uploads, error: uploadsErr } = await supabase.from("uploads").select("*").eq("booking_id", bookingId).eq("file_type", "photo");
+  const { data: uploads, error: uploadsErr } = await supabase.from("uploads").select("*").eq("booking_id", bookingId);
   if (uploadsErr) throw uploadsErr;
-  if (!uploads || uploads.length === 0) throw new Error("No photo uploads found for this booking");
+  if (!uploads || uploads.length === 0) throw new Error("No uploads found for this booking");
 
-  console.log(`Found ${uploads.length} raw photos. Downloading and analyzing...`);
+  const photoUploads = uploads.filter((u) => u.file_type === "photo");
+  const videoUploads = uploads.filter((u) => u.file_type === "video");
+
+  console.log(`Found ${photoUploads.length} raw photos and ${videoUploads.length} video clips. Downloading and analyzing...`);
 
   const analyzed = [];
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-"));
 
-  for (const upload of uploads) {
+  for (const upload of photoUploads) {
     try {
       const buffer = await downloadFromR2(upload.storage_key);
       const ext = path.extname(upload.storage_key).toLowerCase();
@@ -171,14 +243,28 @@ async function runFullPipeline(booking) {
     }
   }
 
-  const shortlist = await buildShortlist(analyzed);
-  console.log(`Shortlisted ${shortlist.length} photos for the final gallery.`);
+  const analyzedClips = [];
+  for (const upload of videoUploads) {
+    try {
+      const buffer = await downloadFromR2(upload.storage_key);
+      const frameBuffer = await extractVideoFrame(buffer);
+      const analysis = await analyzePhoto(frameBuffer, "image/jpeg");
+      analyzedClips.push({ upload, buffer, analysis });
+      console.log(`  ✓ ${upload.storage_key} (video) — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
+    } catch (err) {
+      console.error(`  ✗ ${upload.storage_key} (video) — analysis failed: ${err.message}`);
+    }
+  }
 
-  if (shortlist.length === 0) {
+  const shortlist = await buildShortlist(analyzed);
+  const clipShortlist = await buildShortlist(analyzedClips, MAX_VIDEO_CLIPS);
+  console.log(`Shortlisted ${shortlist.length} photos and ${clipShortlist.length} video clip(s) for the final cut.`);
+
+  if (shortlist.length === 0 && clipShortlist.length === 0) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
     await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId);
     throw new Error(
-      `No photos met the quality threshold for booking ${bookingId} -- reverted status to "collecting".`
+      `No photos or video clips met the quality threshold for booking ${bookingId} -- reverted status to "collecting".`
     );
   }
 
@@ -196,6 +282,23 @@ async function runFullPipeline(booking) {
     const localPath = path.join(tmpDir, `photo-${i + 1}.jpg`);
     fs.writeFileSync(localPath, enhanced);
     localPaths.push(localPath);
+  }
+
+  // Video clips don't go through photo-style enhancement (that's sharp's
+  // image-only pipeline) -- upload as-is. They're stored now, before the
+  // roast-approval pause below, so finishAfterRoastApproval can recover
+  // them later via listDeliverableClips without re-downloading/re-analyzing.
+  console.log("Uploading shortlisted video clips...");
+  const clipLocalPaths = [];
+  for (let i = 0; i < clipShortlist.length; i++) {
+    const { buffer, upload } = clipShortlist[i];
+    const ext = path.extname(upload.storage_key).toLowerCase() || ".mp4";
+    const key = `deliverable/${bookingId}/clip-${i + 1}${ext}`;
+    await uploadToR2(key, buffer, ext === ".mov" ? "video/quicktime" : "video/mp4");
+
+    const localPath = path.join(tmpDir, `clip-${i + 1}${ext}`);
+    fs.writeFileSync(localPath, buffer);
+    clipLocalPaths.push(localPath);
   }
 
   if (booking.roast_enabled) {
@@ -234,13 +337,13 @@ async function runFullPipeline(booking) {
   }
 
   const musicPath = STYLE_MUSIC[booking.style];
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name);
+  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name);
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName) {
+async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName) {
   console.log("Assembling automated slideshow video...");
   const videoLocalPath = path.join(tmpDir, "recap.mp4");
-  await assembleSlideshow(localPaths, videoLocalPath, musicPath, roastLines);
+  await assembleSlideshow(localPaths, clipLocalPaths, videoLocalPath, musicPath, roastLines);
   const videoBuffer = fs.readFileSync(videoLocalPath);
   const videoKey = `deliverable/${bookingId}/full-cut.mp4`;
   await uploadToR2(videoKey, videoBuffer, "video/mp4");
@@ -278,7 +381,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 
-  console.log(`Done. Booking ${bookingId} marked delivered with ${enhancedKeys.length} photos and a full-cut video.`);
+  console.log(`Done. Booking ${bookingId} marked delivered with ${enhancedKeys.length} photos, ${clipLocalPaths.length} video clip(s), and a full-cut video.`);
 }
 
 if (require.main === module) {

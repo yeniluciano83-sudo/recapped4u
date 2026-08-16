@@ -86,12 +86,12 @@ export default function HomePage() {
         )}
       </div>
       <style>{`
-        @media (max-width: 640px) {
+        @media (max-width: 850px) {
           .nav-links { display: none !important; }
           .nav-hamburger { display: flex !important; align-items: center; justify-content: center; }
         }
         .nav-mobile-panel { display: none; }
-        @media (max-width: 640px) {
+        @media (max-width: 850px) {
           .nav-mobile-panel { display: flex !important; }
         }
       `}</style>

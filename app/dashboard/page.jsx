@@ -21,6 +21,13 @@ export default function Dashboard() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
 
+  useEffect(() => {
+    if (!selected) return;
+    const onKeyDown = (e) => { if (e.key === "Escape") setSelected(null); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [selected]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -60,7 +67,7 @@ export default function Dashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 20px 60px" }}>
+      <div {...(selected ? { inert: "" } : {})} style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 20px 60px" }}>
         <div style={{ marginBottom: "28px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 6px" }}>Recapped For You</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "28px", margin: 0 }}>Your events</h1>

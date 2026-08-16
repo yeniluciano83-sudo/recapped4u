@@ -23,6 +23,13 @@ export default function GalleryDeliveryPage() {
   const [savingTemplate, setSavingTemplate] = useState(false);
 
   useEffect(() => {
+    if (!lightbox) return;
+    const onKeyDown = (e) => { if (e.key === "Escape") setLightbox(null); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [lightbox]);
+
+  useEffect(() => {
     if (!bookingId) return;
     fetch(`/api/gallery/${bookingId}`)
       .then((res) => res.json())
@@ -67,7 +74,7 @@ export default function GalleryDeliveryPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
-      <div style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
+      <div {...(lightbox ? { inert: "" } : {})} style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "32px", margin: "0 0 8px", lineHeight: 1.15 }}>{eventName}</h1>

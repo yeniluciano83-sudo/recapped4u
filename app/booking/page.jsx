@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useId } from "react";
 import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame } from "lucide-react";
 
 const TIERS = [
@@ -300,7 +300,13 @@ function StepBlock({ icon, title, children }) {
 }
 
 function Field({ label, children }) {
-  return <div style={{ marginBottom: "16px" }}><label style={{ fontSize: "13px", color: "#4a4642", display: "block", marginBottom: "6px" }}>{label}</label>{children}</div>;
+  const id = useId();
+  return (
+    <div style={{ marginBottom: "16px" }}>
+      <label htmlFor={id} style={{ fontSize: "13px", color: "#4a4642", display: "block", marginBottom: "6px" }}>{label}</label>
+      {React.cloneElement(children, { id })}
+    </div>
+  );
 }
 
 function SummaryRow({ label, value }) {

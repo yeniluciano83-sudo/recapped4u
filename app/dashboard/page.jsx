@@ -70,7 +70,9 @@ export default function Dashboard() {
           {STATUS_FLOW.map((s) => (
             <button key={s} onClick={() => setFilter(filter === s ? "all" : s)} style={{ textAlign: "left", padding: "14px", borderRadius: "12px", cursor: "pointer", background: filter === s ? "#FBEEE0" : "#FFFFFF", border: filter === s ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
               <div style={{ fontSize: "22px", fontWeight: 700, color: STATUS_COLOR[s] }}>{counts[s] || 0}</div>
-              <div style={{ fontSize: "12px", color: "#4a4642", marginTop: "2px" }}>{STATUS_LABEL[s]}</div>
+              <div style={{ fontSize: "12px", color: "#4a4642", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                {filter === s && <CheckCircle2 size={12} color="#C97A3D" />} {STATUS_LABEL[s]}
+              </div>
             </button>
           ))}
         </div>

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square } from "lucide-react";
+import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check } from "lucide-react";
 
 const TEMPLATES = [
   { id: "grid", label: "Grid", icon: LayoutGrid },
@@ -113,7 +113,7 @@ export default function GalleryDeliveryPage() {
                       background: template === t.id ? "#FBEEE0" : "transparent",
                       color: template === t.id ? "#C97A3D" : "#6b655c",
                     }}>
-                    <Icon size={13} /> {t.label}
+                    <Icon size={13} /> {t.label} {template === t.id && <Check size={12} strokeWidth={3} />}
                   </button>
                 );
               })}
@@ -241,8 +241,8 @@ function formatExpiryDate(dateStr) {
 
 function LengthToggle({ active, onClick, label }) {
   return (
-    <button onClick={onClick} style={{ padding: "7px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", border: active ? "1px solid #C97A3D" : "1px solid #D8CFC0", background: active ? "#FBEEE0" : "transparent", color: active ? "#C97A3D" : "#6b655c" }}>
-      {label}
+    <button onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "7px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", border: active ? "1px solid #C97A3D" : "1px solid #D8CFC0", background: active ? "#FBEEE0" : "transparent", color: active ? "#C97A3D" : "#6b655c" }}>
+      {active && <Check size={12} strokeWidth={3} />} {label}
     </button>
   );
 }

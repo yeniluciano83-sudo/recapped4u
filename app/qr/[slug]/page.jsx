@@ -227,12 +227,13 @@ export default function QrSharePage() {
                 {STYLES.map((s) => (
                   <button key={s.id} onClick={() => handleSetSocialStyle(s.id)} disabled={savingStyle}
                     style={{
+                      display: "inline-flex", alignItems: "center", gap: 4,
                       padding: "6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
                       border: eventInfo.social_style === s.id ? "1px solid #C97A3D" : "1px solid #D8CFC0",
                       background: eventInfo.social_style === s.id ? "#FBEEE0" : "transparent",
                       color: eventInfo.social_style === s.id ? "#C97A3D" : "#4a4642",
                     }}>
-                    {s.label}
+                    {eventInfo.social_style === s.id && <Check size={12} strokeWidth={3} />} {s.label}
                   </button>
                 ))}
               </div>

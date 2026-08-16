@@ -11,6 +11,8 @@ const TIERS = [
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "Something to hold, not just watch",
     features: ["Everything in Signature", "Printed photo book", "Priority 48-72hr turnaround", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
+  { id: "custom", name: "Custom Package", price: "Contact us", tagline: "Tell us what you need",
+    features: ["Tailored scope, pricing, and timeline", "For large events, multi-day coverage, or special requests", "We'll follow up by email to work out the details"] },
 ];
 
 const STYLES = [
@@ -49,27 +51,32 @@ export default function BookingForm() {
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()
     : form.eventType;
+  const isCustom = form.tier === "custom";
   const canProceed = () => {
     if (step === 1) return form.hostName && form.email && form.eventType && (form.eventType !== "Other" || form.eventTypeOther.trim()) && form.eventDate;
     if (step === 2) return form.tier;
-    if (step === 3) return form.style;
+    if (step === 3) return isCustom || form.style; // scope (incl. style) is worked out later for custom
     return true;
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled }) });
+      // Custom has no fixed price to check out with -- this just sends an
+      // inquiry email; the actual payment happens outside the app once
+      // scope and price are worked out directly with the host.
+      const endpoint = isCustom ? "/api/custom-inquiry" : "/api/bookings";
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled }) });
       const data = await res.json();
       if (!res.ok) {
-        alert("Booking failed: " + (data.error || "Unknown error"));
+        alert("Submission failed: " + (data.error || "Unknown error"));
         return;
       }
       if (data.checkoutUrl) { window.location.href = data.checkoutUrl; return; }
       setSubmitted(true);
     } catch (err) {
-      console.error("Booking failed", err);
-      alert("Booking failed. Please try again.");
+      console.error("Submission failed", err);
+      alert("Submission failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -82,9 +89,13 @@ export default function BookingForm() {
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
             <Check size={28} color="#211F1D" strokeWidth={2.5} />
           </div>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>You're booked, {form.hostName.split(" ")[0]}</h2>
+          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>
+            {form.tier === "custom" ? `Thanks, ${form.hostName.split(" ")[0]}` : `You're booked, ${form.hostName.split(" ")[0]}`}
+          </h2>
           <p style={{ color: "#a8a29a", fontSize: "15px", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
-            We'll email your upload link and QR code to <strong style={{ color: "#F7F3EC" }}>{form.email}</strong> within 24 hours, ready to share with guests on {form.eventDate}.
+            {form.tier === "custom"
+              ? <>We've got your custom package inquiry and will follow up at <strong style={{ color: "#F7F3EC" }}>{form.email}</strong> to work out the details.</>
+              : <>We'll email your upload link and QR code to <strong style={{ color: "#F7F3EC" }}>{form.email}</strong> within 24 hours, ready to share with guests on {form.eventDate}.</>}
           </p>
         </div>
       </Shell>
@@ -140,6 +151,11 @@ export default function BookingForm() {
 
       {step === 3 && (
         <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
+          {isCustom && (
+            <p style={{ fontSize: "13px", color: "#a8a29a", margin: "0 0 14px", lineHeight: 1.5 }}>
+              Optional for a custom package -- pick one if you have a preference, or skip this and we'll work it out together.
+            </p>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (
               <button key={s.id} onClick={() => update("style", s.id)} style={{ textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#332e28" : "#2a2723", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #3a3733" }}>
@@ -182,21 +198,25 @@ export default function BookingForm() {
       )}
 
       {step === 4 && (
-        <StepBlock icon={<Users size={20} color="#C97A3D" />} title="Review your booking">
+        <StepBlock icon={<Users size={20} color="#C97A3D" />} title={isCustom ? "Review your inquiry" : "Review your booking"}>
           <SummaryRow label="Host" value={form.hostName} />
           <SummaryRow label="Email" value={form.email} />
           <SummaryRow label="Event" value={`${effectiveEventType} — ${form.eventDate}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
-          <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />
+          {!isCustom && <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />}
           {isRoastEligible && form.roastEnabled && (
             <SummaryRow
               label="Roast Reel"
               value={`${ROAST_LEVELS.find((r) => r.id === form.roastLevel)?.label}${ROAST_ADDON_PRICE[form.tier] ? ` (+$${ROAST_ADDON_PRICE[form.tier]})` : " (included)"}`}
             />
           )}
-          <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
+          {!isCustom && (
+            <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
+          )}
           <div style={{ marginTop: "20px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>
-            By booking, you'll receive a service agreement by email. Your event gallery and video stay accessible for {GALLERY_RETENTION[form.tier] || "90 days"} after delivery; raw guest uploads are removed 30 days after final delivery.
+            {isCustom
+              ? "We'll email you back to work out scope and pricing -- nothing is charged by submitting this inquiry."
+              : `By booking, you'll receive a service agreement by email. Your event gallery and video stay accessible for ${GALLERY_RETENTION[form.tier] || "90 days"} after delivery; raw guest uploads are removed 30 days after final delivery.`}
           </div>
         </StepBlock>
       )}
@@ -206,7 +226,9 @@ export default function BookingForm() {
         {step < 4 ? (
           <button onClick={() => canProceed() && setStep(step + 1)} disabled={!canProceed()} style={nextBtn(canProceed())}>Continue <ArrowRight size={16} /></button>
         ) : (
-          <button onClick={handleSubmit} disabled={submitting} style={nextBtn(true)}>{submitting ? "Booking..." : "Confirm booking"}</button>
+          <button onClick={handleSubmit} disabled={submitting} style={nextBtn(true)}>
+            {submitting ? (isCustom ? "Sending..." : "Booking...") : (isCustom ? "Send inquiry" : "Confirm booking")}
+          </button>
         )}
       </div>
     </Shell>

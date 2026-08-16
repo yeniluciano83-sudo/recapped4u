@@ -51,7 +51,7 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 40, background: "#FAF7F2ee", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", borderBottom: "1px solid #E4DED2" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", flexShrink: 0 }}>Recapped For You</span>

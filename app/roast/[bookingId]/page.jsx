@@ -92,7 +92,7 @@ export default function RoastApprovalPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "48px 20px 100px" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <p style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C97A3D", fontWeight: 600, margin: "0 0 12px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
@@ -130,4 +130,4 @@ export default function RoastApprovalPage() {
   );
 }
 
-const shellStyle = { minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };
+const shellStyle = { minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };

@@ -13,6 +13,11 @@
  *   3. Finds bookings paused at "awaiting_roast_approval" whose script has
  *      since been approved, and resumes them to finish rendering.
  *
+ * If any booking's pipeline run fails, it's logged and the run moves on to
+ * the next one -- at the end, if ADMIN_ALERT_EMAIL is set, one summary
+ * email listing every failure from this run is sent (not one email per
+ * failure, to avoid flooding the inbox when several fail in the same run).
+ *
  * event_date is a bare DATE column (no time-of-day) -- these thresholds
  * are measured from midnight UTC of that date, so they're accurate to
  * within a day, not to the hour.
@@ -49,7 +54,7 @@ function runRecap(bookingId) {
   });
 }
 
-async function processCollectingBookings() {
+async function processCollectingBookings(failures) {
   const { data: bookings, error } = await supabase.from("bookings").select("*").eq("status", "collecting");
   if (error) {
     console.error("Failed to query collecting bookings:", error.message);
@@ -71,6 +76,7 @@ async function processCollectingBookings() {
         runRecap(booking.id);
       } catch (err) {
         console.error(`Booking ${booking.id} failed:`, err.message);
+        failures.push({ bookingId: booking.id, error: err.message });
       }
       continue;
     }
@@ -98,7 +104,7 @@ async function processCollectingBookings() {
   }
 }
 
-async function resumeApprovedRoastBookings() {
+async function resumeApprovedRoastBookings(failures) {
   const { data: bookings, error } = await supabase.from("bookings").select("id").eq("status", "awaiting_roast_approval");
   if (error) {
     console.error("Failed to query awaiting-approval bookings:", error.message);
@@ -120,6 +126,7 @@ async function resumeApprovedRoastBookings() {
         runRecap(booking.id);
       } catch (err) {
         console.error(`Booking ${booking.id} failed:`, err.message);
+        failures.push({ bookingId: booking.id, error: err.message });
       }
     }
   }
@@ -127,8 +134,26 @@ async function resumeApprovedRoastBookings() {
 
 async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
-  await processCollectingBookings();
-  await resumeApprovedRoastBookings();
+  const failures = [];
+  await processCollectingBookings(failures);
+  await resumeApprovedRoastBookings(failures);
+
+  if (failures.length > 0 && process.env.ADMIN_ALERT_EMAIL) {
+    console.log(`Sending failure alert for ${failures.length} booking(s) to ${process.env.ADMIN_ALERT_EMAIL}...`);
+    try {
+      // Lazy require, same reasoning as the other email sends in this
+      // pipeline: constructing the Resend client throws synchronously when
+      // RESEND_API_KEY is unset, and a failed alert send shouldn't mask
+      // the actual booking failures already logged above.
+      const { sendFailureAlert } = require("../lib/email");
+      await sendFailureAlert({ to: process.env.ADMIN_ALERT_EMAIL, failures });
+    } catch (err) {
+      console.error(`Failure alert email itself failed to send: ${err.message}`);
+    }
+  } else if (failures.length > 0) {
+    console.error(`${failures.length} booking(s) failed this run, but ADMIN_ALERT_EMAIL isn't set -- no alert sent.`);
+  }
+
   console.log("Done.");
 }
 

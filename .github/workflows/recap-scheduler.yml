@@ -31,3 +31,4 @@ jobs:
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           APP_URL: ${{ secrets.APP_URL }}
+          ADMIN_ALERT_EMAIL: ${{ secrets.ADMIN_ALERT_EMAIL }}

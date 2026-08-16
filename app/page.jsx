@@ -20,7 +20,7 @@ const TIERS = [
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours", highlight: true,
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"] },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "Priority 48-72hr turnaround", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
 ];
 
 const EVENT_TYPES = ["Parties", "Birthdays", "Corporate Events", "Family Reunions", "Housewarmings", "Retirement Parties", "Baby Showers", "Graduations", "Anniversaries", "Bachelor/Bachelorette Parties", "Vacations","Holiday Celebrations","Something Else? Ask Us"];
@@ -28,7 +28,7 @@ const EVENT_TYPES = ["Parties", "Birthdays", "Corporate Events", "Family Reunion
 const FAQS = [
   { q: "Is this AI-generated?", a: "No — every photo and video clip is real footage from your event. Our system analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is AI-generated, and nothing waits on a human editor's schedule." },
   { q: "Will our photos be shared with anyone else?", a: "No. Your photos and videos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
-  { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes priority 48-72 hour delivery." },
+  { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes 24-hour priority delivery (without the Roast Reel add-on, since that step waits on your approval)." },
   { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 90 days after delivery (4 months on Signature, 6 months on Luxe). Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy." },
   { q: "Can guests upload without downloading an app?", a: "Yes — guests just scan a QR code or tap a link, no account or app required." },
   { q: "Do you cover weddings?", a: "Not currently — we focus on birthdays, corporate events, reunions, and other milestone celebrations." },

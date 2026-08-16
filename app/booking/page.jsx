@@ -10,7 +10,7 @@ const TIERS = [
   { id: "premium", name: "Signature", price: "$75", tagline: "Two cuts, your style, your name in it",
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$550", tagline: "Something to hold, not just watch",
-    features: ["Everything in Signature", "Printed photo book", "Priority 48-72hr turnaround", "Complementary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 12 months"] },
+    features: ["Everything in Signature", "Printed photo book", "Priority 48-72hr turnaround", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
 ];
 
 const STYLES = [
@@ -31,7 +31,7 @@ const ROAST_ELIGIBLE_EVENT_TYPES = ["Party", "Family Reunion", "Anniversary", "B
 // here means "included, no extra charge."
 const ROAST_ADDON_PRICE = { premium: 20 };
 // Keep in sync with GALLERY_EXPIRY_MONTHS in scripts/auto-recap.js.
-const GALLERY_RETENTION = { premium: "4 months", keepsake: "12 months" };
+const GALLERY_RETENTION = { premium: "4 months", keepsake: "6 months" };
 const ROAST_LEVELS = [
   { id: "light", label: "Light", desc: "Playful, gentle teasing" },
   { id: "lukewarm", label: "Lukewarm", desc: "Sharper, inside-joke energy" },

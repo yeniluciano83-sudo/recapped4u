@@ -46,10 +46,10 @@ const STYLE_MUSIC = {
 // video's length and this run's Claude spend both stay bounded.
 const MAX_VIDEO_CLIPS = 5;
 
-// Signature's gallery stays downloadable for 4 months and Luxe's for 12,
+// Signature's gallery stays downloadable for 4 months and Luxe's for 6,
 // instead of the default 90 days. Anything not listed here falls back to
 // 90 days.
-const GALLERY_EXPIRY_MONTHS = { premium: 4, keepsake: 12 };
+const GALLERY_EXPIRY_MONTHS = { premium: 4, keepsake: 6 };
 
 function computeGalleryExpiry(tier) {
   const expiresAt = new Date();

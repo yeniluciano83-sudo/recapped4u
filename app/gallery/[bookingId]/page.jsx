@@ -53,7 +53,7 @@ export default function GalleryDeliveryPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
         Loading your recap…
       </div>
     );
@@ -66,16 +66,16 @@ export default function GalleryDeliveryPage() {
   const isDownloadOnly = booking.tier === "free" && isExpired;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "32px", margin: "0 0 8px", lineHeight: 1.15 }}>{eventName}</h1>
-          <p style={{ fontSize: "14px", color: "#a8a29a", margin: 0 }}>{booking.event_date}</p>
+          <p style={{ fontSize: "14px", color: "#4a4642", margin: 0 }}>{booking.event_date}</p>
         </div>
 
-        <div style={{ background: "#2a2723", borderRadius: "18px", border: "1px solid #3a3733", overflow: "hidden", marginBottom: "16px" }}>
-          <div style={{ aspectRatio: "16/9", background: "linear-gradient(135deg, #332e28, #211F1D)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer" }}
+        <div style={{ background: "#FFFFFF", borderRadius: "18px", border: "1px solid #E4DED2", overflow: "hidden", marginBottom: "16px" }}>
+          <div style={{ aspectRatio: "16/9", background: "linear-gradient(135deg, #FBEEE0, #FAF7F2)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer" }}
             onClick={() => { const url = videoLength === "full" ? data?.deliverable?.full_video_url : data?.deliverable?.social_video_url; if (url) window.open(url, "_blank"); }}>
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Play size={26} color="#211F1D" fill="#211F1D" style={{ marginLeft: "3px" }} />
@@ -92,7 +92,7 @@ export default function GalleryDeliveryPage() {
           </div>
         </div>
 
-        <p style={{ textAlign: "center", fontSize: "13px", color: "#6a655e", marginBottom: "32px" }}>
+        <p style={{ textAlign: "center", fontSize: "13px", color: "#8a857d", marginBottom: "32px" }}>
           Cut, graded, and paced automatically · {booking.style} style
         </p>
 
@@ -109,9 +109,9 @@ export default function GalleryDeliveryPage() {
                     style={{
                       display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
                       fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
-                      border: template === t.id ? "1px solid #C97A3D" : "1px solid #3a3733",
-                      background: template === t.id ? "#332e28" : "transparent",
-                      color: template === t.id ? "#C97A3D" : "#8a857d",
+                      border: template === t.id ? "1px solid #C97A3D" : "1px solid #E4DED2",
+                      background: template === t.id ? "#FBEEE0" : "transparent",
+                      color: template === t.id ? "#C97A3D" : "#6b655c",
                     }}>
                     <Icon size={13} /> {t.label}
                   </button>
@@ -120,11 +120,11 @@ export default function GalleryDeliveryPage() {
             </div>
           )}
         </div>
-        {savingTemplate && <p style={{ fontSize: "11.5px", color: "#6a655e", marginTop: "-8px", marginBottom: "14px" }}>Saving your layout choice…</p>}
+        {savingTemplate && <p style={{ fontSize: "11.5px", color: "#8a857d", marginTop: "-8px", marginBottom: "14px" }}>Saving your layout choice…</p>}
 
         {isDownloadOnly ? (
           <div style={{ marginBottom: "36px" }}>
-            <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: "0 0 14px", lineHeight: 1.6 }}>
+            <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.6 }}>
               The interactive gallery view has ended, but your photos are still yours — download them below.
             </p>
             <DownloadOnlyLayout photos={photos} />
@@ -139,12 +139,12 @@ export default function GalleryDeliveryPage() {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <button style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #4a4642", background: "transparent", color: "#F7F3EC", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer" }}>
+          <button style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer" }}>
             <Share2 size={16} /> Share this gallery
           </button>
-          <div style={{ padding: "14px 16px", background: "#2a2723", borderRadius: "10px", border: "1px solid #3a3733", display: "flex", gap: "10px" }}>
+          <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2", display: "flex", gap: "10px" }}>
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
-            <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: "12.5px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
               {isDownloadOnly
                 ? "The interactive gallery has closed, but your photos and video remain downloadable."
                 : booking.gallery_expires_at
@@ -158,7 +158,7 @@ export default function GalleryDeliveryPage() {
 
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px" }}>
-          <button onClick={() => setLightbox(null)} style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "#F7F3EC", cursor: "pointer" }}><X size={26} /></button>
+          <button onClick={() => setLightbox(null)} style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "#FFFFFF", cursor: "pointer" }}><X size={26} /></button>
           <img src={lightbox} alt="" style={{ width: "min(500px, 90vw)", borderRadius: "14px" }} />
         </div>
       )}
@@ -170,7 +170,7 @@ function GridLayout({ photos, onSelect }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
       {photos.map((url, i) => (
-        <button key={i} onClick={() => onSelect(url)} style={{ aspectRatio: "1", borderRadius: "8px", border: "none", cursor: "pointer", backgroundColor: "#151412", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }} />
+        <button key={i} onClick={() => onSelect(url)} style={{ aspectRatio: "1", borderRadius: "8px", border: "none", cursor: "pointer", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }} />
       ))}
     </div>
   );
@@ -194,14 +194,14 @@ function SlideshowLayout({ photos, index, setIndex }) {
   const current = photos[Math.min(index, photos.length - 1)];
   return (
     <div>
-      <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "#2a2723", border: "1px solid #3a3733" }}>
+      <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
         <img src={current} alt="" style={{ width: "100%", aspectRatio: "4/3", objectFit: "contain", display: "block" }} />
         <button onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
           style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>‹</button>
         <button onClick={() => setIndex((i) => (i + 1) % photos.length)}
           style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>›</button>
       </div>
-      <p style={{ textAlign: "center", fontSize: "12.5px", color: "#8a857d", marginTop: "10px" }}>{index + 1} / {photos.length}</p>
+      <p style={{ textAlign: "center", fontSize: "12.5px", color: "#6b655c", marginTop: "10px" }}>{index + 1} / {photos.length}</p>
     </div>
   );
 }
@@ -210,9 +210,9 @@ function DownloadOnlyLayout({ photos }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
       {photos.map((url, i) => (
-        <a key={i} href={url} download style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#151412", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center", textDecoration: "none" }}>
+        <a key={i} href={url} download style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center", textDecoration: "none" }}>
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "6px", background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-            <Download size={12} color="#F7F3EC" />
+            <Download size={12} color="#FFFFFF" />
           </div>
         </a>
       ))}
@@ -226,7 +226,7 @@ function PolaroidLayout({ photos, onSelect }) {
     <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", justifyContent: "center", padding: "10px 0" }}>
       {photos.map((url, i) => (
         <button key={i} onClick={() => onSelect(url)}
-          style={{ background: "#F7F3EC", padding: "10px 10px 24px", borderRadius: "4px", border: "none", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.3)", width: "150px" }}>
+          style={{ background: "#FFFFFF", padding: "10px 10px 24px", borderRadius: "4px", border: "none", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.15)", width: "150px" }}>
           <img src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block" }} />
         </button>
       ))}
@@ -241,10 +241,10 @@ function formatExpiryDate(dateStr) {
 
 function LengthToggle({ active, onClick, label }) {
   return (
-    <button onClick={onClick} style={{ padding: "7px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", border: active ? "1px solid #C97A3D" : "1px solid #4a4642", background: active ? "#332e28" : "transparent", color: active ? "#C97A3D" : "#8a857d" }}>
+    <button onClick={onClick} style={{ padding: "7px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer", border: active ? "1px solid #C97A3D" : "1px solid #D8CFC0", background: active ? "#FBEEE0" : "transparent", color: active ? "#C97A3D" : "#6b655c" }}>
       {label}
     </button>
   );
 }
 
-const iconBtnStyle = { display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", borderRadius: "8px", border: "1px solid #4a4642", background: "transparent", color: "#a8a29a", fontSize: "13px", cursor: "pointer", textDecoration: "none" };
+const iconBtnStyle = { display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "transparent", color: "#4a4642", fontSize: "13px", cursor: "pointer", textDecoration: "none" };

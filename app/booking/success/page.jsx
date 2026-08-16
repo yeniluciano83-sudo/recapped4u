@@ -13,11 +13,11 @@ function SuccessContent() {
         <Check size={30} color="#211F1D" strokeWidth={2.5} />
       </div>
       <h1 style={{ fontFamily: "Georgia, serif", fontSize: "28px", margin: "0 0 12px" }}>Payment confirmed</h1>
-      <p style={{ color: "#a8a29a", fontSize: "15px", lineHeight: 1.6, margin: 0 }}>
+      <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, margin: 0 }}>
         Your booking is complete. Check your email for your guest upload link and confirmation details.
       </p>
       {bookingId && (
-        <p style={{ color: "#6a655e", fontSize: "12px", marginTop: "20px" }}>
+        <p style={{ color: "#8a857d", fontSize: "12px", marginTop: "20px" }}>
           Booking reference: {bookingId}
         </p>
       )}
@@ -27,8 +27,8 @@ function SuccessContent() {
 
 export default function BookingSuccessPage() {
   return (
-    <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
-      <Suspense fallback={<p style={{ color: "#a8a29a" }}>Loading...</p>}>
+    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+      <Suspense fallback={<p style={{ color: "#4a4642" }}>Loading...</p>}>
         <SuccessContent />
       </Suspense>
     </div>

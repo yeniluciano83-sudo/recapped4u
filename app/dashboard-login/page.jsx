@@ -24,7 +24,7 @@ export default function DashboardLogin() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
       <form onSubmit={handleSubmit} style={{ width: "100%", maxWidth: 320 }}>
         <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: "20px", textAlign: "center" }}>
           Recapped For You — Staff Access
@@ -34,7 +34,7 @@ export default function DashboardLogin() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #4a4642", background: "#2a2723", color: "#F7F3EC", fontSize: "15px", outline: "none", boxSizing: "border-box", marginBottom: "12px" }}
+          style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", outline: "none", boxSizing: "border-box", marginBottom: "12px" }}
         />
         <button type="submit" disabled={loading} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>
           {loading ? "Checking..." : "Enter"}

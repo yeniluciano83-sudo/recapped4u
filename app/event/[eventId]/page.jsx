@@ -66,10 +66,10 @@ export default function EventUploadPage() {
   const eventDate = eventInfo?.event_date || "";
 
   return (
-    <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>
-      <div style={{ width: "100%", height: "10px", display: "flex", gap: "3px", padding: "0 12px", background: "#1a1815" }}>
+    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>
+      <div style={{ width: "100%", height: "10px", display: "flex", gap: "3px", padding: "0 12px", background: "#F0EAE0" }}>
         {Array.from({ length: 24 }).map((_, i) => (
-          <div key={i} style={{ flex: 1, height: "10px", borderRadius: "1px", background: i < reelSegments ? "#C97A3D" : "#3a3733", transition: "background 0.4s ease" }} />
+          <div key={i} style={{ flex: 1, height: "10px", borderRadius: "1px", background: i < reelSegments ? "#C97A3D" : "#E4DED2", transition: "background 0.4s ease" }} />
         ))}
       </div>
 
@@ -77,18 +77,18 @@ export default function EventUploadPage() {
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "13px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", marginBottom: "10px", fontWeight: 600 }}>You're invited to add to the story</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "34px", lineHeight: 1.15, margin: "0 0 8px" }}>{eventName}</h1>
-          <p style={{ fontSize: "15px", color: "#a8a29a", margin: 0 }}>{eventDate}</p>
+          <p style={{ fontSize: "15px", color: "#4a4642", margin: 0 }}>{eventDate}</p>
         </div>
 
         <div style={{ textAlign: "center", marginBottom: "32px", fontSize: "14px", color: "#7A8B76" }}>
           <strong style={{ color: "#C97A3D", fontSize: "16px" }}>{uploadCount}</strong> {uploadCount === 1 ? "moment" : "moments"} captured so far
         </div>
 
-        <div style={{ background: "#2a2723", borderRadius: "16px", padding: "28px 22px", border: "1px solid #3a3733" }}>
+        <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2" }}>
           {uploadsClosed ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
               <AlertTriangle size={24} color="#C97A3D" />
-              <p style={{ fontSize: "14px", color: "#a8a29a", margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
                 {eventInfo.status === "cancelled"
                   ? "This event has been cancelled and is no longer accepting uploads."
                   : "The host has closed uploads for this event — the recap is already being put together."}
@@ -96,31 +96,31 @@ export default function EventUploadPage() {
             </div>
           ) : (
             <>
-              <label htmlFor="name-input" style={{ fontSize: "13px", color: "#a8a29a", display: "block", marginBottom: "6px" }}>Your name (so we know who to thank)</label>
+              <label htmlFor="name-input" style={{ fontSize: "13px", color: "#4a4642", display: "block", marginBottom: "6px" }}>Your name (so we know who to thank)</label>
               <input id="name-input" type="text" value={uploaderName} onChange={(e) => setUploaderName(e.target.value)} placeholder="e.g. Jordan"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #4a4642", background: "#211F1D", color: "#F7F3EC", fontSize: "15px", marginBottom: "20px", outline: "none", boxSizing: "border-box" }} />
+                style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", marginBottom: "20px", outline: "none", boxSizing: "border-box" }} />
 
-              <label htmlFor="file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "32px 16px", borderRadius: "12px", border: "1.5px dashed #5a564f", cursor: "pointer", textAlign: "center" }}>
+              <label htmlFor="file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "32px 16px", borderRadius: "12px", border: "1.5px dashed #C9BFA9", cursor: "pointer", textAlign: "center" }}>
                 <Camera size={28} color="#C97A3D" strokeWidth={1.6} />
                 <span style={{ fontSize: "15px", fontWeight: 500 }}>{files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""} ready` : "Tap to add photos or video"}</span>
-                <span style={{ fontSize: "13px", color: "#8a857d" }}>Straight from your camera roll</span>
+                <span style={{ fontSize: "13px", color: "#6b655c" }}>Straight from your camera roll</span>
                 <input id="file-input" type="file" accept="image/*,video/*" multiple onChange={handleFiles} style={{ display: "none" }} />
               </label>
 
               {files.length > 0 && (
                 <div style={{ marginTop: "14px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                   {files.slice(0, 6).map((f, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", background: "#211F1D", padding: "5px 9px", borderRadius: "999px", color: "#a8a29a" }}>
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", background: "#FAF7F2", padding: "5px 9px", borderRadius: "999px", color: "#4a4642" }}>
                       {f.type.startsWith("video") ? <Film size={12} /> : <ImageIcon size={12} />}
                       {f.name.length > 14 ? f.name.slice(0, 12) + "…" : f.name}
                     </div>
                   ))}
-                  {files.length > 6 && <div style={{ fontSize: "12px", color: "#8a857d", padding: "5px 4px" }}>+{files.length - 6} more</div>}
+                  {files.length > 6 && <div style={{ fontSize: "12px", color: "#6b655c", padding: "5px 4px" }}>+{files.length - 6} more</div>}
                 </div>
               )}
 
               <button onClick={handleUpload} disabled={files.length === 0 || uploading}
-                style={{ width: "100%", marginTop: "20px", padding: "14px", borderRadius: "10px", border: "none", background: files.length === 0 ? "#4a4642" : "#C97A3D", color: files.length === 0 ? "#8a857d" : "#211F1D", fontSize: "15px", fontWeight: 700, cursor: files.length === 0 || uploading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                style={{ width: "100%", marginTop: "20px", padding: "14px", borderRadius: "10px", border: "none", background: files.length === 0 ? "#E4DED2" : "#C97A3D", color: files.length === 0 ? "#8a857d" : "#211F1D", fontSize: "15px", fontWeight: 700, cursor: files.length === 0 || uploading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                 {uploading ? <><Loader2 size={17} className="spin" /> Adding to the reel…</> : justUploaded ? <><Check size={17} /> Added — thank you!</> : <><Upload size={17} /> Add to the recap</>}
               </button>
 
@@ -131,7 +131,7 @@ export default function EventUploadPage() {
           )}
         </div>
 
-        <p style={{ textAlign: "center", fontSize: "12px", color: "#6a655e", marginTop: "22px", lineHeight: 1.6 }}>
+        <p style={{ textAlign: "center", fontSize: "12px", color: "#8a857d", marginTop: "22px", lineHeight: 1.6 }}>
           Your photos help build the event recap video.<br />No account needed — just this link.
         </p>
         <p style={{ textAlign: "center", marginTop: "18px" }}>

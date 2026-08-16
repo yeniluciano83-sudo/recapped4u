@@ -97,10 +97,10 @@ export default function BookingForm() {
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>
             {form.tier === "custom" ? `Thanks, ${form.hostName.split(" ")[0]}` : `You're booked, ${form.hostName.split(" ")[0]}`}
           </h2>
-          <p style={{ color: "#a8a29a", fontSize: "15px", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
+          <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
             {form.tier === "custom"
-              ? <>We've got your custom package inquiry and will follow up at <strong style={{ color: "#F7F3EC" }}>{form.email}</strong> to work out the details.</>
-              : <>We'll email your upload link and QR code to <strong style={{ color: "#F7F3EC" }}>{form.email}</strong> within 24 hours, ready to share with guests on {form.eventDate}.</>}
+              ? <>We've got your custom package inquiry and will follow up at <strong style={{ color: "#211F1D" }}>{form.email}</strong> to work out the details.</>
+              : <>We'll email your upload link and QR code to <strong style={{ color: "#211F1D" }}>{form.email}</strong> within 24 hours, ready to share with guests on {form.eventDate}.</>}
           </p>
         </div>
       </Shell>
@@ -111,7 +111,7 @@ export default function BookingForm() {
     <Shell>
       <div style={{ display: "flex", gap: "6px", marginBottom: "28px" }}>
         {[1, 2, 3, 4].map((n) => (
-          <div key={n} style={{ flex: 1, height: "3px", borderRadius: "2px", background: n <= step ? "#C97A3D" : "#3a3733" }} />
+          <div key={n} style={{ flex: 1, height: "3px", borderRadius: "2px", background: n <= step ? "#C97A3D" : "#E4DED2" }} />
         ))}
       </div>
 
@@ -139,13 +139,13 @@ export default function BookingForm() {
         <StepBlock icon={<Package size={20} color="#C97A3D" />} title="Choose your package">
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {TIERS.map((t) => (
-              <button key={t.id} onClick={() => update("tier", t.id)} style={{ textAlign: "left", padding: "18px", borderRadius: "14px", cursor: "pointer", background: form.tier === t.id ? "#332e28" : "#2a2723", border: form.tier === t.id ? "1.5px solid #C97A3D" : "1px solid #3a3733" }}>
+              <button key={t.id} onClick={() => update("tier", t.id)} style={{ textAlign: "left", padding: "18px", borderRadius: "14px", cursor: "pointer", background: form.tier === t.id ? "#FBEEE0" : "#FFFFFF", border: form.tier === t.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <span style={{ fontWeight: 700, fontSize: "16px" }}>{t.name}</span>
                   <span style={{ color: "#C97A3D", fontWeight: 700 }}>{t.price}</span>
                 </div>
-                <p style={{ fontSize: "13px", color: "#a8a29a", margin: "4px 0 10px" }}>{t.tagline}</p>
-                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "13px", color: "#8a857d" }}>
+                <p style={{ fontSize: "13px", color: "#4a4642", margin: "4px 0 10px" }}>{t.tagline}</p>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "13px", color: "#6b655c" }}>
                   {t.features.map((f) => <li key={f} style={{ display: "flex", gap: "6px", marginBottom: "4px" }}><Check size={13} color="#7A8B76" style={{ flexShrink: 0, marginTop: "2px" }} /> {f}</li>)}
                 </ul>
               </button>
@@ -157,23 +157,23 @@ export default function BookingForm() {
       {step === 3 && (
         <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
           {isCustom && (
-            <p style={{ fontSize: "13px", color: "#a8a29a", margin: "0 0 14px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
               Optional for a custom package -- pick one if you have a preference, or skip this and we'll work it out together.
             </p>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (
-              <button key={s.id} onClick={() => update("style", s.id)} style={{ textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#332e28" : "#2a2723", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #3a3733" }}>
+              <button key={s.id} onClick={() => update("style", s.id)} style={{ textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#FBEEE0" : "#FFFFFF", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
                 <div style={{ fontWeight: 600, fontSize: "15px" }}>{s.label}</div>
-                <div style={{ fontSize: "13px", color: "#a8a29a", marginTop: "2px" }}>{s.desc}</div>
+                <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>{s.desc}</div>
               </button>
             ))}
           </div>
 
           {isSocialCutEligible && (
-            <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#2a2723", border: "1px solid #3a3733" }}>
+            <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
               <div style={{ fontWeight: 700, fontSize: "15px" }}>Social cut theme</div>
-              <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: "4px 0 12px", lineHeight: 1.5 }}>
+              <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
                 Optional -- pick a different style for your 60-90 second social cut, or leave it matching your main style above. You can also change this (and star must-include photos) later from your QR share page.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
@@ -181,9 +181,9 @@ export default function BookingForm() {
                   <button key={s.id} onClick={() => update("socialStyle", form.socialStyle === s.id ? "" : s.id)}
                     style={{
                       padding: "8px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
-                      border: form.socialStyle === s.id ? "1px solid #C97A3D" : "1px solid #4a4642",
-                      background: form.socialStyle === s.id ? "#332e28" : "transparent",
-                      color: form.socialStyle === s.id ? "#C97A3D" : "#8a857d",
+                      border: form.socialStyle === s.id ? "1px solid #C97A3D" : "1px solid #D8CFC0",
+                      background: form.socialStyle === s.id ? "#FBEEE0" : "transparent",
+                      color: form.socialStyle === s.id ? "#C97A3D" : "#6b655c",
                     }}>
                     {s.label}
                   </button>
@@ -193,7 +193,7 @@ export default function BookingForm() {
           )}
 
           {isRoastEligible && (
-            <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#2a2723", border: form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #3a3733" }}>
+            <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
                 <input type="checkbox" checked={form.roastEnabled} onChange={(e) => update("roastEnabled", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
                 <Flame size={17} color="#C97A3D" />
@@ -202,15 +202,15 @@ export default function BookingForm() {
                   {ROAST_ADDON_PRICE[form.tier] ? `+$${ROAST_ADDON_PRICE[form.tier]}` : "Included"}
                 </span>
               </label>
-              <p style={{ fontSize: "12.5px", color: "#a8a29a", margin: "8px 0 0", lineHeight: 1.5 }}>
+              <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "8px 0 0", lineHeight: 1.5 }}>
                 Witty commentary layered over your photos. You approve the full script before anyone sees it.
               </p>
               {form.roastEnabled && (
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
                   {ROAST_LEVELS.map((r) => (
-                    <button key={r.id} onClick={() => update("roastLevel", r.id)} style={{ flex: "1 1 110px", textAlign: "left", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: form.roastLevel === r.id ? "#332e28" : "#211F1D", border: form.roastLevel === r.id ? "1.5px solid #C97A3D" : "1px solid #4a4642" }}>
+                    <button key={r.id} onClick={() => update("roastLevel", r.id)} style={{ flex: "1 1 110px", textAlign: "left", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: form.roastLevel === r.id ? "#FBEEE0" : "#FAF7F2", border: form.roastLevel === r.id ? "1.5px solid #C97A3D" : "1px solid #D8CFC0" }}>
                       <div style={{ fontWeight: 600, fontSize: "12.5px" }}>{r.label}</div>
-                      <div style={{ fontSize: "11px", color: "#8a857d", marginTop: "2px" }}>{r.desc}</div>
+                      <div style={{ fontSize: "11px", color: "#6b655c", marginTop: "2px" }}>{r.desc}</div>
                     </button>
                   ))}
                 </div>
@@ -243,7 +243,7 @@ export default function BookingForm() {
           {!isCustom && (
             <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
           )}
-          <div style={{ marginTop: "20px", padding: "14px", background: "#2a2723", borderRadius: "10px", fontSize: "12px", color: "#8a857d", lineHeight: 1.6 }}>
+          <div style={{ marginTop: "20px", padding: "14px", background: "#FFFFFF", borderRadius: "10px", fontSize: "12px", color: "#6b655c", lineHeight: 1.6 }}>
             {isCustom
               ? "We'll email you back to work out scope and pricing -- nothing is charged by submitting this inquiry."
               : `By booking, you'll receive a service agreement by email. ${
@@ -271,7 +271,7 @@ export default function BookingForm() {
 
 function Shell({ children }) {
   return (
-    <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
+    <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: "460px" }}>
         <div style={{ textAlign: "center", marginBottom: "28px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: 0 }}>Recapped For You</p>
@@ -292,13 +292,13 @@ function StepBlock({ icon, title, children }) {
 }
 
 function Field({ label, children }) {
-  return <div style={{ marginBottom: "16px" }}><label style={{ fontSize: "13px", color: "#a8a29a", display: "block", marginBottom: "6px" }}>{label}</label>{children}</div>;
+  return <div style={{ marginBottom: "16px" }}><label style={{ fontSize: "13px", color: "#4a4642", display: "block", marginBottom: "6px" }}>{label}</label>{children}</div>;
 }
 
 function SummaryRow({ label, value }) {
-  return <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #3a3733", fontSize: "14px" }}><span style={{ color: "#8a857d" }}>{label}</span><span style={{ fontWeight: 500 }}>{value || "—"}</span></div>;
+  return <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E4DED2", fontSize: "14px" }}><span style={{ color: "#6b655c" }}>{label}</span><span style={{ fontWeight: 500 }}>{value || "—"}</span></div>;
 }
 
-const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #4a4642", background: "#211F1D", color: "#F7F3EC", fontSize: "15px", outline: "none", boxSizing: "border-box" };
-const backBtn = { flex: "0 0 auto", padding: "13px 18px", borderRadius: "10px", border: "1px solid #4a4642", background: "transparent", color: "#a8a29a", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" };
-const nextBtn = (enabled) => ({ flex: 1, padding: "13px 18px", borderRadius: "10px", border: "none", background: enabled ? "#C97A3D" : "#4a4642", color: enabled ? "#211F1D" : "#8a857d", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: enabled ? "pointer" : "default" });
+const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", outline: "none", boxSizing: "border-box" };
+const backBtn = { flex: "0 0 auto", padding: "13px 18px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#4a4642", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" };
+const nextBtn = (enabled) => ({ flex: 1, padding: "13px 18px", borderRadius: "10px", border: "none", background: enabled ? "#C97A3D" : "#E4DED2", color: enabled ? "#211F1D" : "#8a857d", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", cursor: enabled ? "pointer" : "default" });

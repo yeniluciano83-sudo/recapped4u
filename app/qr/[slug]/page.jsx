@@ -138,7 +138,7 @@ export default function QrSharePage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
         Loading…
       </div>
     );
@@ -146,7 +146,7 @@ export default function QrSharePage() {
 
   if (!eventInfo) {
     return (
-      <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
         Event not found.
       </div>
     );
@@ -154,11 +154,11 @@ export default function QrSharePage() {
 
   if (eventInfo.status === "cancelled") {
     return (
-      <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", padding: "40px 20px" }}>
+      <div style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", padding: "40px 20px" }}>
         <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
           <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, margin: "0 0 10px" }}>This event has been cancelled</h1>
-          <p style={{ color: "#a8a29a", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+          <p style={{ color: "#4a4642", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
             The guest upload link for {eventName} is no longer active. If this wasn't expected, reply to your booking confirmation email and we'll help.
           </p>
         </div>
@@ -168,17 +168,17 @@ export default function QrSharePage() {
 
   return (
     <>
-      <div className="no-print" style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+      <div className="no-print" style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
         <div style={{ width: "100%", maxWidth: 480, textAlign: "center" }}>
           <p style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 10 }}>Your guest QR code</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 28, margin: "0 0 6px" }}>{eventName}</h1>
-          <p style={{ color: "#a8a29a", fontSize: 14, marginBottom: 28 }}>{formatDate(eventInfo.event_date)}</p>
+          <p style={{ color: "#4a4642", fontSize: 14, marginBottom: 28 }}>{formatDate(eventInfo.event_date)}</p>
 
-          <div style={{ background: "#F7F3EC", borderRadius: 16, padding: 24, marginBottom: 24, display: "inline-block" }}>
+          <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 24, marginBottom: 24, display: "inline-block", border: "1px solid #E4DED2" }}>
             <img src={qrImageUrl} alt="Guest upload QR code" width={240} height={240} style={{ display: "block" }} />
           </div>
 
-          <p style={{ fontSize: 13, color: "#8a857d", marginBottom: 24, wordBreak: "break-all" }}>{uploadUrl}</p>
+          <p style={{ fontSize: 13, color: "#6b655c", marginBottom: 24, wordBreak: "break-all" }}>{uploadUrl}</p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={handleShare} style={primaryBtnStyle}>
@@ -198,14 +198,14 @@ export default function QrSharePage() {
           </div>
 
           {eventInfo.status === "collecting" && (
-            <div style={{ marginTop: 24, padding: 16, borderRadius: 12, background: "#2a2723", border: "1px solid #3a3733", textAlign: "left" }}>
+            <div style={{ marginTop: 24, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
               {eventInfo.uploads_closed_at ? (
                 <p style={{ fontSize: 13, color: "#7A8B76", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
                   <CheckCircle2 size={16} /> Uploads closed — your recap will start processing within a few hours.
                 </p>
               ) : (
                 <>
-                  <p style={{ fontSize: 13, color: "#a8a29a", margin: "0 0 10px", lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 10px", lineHeight: 1.5 }}>
                     All your guests already uploaded? You don't have to wait for the deadline.
                   </p>
                   <button onClick={handleCloseUploads} disabled={closingUploads} style={{ ...secondaryBtnStyle, width: "100%" }}>
@@ -217,9 +217,9 @@ export default function QrSharePage() {
           )}
 
           {isSocialCutEligible && eventInfo.status === "collecting" && (
-            <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#2a2723", border: "1px solid #3a3733", textAlign: "left" }}>
+            <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
               <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px" }}>Your social cut</p>
-              <p style={{ fontSize: 12.5, color: "#a8a29a", margin: "0 0 12px", lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12.5, color: "#4a4642", margin: "0 0 12px", lineHeight: 1.5 }}>
                 Pick a theme for the short cut (defaults to your main style if you don't choose one), and star any photos that absolutely have to be in it.
               </p>
 
@@ -228,9 +228,9 @@ export default function QrSharePage() {
                   <button key={s.id} onClick={() => handleSetSocialStyle(s.id)} disabled={savingStyle}
                     style={{
                       padding: "6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                      border: eventInfo.social_style === s.id ? "1px solid #C97A3D" : "1px solid #4a4642",
-                      background: eventInfo.social_style === s.id ? "#332e28" : "transparent",
-                      color: eventInfo.social_style === s.id ? "#C97A3D" : "#a8a29a",
+                      border: eventInfo.social_style === s.id ? "1px solid #C97A3D" : "1px solid #D8CFC0",
+                      background: eventInfo.social_style === s.id ? "#FBEEE0" : "transparent",
+                      color: eventInfo.social_style === s.id ? "#C97A3D" : "#4a4642",
                     }}>
                     {s.label}
                   </button>
@@ -238,15 +238,15 @@ export default function QrSharePage() {
               </div>
 
               {photosLoading ? (
-                <p style={{ fontSize: 12.5, color: "#6a655e", margin: 0 }}>Loading photos…</p>
+                <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>Loading photos…</p>
               ) : photos.length === 0 ? (
-                <p style={{ fontSize: 12.5, color: "#6a655e", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
+                <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                   {photos.map((photo) => (
                     <button key={photo.id} onClick={() => handleToggleMustInclude(photo)} disabled={togglingId === photo.id}
                       style={{
-                        position: "relative", aspectRatio: "1", borderRadius: 8, border: photo.mustIncludeSocial ? "2px solid #C97A3D" : "1px solid #3a3733",
+                        position: "relative", aspectRatio: "1", borderRadius: 8, border: photo.mustIncludeSocial ? "2px solid #C97A3D" : "1px solid #E4DED2",
                         padding: 0, cursor: "pointer", overflow: "hidden", backgroundImage: `url(${photo.url})`, backgroundSize: "cover", backgroundPosition: "center",
                       }}>
                       {photo.mustIncludeSocial && (
@@ -301,7 +301,7 @@ export default function QrSharePage() {
 }
 
 const primaryBtnStyle = { display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 10, border: "none", background: "#C97A3D", color: "#211F1D", fontSize: 15, fontWeight: 700, cursor: "pointer" };
-const secondaryBtnStyle = { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 10, border: "1px solid #4a4642", background: "transparent", color: "#F7F3EC", fontSize: 14, fontWeight: 600, cursor: "pointer" };
+const secondaryBtnStyle = { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 10, border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: 14, fontWeight: 600, cursor: "pointer" };
 
 function formatDate(dateStr) {
   if (!dateStr) return "";

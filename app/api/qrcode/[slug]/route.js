@@ -27,7 +27,7 @@ export async function GET(req, { params }) {
       margin: 2,
       color: {
         dark: "#211F1D",
-        light: "#F7F3EC",
+        light: "#FFFFFF",
       },
     });
 

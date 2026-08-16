@@ -152,7 +152,7 @@ function GridLayout({ photos, onSelect }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
       {photos.map((url, i) => (
-        <button key={i} onClick={() => onSelect(url)} style={{ aspectRatio: "1", borderRadius: "8px", border: "none", cursor: "pointer", backgroundImage: `url(${url})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <button key={i} onClick={() => onSelect(url)} style={{ aspectRatio: "1", borderRadius: "8px", border: "none", cursor: "pointer", backgroundColor: "#151412", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }} />
       ))}
     </div>
   );
@@ -177,7 +177,7 @@ function SlideshowLayout({ photos, index, setIndex }) {
   return (
     <div>
       <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "#2a2723", border: "1px solid #3a3733" }}>
-        <img src={current} alt="" style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }} />
+        <img src={current} alt="" style={{ width: "100%", aspectRatio: "4/3", objectFit: "contain", display: "block" }} />
         <button onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
           style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>‹</button>
         <button onClick={() => setIndex((i) => (i + 1) % photos.length)}
@@ -195,7 +195,7 @@ function PolaroidLayout({ photos, onSelect }) {
       {photos.map((url, i) => (
         <button key={i} onClick={() => onSelect(url)}
           style={{ background: "#F7F3EC", padding: "10px 10px 24px", borderRadius: "4px", border: "none", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.3)", width: "150px" }}>
-          <img src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
+          <img src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block" }} />
         </button>
       ))}
     </div>

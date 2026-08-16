@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Camera, Upload, Check, Image as ImageIcon, Film, Loader2 } from "lucide-react";
+import { Camera, Upload, Check, Image as ImageIcon, Film, Loader2, AlertTriangle } from "lucide-react";
 
 export default function EventUploadPage() {
   const params = useParams();
@@ -12,6 +12,7 @@ export default function EventUploadPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [justUploaded, setJustUploaded] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const [eventInfo, setEventInfo] = useState(null);
 
   const loadEventInfo = useCallback(async () => {
@@ -32,12 +33,18 @@ export default function EventUploadPage() {
   const handleUpload = async () => {
     if (files.length === 0) return;
     setUploading(true);
+    setUploadError(null);
     try {
       const formData = new FormData();
       formData.append("uploaderName", uploaderName || "Guest");
       files.forEach((f) => formData.append("files", f));
 
-      await fetch(`/api/events/${eventId}/upload`, { method: "POST", body: formData });
+      const res = await fetch(`/api/events/${eventId}/upload`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setUploadError(data.error || "Upload failed. Please try again.");
+        return;
+      }
 
       setUploadCount((c) => c + files.length);
       setJustUploaded(true);
@@ -46,10 +53,13 @@ export default function EventUploadPage() {
       setTimeout(() => setJustUploaded(false), 3500);
     } catch (err) {
       console.error("Upload failed", err);
+      setUploadError("Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
   };
+
+  const uploadsClosed = eventInfo?.status === "cancelled" || Boolean(eventInfo?.uploads_closed_at);
 
   const reelSegments = Math.min(uploadCount, 24);
   const eventName = eventInfo?.host_name ? `${eventInfo.host_name}'s ${eventInfo.event_type}` : "This event";
@@ -75,33 +85,50 @@ export default function EventUploadPage() {
         </div>
 
         <div style={{ background: "#2a2723", borderRadius: "16px", padding: "28px 22px", border: "1px solid #3a3733" }}>
-          <label htmlFor="name-input" style={{ fontSize: "13px", color: "#a8a29a", display: "block", marginBottom: "6px" }}>Your name (so we know who to thank)</label>
-          <input id="name-input" type="text" value={uploaderName} onChange={(e) => setUploaderName(e.target.value)} placeholder="e.g. Jordan"
-            style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #4a4642", background: "#211F1D", color: "#F7F3EC", fontSize: "15px", marginBottom: "20px", outline: "none", boxSizing: "border-box" }} />
-
-          <label htmlFor="file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "32px 16px", borderRadius: "12px", border: "1.5px dashed #5a564f", cursor: "pointer", textAlign: "center" }}>
-            <Camera size={28} color="#C97A3D" strokeWidth={1.6} />
-            <span style={{ fontSize: "15px", fontWeight: 500 }}>{files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""} ready` : "Tap to add photos or video"}</span>
-            <span style={{ fontSize: "13px", color: "#8a857d" }}>Straight from your camera roll</span>
-            <input id="file-input" type="file" accept="image/*,video/*" multiple onChange={handleFiles} style={{ display: "none" }} />
-          </label>
-
-          {files.length > 0 && (
-            <div style={{ marginTop: "14px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              {files.slice(0, 6).map((f, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", background: "#211F1D", padding: "5px 9px", borderRadius: "999px", color: "#a8a29a" }}>
-                  {f.type.startsWith("video") ? <Film size={12} /> : <ImageIcon size={12} />}
-                  {f.name.length > 14 ? f.name.slice(0, 12) + "…" : f.name}
-                </div>
-              ))}
-              {files.length > 6 && <div style={{ fontSize: "12px", color: "#8a857d", padding: "5px 4px" }}>+{files.length - 6} more</div>}
+          {uploadsClosed ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
+              <AlertTriangle size={24} color="#C97A3D" />
+              <p style={{ fontSize: "14px", color: "#a8a29a", margin: 0, lineHeight: 1.6 }}>
+                {eventInfo.status === "cancelled"
+                  ? "This event has been cancelled and is no longer accepting uploads."
+                  : "The host has closed uploads for this event — the recap is already being put together."}
+              </p>
             </div>
-          )}
+          ) : (
+            <>
+              <label htmlFor="name-input" style={{ fontSize: "13px", color: "#a8a29a", display: "block", marginBottom: "6px" }}>Your name (so we know who to thank)</label>
+              <input id="name-input" type="text" value={uploaderName} onChange={(e) => setUploaderName(e.target.value)} placeholder="e.g. Jordan"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #4a4642", background: "#211F1D", color: "#F7F3EC", fontSize: "15px", marginBottom: "20px", outline: "none", boxSizing: "border-box" }} />
 
-          <button onClick={handleUpload} disabled={files.length === 0 || uploading}
-            style={{ width: "100%", marginTop: "20px", padding: "14px", borderRadius: "10px", border: "none", background: files.length === 0 ? "#4a4642" : "#C97A3D", color: files.length === 0 ? "#8a857d" : "#211F1D", fontSize: "15px", fontWeight: 700, cursor: files.length === 0 || uploading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-            {uploading ? <><Loader2 size={17} className="spin" /> Adding to the reel…</> : justUploaded ? <><Check size={17} /> Added — thank you!</> : <><Upload size={17} /> Add to the recap</>}
-          </button>
+              <label htmlFor="file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "32px 16px", borderRadius: "12px", border: "1.5px dashed #5a564f", cursor: "pointer", textAlign: "center" }}>
+                <Camera size={28} color="#C97A3D" strokeWidth={1.6} />
+                <span style={{ fontSize: "15px", fontWeight: 500 }}>{files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""} ready` : "Tap to add photos or video"}</span>
+                <span style={{ fontSize: "13px", color: "#8a857d" }}>Straight from your camera roll</span>
+                <input id="file-input" type="file" accept="image/*,video/*" multiple onChange={handleFiles} style={{ display: "none" }} />
+              </label>
+
+              {files.length > 0 && (
+                <div style={{ marginTop: "14px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {files.slice(0, 6).map((f, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", background: "#211F1D", padding: "5px 9px", borderRadius: "999px", color: "#a8a29a" }}>
+                      {f.type.startsWith("video") ? <Film size={12} /> : <ImageIcon size={12} />}
+                      {f.name.length > 14 ? f.name.slice(0, 12) + "…" : f.name}
+                    </div>
+                  ))}
+                  {files.length > 6 && <div style={{ fontSize: "12px", color: "#8a857d", padding: "5px 4px" }}>+{files.length - 6} more</div>}
+                </div>
+              )}
+
+              <button onClick={handleUpload} disabled={files.length === 0 || uploading}
+                style={{ width: "100%", marginTop: "20px", padding: "14px", borderRadius: "10px", border: "none", background: files.length === 0 ? "#4a4642" : "#C97A3D", color: files.length === 0 ? "#8a857d" : "#211F1D", fontSize: "15px", fontWeight: 700, cursor: files.length === 0 || uploading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                {uploading ? <><Loader2 size={17} className="spin" /> Adding to the reel…</> : justUploaded ? <><Check size={17} /> Added — thank you!</> : <><Upload size={17} /> Add to the recap</>}
+              </button>
+
+              {uploadError && (
+                <p style={{ fontSize: "12.5px", color: "#C97A3D", marginTop: "12px", textAlign: "center" }}>{uploadError}</p>
+              )}
+            </>
+          )}
         </div>
 
         <p style={{ textAlign: "center", fontSize: "12px", color: "#6a655e", marginTop: "22px", lineHeight: 1.6 }}>

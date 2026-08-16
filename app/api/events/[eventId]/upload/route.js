@@ -7,12 +7,16 @@ export async function POST(req, { params }) {
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
-    .select("id, uploads_closed_at")
+    .select("id, uploads_closed_at, status")
     .eq("upload_slug", eventId)
     .single();
 
   if (bookingError || !booking) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  if (booking.status === "cancelled") {
+    return NextResponse.json({ error: "This event has been cancelled." }, { status: 400 });
   }
 
   if (booking.uploads_closed_at) {
@@ -58,7 +62,8 @@ export async function POST(req, { params }) {
     .update({ status: "collecting" })
     .eq("id", booking.id)
     .neq("status", "editing")
-    .neq("status", "delivered");
+    .neq("status", "delivered")
+    .neq("status", "cancelled");
 
   return NextResponse.json({ uploaded: results.length });
 }

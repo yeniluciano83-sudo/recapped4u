@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle } from "lucide-react";
 
 // Signature/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -148,6 +148,20 @@ export default function QrSharePage() {
     return (
       <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif" }}>
         Event not found.
+      </div>
+    );
+  }
+
+  if (eventInfo.status === "cancelled") {
+    return (
+      <div style={{ minHeight: "100vh", background: "#211F1D", color: "#F7F3EC", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", padding: "40px 20px" }}>
+        <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
+          <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
+          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, margin: "0 0 10px" }}>This event has been cancelled</h1>
+          <p style={{ color: "#a8a29a", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+            The guest upload link for {eventName} is no longer active. If this wasn't expected, reply to your booking confirmation email and we'll help.
+          </p>
+        </div>
       </div>
     );
   }

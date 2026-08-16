@@ -9,7 +9,7 @@ const TIERS = [
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "AI-curated photo gallery", "One recap video (5-10 min)", "One editing style", "Digital delivery"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Two cuts, your style, your name in it",
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style", "Roast Reel add-on eligible (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
-  { id: "keepsake", name: "Luxe", price: "$550", tagline: "Something to hold, not just watch",
+  { id: "keepsake", name: "Luxe", price: "$95", tagline: "Something to hold, not just watch",
     features: ["Everything in Signature", "Printed photo book", "Priority 48-72hr turnaround", "Complimentary Roast Reel add-on", "2-week upload deadline", "Downloadable gallery for 6 months"] },
 ];
 

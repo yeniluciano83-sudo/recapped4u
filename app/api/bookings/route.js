@@ -9,7 +9,7 @@ const TIER_PRICES = {
   free: { amount: 0, label: "Free Package" },
   standard: { amount: 3500, label: "Classic Package" },
   premium: { amount: 7500, label: "Signature Package" },
-  keepsake: { amount: 55000, label: "Luxe Package" },
+  keepsake: { amount: 9500, label: "Luxe Package" },
 };
 
 // Signature charges extra for Roast Reel; Luxe includes it at no

@@ -7,7 +7,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const TIER_PRICES = {
   free: { amount: 0, label: "Free Package" },
-  standard: { amount: 27500, label: "Classic Package" },
+  standard: { amount: 3500, label: "Classic Package" },
   premium: { amount: 42500, label: "Signature Package" },
   keepsake: { amount: 55000, label: "Luxe Package" },
 };

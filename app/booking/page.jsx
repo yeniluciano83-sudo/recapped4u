@@ -3,12 +3,14 @@ import React, { useState } from "react";
 import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame } from "lucide-react";
 
 const TIERS = [
-  { id: "standard", name: "Standard", price: "$275", tagline: "One video, one style",
+  { id: "free", name: "Free", price: "$0", tagline: "Try it out, no card required",
+    features: ["AI-curated gallery (up to 10 photos)", "Short highlight video (60-90 sec)", "One editing style", "Digital delivery", "Guests have 24hrs after the event to upload"] },
+  { id: "standard", name: "Classic", price: "$275", tagline: "One video, one style",
     features: ["AI-curated photo gallery", "One recap video (5-10 min)", "One editing style", "Digital delivery"] },
-  { id: "premium", name: "Premium", price: "$425", tagline: "Two cuts, your style, your name in it",
-    features: ["Everything in Standard", "Social cut (60-90 sec) + full cut", "Choose your editing style", "Editor's personal touch"], highlight: true },
-  { id: "keepsake", name: "Premium + Keepsake", price: "$550", tagline: "Something to hold, not just watch",
-    features: ["Everything in Premium", "Printed photo book", "Priority 48-72hr turnaround"] },
+  { id: "premium", name: "Signature", price: "$425", tagline: "Two cuts, your style, your name in it",
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style"], highlight: true },
+  { id: "keepsake", name: "Luxe", price: "$550", tagline: "Something to hold, not just watch",
+    features: ["Everything in Signature", "Printed photo book", "Priority 48-72hr turnaround"] },
 ];
 
 const STYLES = [

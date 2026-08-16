@@ -13,12 +13,14 @@ const NAV_ITEMS = [
 ];
 
 const TIERS = [
-  { id: "standard", name: "Standard", price: "$275", tagline: "One video, one style",
+  { id: "free", name: "Free", price: "$0", tagline: "Try it out, no card required",
+    features: ["AI-curated gallery (up to 10 photos)", "Short highlight video (60-90 sec)", "One editing style", "Digital delivery", "Guests have 24hrs after the event to upload"] },
+  { id: "standard", name: "Classic", price: "$275", tagline: "One video, one style",
     features: ["AI-curated photo gallery", "One recap video (5-10 min)", "One editing style", "Digital delivery"] },
-  { id: "premium", name: "Premium", price: "$425", tagline: "Two cuts, your style, your name in it", highlight: true,
-    features: ["Everything in Standard", "Social cut (60-90 sec) + full cut", "Choose your editing style"] },
-  { id: "keepsake", name: "Premium + Keepsake", price: "$550", tagline: "Something to hold, not just watch",
-    features: ["Everything in Premium", "Printed photo book", "Priority 48-72hr turnaround"] },
+  { id: "premium", name: "Signature", price: "$425", tagline: "Two cuts, your style, your name in it", highlight: true,
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style"] },
+  { id: "keepsake", name: "Luxe", price: "$550", tagline: "Something to hold, not just watch",
+    features: ["Everything in Signature", "Printed photo book", "Priority 48-72hr turnaround"] },
 ];
 
 const EVENT_TYPES = ["Parties", "Birthdays", "Corporate Events", "Family Reunions", "Housewarmings", "Retirement Parties", "Baby Showers", "Graduations", "Anniversaries", "Bachelor/Bachelorette Parties", "Vacations","Holiday Celebrations","Something Else? Ask Us"];
@@ -26,7 +28,7 @@ const EVENT_TYPES = ["Parties", "Birthdays", "Corporate Events", "Family Reunion
 const FAQS = [
   { q: "Is this AI-generated?", a: "No — every photo and video clip is real footage from your event. Our system analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is AI-generated, and nothing waits on a human editor's schedule." },
   { q: "Will our photos be shared with anyone else?", a: "No. Your photos and videos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
-  { q: "How long does it take?", a: "Standard turnaround is a few days; Premium + Keepsake includes priority 48-72 hour delivery." },
+  { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes priority 48-72 hour delivery." },
   { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 90 days after delivery. Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy." },
   { q: "Can guests upload without downloading an app?", a: "Yes — guests just scan a QR code or tap a link, no account or app required." },
   { q: "Do you cover weddings?", a: "Not currently — we focus on birthdays, corporate events, reunions, and other milestone celebrations." },
@@ -35,7 +37,7 @@ const FAQS = [
   { q: "How do we pay, and when?", a: "Payment is collected securely at booking through Stripe. We accept all major credit and debit cards." },
   { q: "Can we pick which photos and clips make the final cut?", a: "Our automated curation selects the best moments for you, but you can flag must-include moments and people in your booking notes and we'll make sure those are prioritized." },
   { q: "Do you travel, or is this remote-only?", a: "Fully remote — there's no need for us to be physically present. Guests upload directly, and our editing happens entirely online, so we can work with events anywhere." },
-  { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Premium and Keepsake tiers for select event types) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests." },
+  { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers for select event types) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests." },
 ];
 
 export default function HomePage() {
@@ -126,7 +128,7 @@ export default function HomePage() {
             <span style={{ fontSize: 11.5, color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Specialty add-on</span>
           </div>
           <p style={{ fontSize: 13, color: "#a8a29a", margin: "0 0 14px", maxWidth: 520 }}>
-            Witty, affectionate commentary layered over your photos and guests — you pick how far to take it, and you approve the full script before anyone sees it. Available on Premium and Keepsake for parties, reunions, anniversaries, and bachelor/bachelorette events.
+            Witty, affectionate commentary layered over your photos and guests — you pick how far to take it, and you approve the full script before anyone sees it. Available on Signature and Luxe for parties, reunions, anniversaries, and bachelor/bachelorette events.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
@@ -149,18 +151,6 @@ export default function HomePage() {
             <Play size={24} color="#C97A3D" fill="#C97A3D" style={{ marginLeft: 3 }} />
           </div>
           <p style={{ fontSize: 14, color: "#a8a29a", margin: 0 }}>Sample recap coming soon — check back shortly.</p>
-        </div>
-
-        <div style={{ ...cardStyle, marginTop: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", border: "1.5px solid #C97A3D" }}>
-          <div>
-            <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 4px" }}>Get 10 photos polished, free</p>
-            <p style={{ fontSize: 13, color: "#a8a29a", margin: 0, maxWidth: 380 }}>
-              Have a recent event? We'll edit 10 of your photos at no cost, in exchange for featuring them as samples on our site.
-            </p>
-          </div>
-          <a href="/demo-request" style={{ background: "#C97A3D", color: "#211F1D", fontSize: 13.5, fontWeight: 700, padding: "10px 18px", borderRadius: 8, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>
-            Claim Free Demo
-          </a>
         </div>
 
         <p style={{ marginTop: 16, fontSize: 13, color: "#6a655e" }}>

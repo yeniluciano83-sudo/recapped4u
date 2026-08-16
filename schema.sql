@@ -11,7 +11,7 @@ create table bookings (
   event_type text not null,
   event_date date not null,
   guest_count integer,
-  tier text not null check (tier in ('standard', 'premium', 'keepsake')),
+  tier text not null check (tier in ('free', 'standard', 'premium', 'keepsake')),
   style text check (style in ('cinematic', 'upbeat', 'documentary')),
   notes text,
   status text not null default 'booked'
@@ -22,6 +22,10 @@ create table bookings (
   upload_slug text unique not null, -- used to build the public guest-upload URL
   delivered_at timestamptz,
   gallery_expires_at timestamptz, -- delivered_at + 90 days, set on delivery
+  roast_enabled boolean not null default false,
+  roast_level text check (roast_level in ('light', 'lukewarm', 'hot')),
+  gallery_template text not null default 'grid' check (gallery_template in ('grid', 'masonry', 'slideshow', 'polaroid')),
+  reminder_sent_at timestamptz, -- set when the 24h-post-event upload reminder email is sent
   created_at timestamptz not null default now()
 );
 

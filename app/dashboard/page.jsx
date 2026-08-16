@@ -5,7 +5,7 @@ import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Fla
 const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
 const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", editing: "Editing", delivered: "Delivered" };
 const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76" };
-const TIER_LABEL = { standard: "Standard", premium: "Premium", keepsake: "Premium + Keepsake" };
+const TIER_LABEL = { free: "Free", standard: "Classic", premium: "Signature", keepsake: "Luxe" };
 const ROAST_LABEL = { light: "Light Roasting", lukewarm: "Lukewarm Roasting", hot: "Hot Roasting" };
 
 export default function Dashboard() {

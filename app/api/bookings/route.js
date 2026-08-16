@@ -6,9 +6,10 @@ import { supabase } from "@/lib/supabase";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const TIER_PRICES = {
-  standard: { amount: 27500, label: "Standard Package" },
-  premium: { amount: 42500, label: "Premium Package" },
-  keepsake: { amount: 55000, label: "Premium + Keepsake Package" },
+  free: { amount: 0, label: "Free Package" },
+  standard: { amount: 27500, label: "Classic Package" },
+  premium: { amount: 42500, label: "Signature Package" },
+  keepsake: { amount: 55000, label: "Luxe Package" },
 };
 
 export async function POST(req) {
@@ -44,6 +45,40 @@ export async function POST(req) {
     if (error) throw error;
 
     const price = TIER_PRICES[tier];
+
+    // Free tier has nothing to charge -- skip Stripe entirely rather than
+    // create a $0 checkout session, and confirm right away instead of
+    // waiting on a payment webhook that will never fire.
+    if (price.amount === 0) {
+      await supabase
+        .from("bookings")
+        .update({ status: "collecting", stripe_payment_status: "paid" })
+        .eq("id", booking.id);
+
+      // Dynamic import, not a top-level one: constructing the Resend client
+      // throws synchronously when RESEND_API_KEY is unset, which would
+      // otherwise break booking creation for every tier, not just free.
+      try {
+        const { sendBookingConfirmation } = await import("@/lib/email");
+        await sendBookingConfirmation({
+          to: email,
+          hostName,
+          eventDate,
+          eventType,
+          guestCount,
+          tier,
+          style,
+          amountPaid: "$0.00",
+          uploadUrl: `${process.env.APP_URL}/event/${uploadSlug}`,
+          uploadSlug,
+        });
+      } catch (err) {
+        console.error("Confirmation email failed:", err.message);
+      }
+
+      return NextResponse.json({ bookingId: booking.id });
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [

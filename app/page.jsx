@@ -245,7 +245,7 @@ export default function HomePage() {
       </main>
 
       <footer style={{ textAlign: "center", padding: "40px 20px", color: "#8a857d", fontSize: 12.5, borderTop: "1px solid #E4DED2" }}>
-        © {new Date().getFullYear()} Recapped For You · <a href="/privacy" style={{ color: "#8a857d", textDecoration: "underline" }}>Privacy Policy</a>
+        © {new Date().getFullYear()} Recapped For You · <a href="/privacy" style={{ color: "#8a857d", textDecoration: "underline" }}>Privacy Policy</a> · <a href="/terms" style={{ color: "#8a857d", textDecoration: "underline" }}>Terms of Service</a>
       </footer>
     </div>
   );

@@ -79,7 +79,7 @@ export default function GalleryDeliveryPage() {
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>{eventName}</h1>
           <p style={{ color: "#4a4642", fontSize: "14.5px", lineHeight: 1.6 }}>
-            This gallery's 30-day Free-tier retention window has ended, and the photos and video have been permanently removed. Upgrade next time for a longer downloadable window.
+            This gallery's 7-day Free-tier retention window has ended, and the photos and video have been permanently removed. Upgrade next time for a longer downloadable window.
           </p>
         </div>
       </main>
@@ -147,7 +147,7 @@ export default function GalleryDeliveryPage() {
         {isDownloadOnly ? (
           <div style={{ marginBottom: "36px" }}>
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.6 }}>
-              The interactive gallery view has ended, but your photos are still yours — download them below.
+              Your 7-day Free-tier window has ended and this gallery is being permanently removed — download anything you'd like to keep right away.
             </p>
             <DownloadOnlyLayout photos={photos} />
           </div>
@@ -168,9 +168,7 @@ export default function GalleryDeliveryPage() {
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
               {isDownloadOnly
-                ? booking.gallery_purge_at
-                  ? `The interactive gallery has closed, but your photos and video remain downloadable until ${formatExpiryDate(booking.gallery_purge_at)}.`
-                  : "The interactive gallery has closed, but your photos and video remain downloadable for a limited time."
+                ? "Your 7-day window has ended and this gallery is now being permanently removed."
                 : booking.gallery_expires_at
                 ? `This gallery and video stay available until ${formatExpiryDate(booking.gallery_expires_at)}.`
                 : "This gallery and video stay available for a limited time."}{" "}

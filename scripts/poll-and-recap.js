@@ -17,8 +17,8 @@
  *      after delivery, see finalizeDelivery in auto-recap.js) has passed --
  *      matching the retention policy already promised in the UI copy.
  *   5. Permanently deletes Free-tier bookings' finished gallery/video (R2
- *      objects + the deliverables row) whose gallery_purge_at (also set to
- *      30 days after delivery) has passed -- unlike paid tiers, Free has no
+ *      objects + the deliverables row) whose gallery_purge_at (set to 7
+ *      days after delivery) has passed -- unlike paid tiers, Free has no
  *      revenue backing indefinite storage.
  *
  * If any booking's pipeline run fails, it's logged and the run moves on to

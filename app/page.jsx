@@ -14,7 +14,7 @@ const NAV_ITEMS = [
 
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
-    features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "Guests have 24hrs after the event to upload", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
+    features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "Guests have 24hrs after the event to upload", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Downloadable gallery for 7 days"] },
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "Curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours", highlight: true,
@@ -29,7 +29,7 @@ const FAQS = [
   { q: "Is this real footage, or generated?", a: "It's all real — every photo and video clip is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
   { q: "Will our photos be shared with anyone else?", a: "No. Your photos and videos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
   { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes 24-hour priority delivery (without the Roast Reel add-on, since that step waits on your approval)." },
-  { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 2 months on Classic, 4 months on Signature, and 6 months on Luxe. Free's interactive gallery is active for 7 days after delivery, then stays downloadable through day 30, after which it's permanently removed. Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy. Your pictures, videos, and data are never sold to a third party." },
+  { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 2 months on Classic, 4 months on Signature, and 6 months on Luxe. Free's gallery and video are downloadable for 7 days after delivery, after which they're permanently removed. Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy. Your pictures, videos, and data are never sold to a third party." },
   { q: "Can guests upload without downloading an app?", a: "Yes — guests just scan a QR code or tap a link, no account or app required." },
   { q: "Do you cover weddings?", a: "Not currently — we focus on birthdays, corporate events, reunions, and other milestone celebrations." },
   { q: "Is there a limit on how many guests can upload?", a: "No hard limit — the QR link works for any size gathering, from a small family dinner to a large corporate event." },

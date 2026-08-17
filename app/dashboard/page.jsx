@@ -183,7 +183,7 @@ export default function Dashboard() {
               {selected.gallery_expires_at
                 ? `until ${formatExpiryDate(selected.gallery_expires_at)}`
                 : selected.tier === "free"
-                ? "7 days interactive, then downloadable through day 30, then permanently removed"
+                ? "7 days, then permanently removed"
                 : `${GALLERY_RETENTION[selected.tier] || "90 days"} after delivery`}.
             </div>
           </div>

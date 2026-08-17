@@ -69,11 +69,9 @@ function buildSocialSelection(analyzed, shortlist) {
 }
 
 // Classic's gallery stays downloadable for 2 months, Signature's for 4,
-// and Luxe's for 6. Free's active gallery window is much shorter (7 days)
-// -- after that the interactive gallery page steps down to a plain
-// photo-download list rather than going away entirely (see the gallery
-// page's own handling of an expired gallery_expires_at). Anything not
-// listed here falls back to 90 days.
+// and Luxe's for 6. Free's gallery is downloadable for 7 days total, then
+// permanently deleted (see galleryPurgeAt below, which is set to this same
+// date for free). Anything not listed here falls back to 90 days.
 const GALLERY_EXPIRY_DAYS = { free: 7 };
 const GALLERY_EXPIRY_MONTHS = { standard: 2, premium: 4, keepsake: 6 };
 
@@ -481,11 +479,11 @@ async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedK
   const expiresAt = computeGalleryExpiry(tier);
 
   // Free's finished gallery/video had no deletion cutoff at all previously --
-  // once delivered it stayed downloadable forever. Give it the same 30-day
-  // total lifespan as raw guest uploads (7 days interactive, then
-  // download-only for the rest); see purgeExpiredFreeGalleries() in
+  // once delivered it stayed downloadable forever. It's now deleted the same
+  // moment the gallery itself expires (7 days after delivery, see
+  // GALLERY_EXPIRY_DAYS above); see purgeExpiredFreeGalleries() in
   // scripts/poll-and-recap.js, which reads this.
-  const galleryPurgeAt = tier === "free" ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
+  const galleryPurgeAt = tier === "free" ? expiresAt.toISOString() : null;
 
   await supabase
     .from("bookings")

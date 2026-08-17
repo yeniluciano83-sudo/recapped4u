@@ -4,7 +4,7 @@ import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame
 
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
-    features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "Guests have 24hrs after the event to upload", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
+    features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "Guests have 24hrs after the event to upload", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Downloadable gallery for 7 days"] },
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "Curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
@@ -261,7 +261,7 @@ export default function BookingForm() {
               ? "We'll email you back to work out scope and pricing -- nothing is charged by submitting this inquiry."
               : `By booking, you'll receive a service agreement by email. ${
                   form.tier === "free"
-                    ? "Your interactive gallery stays active for 7 days after delivery, then remains downloadable through day 30, after which it's permanently removed."
+                    ? "Your gallery and video are downloadable for 7 days after delivery, after which they're permanently removed."
                     : `Your event gallery and video stay accessible for ${GALLERY_RETENTION[form.tier] || "90 days"} after delivery.`
                 } Raw guest uploads are removed 30 days after final delivery. Cancel more than 24 hours before your event for a full refund; cancellations inside 24 hours aren't eligible for a refund.`}
           </div>

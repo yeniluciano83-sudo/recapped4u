@@ -53,7 +53,7 @@ export default function HomePage() {
   return (
     <div style={{ background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 40, background: "#FAF7F2ee", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", borderBottom: "1px solid #E4DED2" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "16px 20px", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
           <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", flexShrink: 0 }}>Recapped For You</span>
           <div className="nav-links" style={{ display: "flex", gap: 4, overflowX: "auto" }}>
             {NAV_ITEMS.map((item) => (
@@ -113,7 +113,7 @@ export default function HomePage() {
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 16 }}>
           {[
             { n: "1", t: "Book", d: "Pick your package and event date." },
             { n: "2", t: "Guests upload", d: "Send your QR code digitally or print it on cards for your event — guests add photos & video, no app needed." },
@@ -133,7 +133,7 @@ export default function HomePage() {
       </Section>
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 16 }}>
           {TIERS.map((t) => (
             <div key={t.id} style={{ ...cardStyle, border: t.highlight ? "1.5px solid #C97A3D" : cardStyle.border }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
@@ -193,11 +193,11 @@ export default function HomePage() {
           {EVENT_TYPES.map((e) =>
             e.startsWith("Something Else") ? (
               <button key={e} onClick={() => scrollTo("contact")}
-                style={{ background: "#FBEEE0", border: "1px solid #C97A3D", color: "#C97A3D", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, cursor: "pointer", fontWeight: 600 }}>
+                style={{ background: "#FBEEE0", border: "1px solid #C97A3D", color: "#C97A3D", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, cursor: "pointer", fontWeight: 600, maxWidth: "100%" }}>
                 {e}
               </button>
             ) : (
-              <span key={e} style={{ background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: 999, padding: "8px 16px", fontSize: 13.5 }}>{e}</span>
+              <span key={e} style={{ background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, maxWidth: "100%" }}>{e}</span>
             )
           )}
         </div>
@@ -235,7 +235,7 @@ export default function HomePage() {
         <p style={{ fontSize: 14, color: "#4a4642", marginBottom: 18 }}>
           Corporate events, custom packages, or just have a question — reach out.
         </p>
-        <a href="mailto:hello@recappedforyou.com" style={{ display: "inline-block", background: "#C97A3D", color: "#211F1D", fontSize: 14.5, fontWeight: 700, padding: "12px 22px", borderRadius: 10, textDecoration: "none" }}>
+        <a href="mailto:hello@recappedforyou.com" style={{ display: "inline-block", background: "#C97A3D", color: "#211F1D", fontSize: 14.5, fontWeight: 700, padding: "12px 22px", borderRadius: 10, textDecoration: "none", overflowWrap: "anywhere" }}>
           hello@recappedforyou.com
         </a>
         <p style={{ fontSize: 12.5, color: "#8a857d", marginTop: 16 }}>

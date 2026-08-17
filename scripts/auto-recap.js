@@ -206,7 +206,21 @@ async function runAutoRecap(bookingId) {
     return finishAfterRoastApproval(booking);
   }
 
-  return runFullPipeline(booking);
+  try {
+    return await runFullPipeline(booking);
+  } catch (err) {
+    // Without this, any failure partway through runFullPipeline (network
+    // blip, API error, anything) leaves the booking stuck at "editing"
+    // forever -- processCollectingBookings only re-queries
+    // status === "collecting", so nothing would ever retry it
+    // automatically. Revert so the next scheduled run picks it back up.
+    // Guarded on status still being "editing" so this doesn't clobber a
+    // status change that happened for another reason mid-run (e.g. the
+    // zero-shortlist case above already reverts to "collecting" itself,
+    // or the host cancelled the booking while this was running).
+    await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId).eq("status", "editing");
+    throw err;
+  }
 }
 
 async function finishAfterRoastApproval(booking) {

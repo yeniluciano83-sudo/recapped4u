@@ -22,7 +22,7 @@ create table bookings (
   stripe_session_id text,
   upload_slug text unique not null, -- used to build the public guest-upload URL
   delivered_at timestamptz,
-  gallery_expires_at timestamptz, -- delivered_at + 90 days, set on delivery
+  gallery_expires_at timestamptz, -- delivered_at + per-tier retention (see GALLERY_EXPIRY_MONTHS/DAYS in scripts/auto-recap.js), set on delivery
   roast_enabled boolean not null default false,
   roast_level text check (roast_level in ('light', 'lukewarm', 'hot')),
   gallery_template text not null default 'grid' check (gallery_template in ('grid', 'masonry', 'slideshow', 'polaroid')),

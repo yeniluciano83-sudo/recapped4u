@@ -12,7 +12,7 @@ const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A
 const TIER_LABEL = { free: "Free", standard: "Classic", premium: "Signature", keepsake: "Luxe" };
 const ROAST_LABEL = { light: "Light Roasting", lukewarm: "Lukewarm Roasting", hot: "Hot Roasting" };
 // Keep in sync with GALLERY_EXPIRY_MONTHS in scripts/auto-recap.js.
-const GALLERY_RETENTION = { premium: "4 months", keepsake: "6 months" };
+const GALLERY_RETENTION = { standard: "2 months", premium: "4 months", keepsake: "6 months" };
 
 export default function Dashboard() {
   const [bookings, setBookings] = useState([]);

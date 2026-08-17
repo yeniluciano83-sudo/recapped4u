@@ -68,14 +68,14 @@ function buildSocialSelection(analyzed, shortlist) {
   return [...mustInclude, ...fill];
 }
 
-// Signature's gallery stays downloadable for 4 months and Luxe's for 6,
-// instead of the default 90 days. Free's active gallery window is much
-// shorter (7 days) -- after that the interactive gallery page steps down
-// to a plain photo-download list rather than going away entirely (see the
-// gallery page's own handling of an expired gallery_expires_at). Anything
-// not listed here falls back to 90 days.
+// Classic's gallery stays downloadable for 2 months, Signature's for 4,
+// and Luxe's for 6. Free's active gallery window is much shorter (7 days)
+// -- after that the interactive gallery page steps down to a plain
+// photo-download list rather than going away entirely (see the gallery
+// page's own handling of an expired gallery_expires_at). Anything not
+// listed here falls back to 90 days.
 const GALLERY_EXPIRY_DAYS = { free: 7 };
-const GALLERY_EXPIRY_MONTHS = { premium: 4, keepsake: 6 };
+const GALLERY_EXPIRY_MONTHS = { standard: 2, premium: 4, keepsake: 6 };
 
 function computeGalleryExpiry(tier) {
   const expiresAt = new Date();

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef } from "react";
-import { Camera, Sparkles, Users, Check, ChevronRight, Play, HelpCircle, Mail, Star, Flame, Menu, X } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, Play, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -94,6 +94,28 @@ export default function HomePage() {
         @media (max-width: 850px) {
           .nav-mobile-panel { display: flex !important; }
         }
+
+        .how-timeline { display: flex; flex-direction: column; }
+        .how-step { display: flex; gap: 16px; }
+        .how-step-node { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+        .how-step-circle {
+          width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+          background: linear-gradient(135deg, #C97A3D, #E0985A);
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 4px 14px rgba(201,122,61,0.32);
+        }
+        .how-step-line { width: 2px; flex: 1; min-height: 28px; background: #E4DED2; margin: 6px 0; }
+        .how-step-content { padding-bottom: 28px; }
+        .how-step-title { font-family: Georgia, serif; font-size: 17px; font-weight: 700; margin: 6px 0 5px; }
+        .how-step-desc { font-size: 13.5px; color: #4a4642; line-height: 1.55; max-width: 480px; }
+        @media (min-width: 760px) {
+          .how-timeline { flex-direction: row; align-items: flex-start; }
+          .how-step { flex-direction: column; align-items: stretch; flex: 1; gap: 0; }
+          .how-step-node { flex-direction: row; width: 100%; }
+          .how-step-line { height: 2px; width: auto; flex: 1; min-height: 0; margin: 0 8px; align-self: center; }
+          .how-step-content { padding-bottom: 0; padding-right: 12px; }
+          .how-step-title { margin-top: 14px; }
+        }
       `}</style>
 
       <main>
@@ -113,23 +135,35 @@ export default function HomePage() {
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 16 }}>
-          {[
-            { n: "1", t: "Book", d: "Pick your package and event date." },
-            { n: "2", t: "Guests upload", d: "Send your QR code digitally or print it on cards for your event — guests add photos & video, no app needed, and you can add your own from the same share page." },
-            { n: "3", t: "We edit", d: "Every clip is scored, then cut, graded, and paced into your story — automatically, start to finish." },
-            { n: "4", t: "You receive it", d: "A polished video and gallery, ready to share and keep." },
-          ].map((s) => (
-            <div key={s.n} style={cardStyle}>
-              <div style={{ color: "#C97A3D", fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{s.n}</div>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>{s.t}</div>
-              <div style={{ fontSize: 13.5, color: "#4a4642", lineHeight: 1.5 }}>{s.d}</div>
-            </div>
-          ))}
-        </div>
-        <p style={{ marginTop: 24, fontSize: 13.5, color: "#6b655c", lineHeight: 1.6, maxWidth: 560 }}>
-          Nothing here is synthetic or computer-generated — every photo and clip is real footage from your event. Our process finds the best moments in hundreds of files, then automatically cuts, grades, and paces them into your story.
+        <p style={{ fontSize: 15, color: "#6b655c", margin: "-8px 0 32px", maxWidth: 520 }}>
+          From your guests' camera rolls to your inbox — four steps, zero editing skills required.
         </p>
+        <div className="how-timeline">
+          {[
+            { n: "1", icon: Calendar, t: "Book", d: "Pick your package and event date — takes about two minutes." },
+            { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Share your QR code digitally or print it on cards. Guests add photos & video with zero apps and zero fuss, and you can toss in your own from the same page." },
+            { n: "3", icon: Wand2, t: "We do the editing", d: "While you get back to the party, every clip is scored for focus, light, and energy, then cut, graded, and paced into your story — automatically, start to finish." },
+            { n: "4", icon: PartyPopper, t: "It lands in your inbox", d: "A polished video and gallery, ready to relive, share, and keep." },
+          ].map((s, i, arr) => {
+            const Icon = s.icon;
+            return (
+              <div className="how-step" key={s.n}>
+                <div className="how-step-node">
+                  <div className="how-step-circle"><Icon size={19} color="#FFFFFF" strokeWidth={2} /></div>
+                  {i < arr.length - 1 && <div className="how-step-line" />}
+                </div>
+                <div className="how-step-content">
+                  <div className="how-step-title">{s.t}</div>
+                  <div className="how-step-desc">{s.d}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 8, display: "inline-flex", alignItems: "flex-start", gap: 8, fontSize: 13.5, color: "#6b655c", lineHeight: 1.6, maxWidth: 560, background: "#FBEEE0", border: "1px solid #E4DED2", borderRadius: 10, padding: "12px 14px" }}>
+          <Check size={15} color="#7A8B76" style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>Nothing here is synthetic or computer-generated — every photo and clip is real footage from your event. Our process finds the best moments in hundreds of files, then automatically cuts, grades, and paces them into your story.</span>
+        </div>
       </Section>
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />}>

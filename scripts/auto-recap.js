@@ -466,9 +466,16 @@ async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedK
 
   const expiresAt = computeGalleryExpiry(tier);
 
+  // Free's finished gallery/video had no deletion cutoff at all previously --
+  // once delivered it stayed downloadable forever. Give it the same 30-day
+  // total lifespan as raw guest uploads (7 days interactive, then
+  // download-only for the rest); see purgeExpiredFreeGalleries() in
+  // scripts/poll-and-recap.js, which reads this.
+  const galleryPurgeAt = tier === "free" ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
+
   await supabase
     .from("bookings")
-    .update({ status: "delivered", delivered_at: new Date().toISOString(), gallery_expires_at: expiresAt.toISOString() })
+    .update({ status: "delivered", delivered_at: new Date().toISOString(), gallery_expires_at: expiresAt.toISOString(), gallery_purge_at: galleryPurgeAt })
     .eq("id", bookingId);
 
   // Raw guest uploads get permanently deleted 30 days from here -- see

@@ -57,7 +57,7 @@ export default function PrivacyPage() {
 
         <Section title="How long we keep it">
           <p><strong style={{ color: HEADING }}>Raw guest uploads</strong> (the original photos/videos guests submit) are permanently deleted 30 days after your final recap is delivered — once the curated gallery and video are ready, we don't need the originals anymore.</p>
-          <p><strong style={{ color: HEADING }}>Your delivered gallery and video</strong> stay accessible based on your tier: Free's interactive gallery is available for 7 days after delivery (photos and video stay downloadable after that); Classic for 2 months; Signature for 4 months; Luxe for 6 months.</p>
+          <p><strong style={{ color: HEADING }}>Your delivered gallery and video</strong> stay accessible based on your tier: Free's gallery is interactive for 7 days after delivery, stays downloadable through day 30, and is then permanently deleted; Classic for 2 months; Signature for 4 months; Luxe for 6 months.</p>
           <p><strong style={{ color: HEADING }}>Custom package inquiries</strong> don't create a stored booking record at all — the details you submit are sent directly to us by email to follow up with you.</p>
         </Section>
 

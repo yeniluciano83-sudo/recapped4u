@@ -16,6 +16,10 @@
  *   4. Permanently deletes raw guest uploads whose purge_at (set to 30 days
  *      after delivery, see finalizeDelivery in auto-recap.js) has passed --
  *      matching the retention policy already promised in the UI copy.
+ *   5. Permanently deletes Free-tier bookings' finished gallery/video (R2
+ *      objects + the deliverables row) whose gallery_purge_at (also set to
+ *      30 days after delivery) has passed -- unlike paid tiers, Free has no
+ *      revenue backing indefinite storage.
  *
  * If any booking's pipeline run fails, it's logged and the run moves on to
  * the next one -- at the end, if ADMIN_ALERT_EMAIL is set, one summary
@@ -166,12 +170,47 @@ async function purgeExpiredUploads(failures) {
   }
 }
 
+async function purgeExpiredFreeGalleries(failures) {
+  const { data: expired, error } = await supabase
+    .from("bookings")
+    .select("id, gallery_purge_at")
+    .eq("tier", "free")
+    .lte("gallery_purge_at", new Date().toISOString())
+    .limit(200); // batched -- a single run only needs to make a dent, not clear a backlog in one shot
+
+  if (error) {
+    console.error("Failed to query free bookings past their gallery purge date:", error.message);
+    return;
+  }
+  if (!expired || expired.length === 0) return;
+
+  console.log(`\nPurging ${expired.length} Free-tier gallery/video past their 30-day retention window...`);
+  const { deleteFile } = require("../lib/storage");
+  for (const booking of expired) {
+    try {
+      const { data: deliverables } = await supabase.from("deliverables").select("id, full_video_key, social_video_key, gallery_photo_keys").eq("booking_id", booking.id);
+      for (const deliverable of deliverables || []) {
+        const keys = [deliverable.full_video_key, deliverable.social_video_key, ...(deliverable.gallery_photo_keys || [])].filter(Boolean);
+        for (const key of keys) {
+          await deleteFile(key);
+        }
+        await supabase.from("deliverables").delete().eq("id", deliverable.id);
+      }
+      await supabase.from("bookings").update({ gallery_purge_at: null }).eq("id", booking.id);
+    } catch (err) {
+      console.error(`Failed to purge gallery for booking ${booking.id}:`, err.message);
+      failures.push({ bookingId: booking.id, error: `Free gallery purge failed: ${err.message}` });
+    }
+  }
+}
+
 async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
   const failures = [];
   await processCollectingBookings(failures);
   await resumeApprovedRoastBookings(failures);
   await purgeExpiredUploads(failures);
+  await purgeExpiredFreeGalleries(failures);
 
   if (failures.length > 0 && process.env.ADMIN_ALERT_EMAIL) {
     console.log(`Sending failure alert for ${failures.length} booking(s) to ${process.env.ADMIN_ALERT_EMAIL}...`);

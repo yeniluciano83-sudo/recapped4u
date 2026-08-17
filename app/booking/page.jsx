@@ -261,7 +261,7 @@ export default function BookingForm() {
               ? "We'll email you back to work out scope and pricing -- nothing is charged by submitting this inquiry."
               : `By booking, you'll receive a service agreement by email. ${
                   form.tier === "free"
-                    ? "Your interactive gallery stays active for 7 days after delivery; after that, your photos and video remain downloadable."
+                    ? "Your interactive gallery stays active for 7 days after delivery, then remains downloadable through day 30, after which it's permanently removed."
                     : `Your event gallery and video stay accessible for ${GALLERY_RETENTION[form.tier] || "90 days"} after delivery.`
                 } Raw guest uploads are removed 30 days after final delivery. Cancel more than 24 hours before your event for a full refund; cancellations inside 24 hours aren't eligible for a refund.`}
           </div>

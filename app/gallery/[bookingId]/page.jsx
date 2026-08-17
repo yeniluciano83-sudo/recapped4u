@@ -72,6 +72,20 @@ export default function GalleryDeliveryPage() {
   const isExpired = booking.gallery_expires_at && new Date(booking.gallery_expires_at) < new Date();
   const isDownloadOnly = booking.tier === "free" && isExpired;
 
+  if (booking.tier === "free" && booking.status === "delivered" && !data.deliverable) {
+    return (
+      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+        <div style={{ textAlign: "center", maxWidth: 380 }}>
+          <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
+          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>{eventName}</h1>
+          <p style={{ color: "#4a4642", fontSize: "14.5px", lineHeight: 1.6 }}>
+            This gallery's 30-day Free-tier retention window has ended, and the photos and video have been permanently removed. Upgrade next time for a longer downloadable window.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <div {...(lightbox ? { inert: "" } : {})} style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
@@ -154,7 +168,9 @@ export default function GalleryDeliveryPage() {
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
               {isDownloadOnly
-                ? "The interactive gallery has closed, but your photos and video remain downloadable."
+                ? booking.gallery_purge_at
+                  ? `The interactive gallery has closed, but your photos and video remain downloadable until ${formatExpiryDate(booking.gallery_purge_at)}.`
+                  : "The interactive gallery has closed, but your photos and video remain downloadable for a limited time."
                 : booking.gallery_expires_at
                 ? `This gallery and video stay available until ${formatExpiryDate(booking.gallery_expires_at)}.`
                 : "This gallery and video stay available for a limited time."}{" "}

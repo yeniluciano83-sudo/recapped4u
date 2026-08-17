@@ -26,7 +26,8 @@ export default function PrivacyPage() {
 
         <p style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "24px 0 8px" }}>Privacy Policy</p>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 32, margin: "0 0 8px", lineHeight: 1.15 }}>How we handle your data</h1>
-        <p style={{ fontSize: 13, color: MUTED, margin: "0 0 12px" }}>Last updated August 2026</p>
+        <p style={{ fontSize: 13, color: MUTED, margin: "0 0 4px" }}>Last updated August 2026</p>
+        <p style={{ fontSize: 13, color: MUTED, margin: "0 0 12px" }}>Recapped For You LLC, a New York limited liability company, operates this site and the services described here.</p>
 
         <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 16px", marginBottom: 36 }}>
           <p style={{ fontSize: 13, color: MUTED, margin: 0, lineHeight: 1.6 }}>

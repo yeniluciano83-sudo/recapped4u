@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Upload, Camera, Image as ImageIcon, Film, Loader2 } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight } from "lucide-react";
 
 // Signature/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -22,11 +22,6 @@ export default function QrSharePage() {
   const [copied, setCopied] = useState(false);
   const [closingUploads, setClosingUploads] = useState(false);
   const [extendingDeadline, setExtendingDeadline] = useState(false);
-  const [hostFiles, setHostFiles] = useState([]);
-  const [hostUploaderName, setHostUploaderName] = useState("");
-  const [hostUploading, setHostUploading] = useState(false);
-  const [hostJustUploaded, setHostJustUploaded] = useState(false);
-  const [hostUploadError, setHostUploadError] = useState(null);
   const [savingStyle, setSavingStyle] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [photosLoading, setPhotosLoading] = useState(false);
@@ -118,35 +113,6 @@ export default function QrSharePage() {
       setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustIncludeSocial: !next } : p))); // revert on failure
     } finally {
       setTogglingId(null);
-    }
-  };
-
-  const handleHostFiles = (e) => setHostFiles(Array.from(e.target.files || []));
-
-  const handleHostUpload = async () => {
-    if (hostFiles.length === 0) return;
-    setHostUploading(true);
-    setHostUploadError(null);
-    try {
-      const formData = new FormData();
-      formData.append("uploaderName", hostUploaderName || eventInfo.host_name || "Host");
-      hostFiles.forEach((f) => formData.append("files", f));
-
-      const res = await fetch(`/api/events/${slug}/upload`, { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) {
-        setHostUploadError(data.error || "Upload failed. Please try again.");
-        return;
-      }
-
-      setHostJustUploaded(true);
-      setHostFiles([]);
-      setTimeout(() => setHostJustUploaded(false), 3500);
-    } catch (err) {
-      console.error("Host upload failed", err);
-      setHostUploadError("Upload failed. Please try again.");
-    } finally {
-      setHostUploading(false);
     }
   };
 
@@ -254,40 +220,16 @@ export default function QrSharePage() {
           </div>
 
           {eventInfo.status === "collecting" && !eventInfo.uploads_closed_at && (
-            <div style={{ marginTop: 24, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
-              <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 12px" }}>Add your own photos</p>
-
-              <input value={hostUploaderName} onChange={(e) => setHostUploaderName(e.target.value)} placeholder={eventInfo.host_name || "Your name"}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: 14, marginBottom: 12, boxSizing: "border-box" }} />
-
-              <label htmlFor="host-file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "22px 16px", borderRadius: 12, border: "1.5px dashed #C9BFA9", cursor: "pointer", textAlign: "center" }}>
-                <Camera size={22} color="#C97A3D" strokeWidth={1.6} />
-                <span style={{ fontSize: 13.5, fontWeight: 500 }}>{hostFiles.length > 0 ? `${hostFiles.length} file${hostFiles.length > 1 ? "s" : ""} ready` : "Tap to add photos or video"}</span>
-                <input id="host-file-input" type="file" accept="image/*,video/*" multiple onChange={handleHostFiles} style={{ display: "none" }} />
-              </label>
-
-              {hostFiles.length > 0 && (
-                <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {hostFiles.slice(0, 6).map((f, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "#FAF7F2", padding: "5px 9px", borderRadius: 999, color: "#4a4642" }}>
-                      {f.type.startsWith("video") ? <Film size={12} /> : <ImageIcon size={12} />}
-                      {f.name.length > 14 ? f.name.slice(0, 12) + "…" : f.name}
-                    </div>
-                  ))}
-                  {hostFiles.length > 6 && <div style={{ fontSize: 12, color: "#6b655c", padding: "5px 4px" }}>+{hostFiles.length - 6} more</div>}
-                </div>
-              )}
-
-              <button onClick={handleHostUpload} disabled={hostFiles.length === 0 || hostUploading}
-                role="status" aria-live="polite"
-                style={{ width: "100%", marginTop: 14, padding: 12, borderRadius: 10, border: "none", background: hostFiles.length === 0 ? "#E4DED2" : "#C97A3D", color: hostFiles.length === 0 ? "#8a857d" : "#211F1D", fontSize: 14, fontWeight: 700, cursor: hostFiles.length === 0 || hostUploading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {hostUploading ? <><Loader2 size={16} className="spin" /> Adding…</> : hostJustUploaded ? <><Check size={16} /> Added — thank you!</> : <><Upload size={16} /> Add to the recap</>}
-              </button>
-
-              {hostUploadError && (
-                <p role="alert" style={{ fontSize: 12.5, color: "#C97A3D", marginTop: 10, textAlign: "center" }}>{hostUploadError}</p>
-              )}
-            </div>
+            <a href={`/qr/${slug}/upload`} style={{ marginTop: 24, padding: 18, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left", textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FBEEE0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Camera size={19} color="#C97A3D" strokeWidth={1.8} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 2px" }}>Add your own photos</p>
+                <p style={{ fontSize: 12.5, color: "#6b655c", margin: 0 }}>Your own upload page — straight from your camera roll</p>
+              </div>
+              <ChevronRight size={18} color="#8a857d" style={{ flexShrink: 0 }} />
+            </a>
           )}
 
           {eventInfo.status === "collecting" && (
@@ -409,8 +351,6 @@ export default function QrSharePage() {
           .print-url { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: #777; margin-top: 20px; word-break: break-all; }
           .print-footer { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; color: #C97A3D; font-weight: 600; margin-top: 8px; }
         }
-        .spin { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </>
   );

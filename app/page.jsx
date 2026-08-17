@@ -116,7 +116,7 @@ export default function HomePage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 16 }}>
           {[
             { n: "1", t: "Book", d: "Pick your package and event date." },
-            { n: "2", t: "Guests upload", d: "Send your QR code digitally or print it on cards for your event — guests add photos & video, no app needed." },
+            { n: "2", t: "Guests upload", d: "Send your QR code digitally or print it on cards for your event — guests add photos & video, no app needed, and you can add your own from the same share page." },
             { n: "3", t: "We edit", d: "Every clip is scored, then cut, graded, and paced into your story — automatically, start to finish." },
             { n: "4", t: "You receive it", d: "A polished video and gallery, ready to share and keep." },
           ].map((s) => (

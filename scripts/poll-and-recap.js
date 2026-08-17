@@ -74,8 +74,10 @@ async function processCollectingBookings(failures) {
 
     const hours = hoursSinceEvent(booking.event_date);
     const closedEarly = Boolean(booking.uploads_closed_at);
+    const extensionHours = booking.deadline_extension_hours || 0;
+    const effectiveProcessHours = schedule.processHours + extensionHours;
 
-    if (hours >= schedule.processHours || closedEarly) {
+    if (hours >= effectiveProcessHours || closedEarly) {
       const reason = closedEarly ? "host closed uploads early" : `event was ~${Math.round(hours)}h ago`;
       console.log(`\nProcessing booking ${booking.id} (${booking.tier}, ${reason})...`);
       try {
@@ -87,7 +89,7 @@ async function processCollectingBookings(failures) {
       continue;
     }
 
-    if (schedule.reminderHours !== null && hours >= schedule.reminderHours && !booking.reminder_sent_at) {
+    if (schedule.reminderHours !== null && hours >= schedule.reminderHours + extensionHours && !booking.reminder_sent_at) {
       console.log(`Sending upload reminder for booking ${booking.id}...`);
       try {
         // Lazy require: constructing the Resend client throws synchronously

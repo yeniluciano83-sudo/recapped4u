@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock } from "lucide-react";
 
 // Signature/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -21,6 +21,7 @@ export default function QrSharePage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [closingUploads, setClosingUploads] = useState(false);
+  const [extendingDeadline, setExtendingDeadline] = useState(false);
   const [savingStyle, setSavingStyle] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [photosLoading, setPhotosLoading] = useState(false);
@@ -136,6 +137,27 @@ export default function QrSharePage() {
     }
   };
 
+  const handleExtendDeadline = async () => {
+    if (!window.confirm("This pushes your upload deadline out by 2 days, once. Continue?")) {
+      return;
+    }
+    setExtendingDeadline(true);
+    try {
+      const res = await fetch(`/api/events/${slug}/extend-deadline`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to extend deadline. Please try again.");
+        return;
+      }
+      setEventInfo((prev) => ({ ...prev, deadline_extension_hours: data.deadlineExtensionHours }));
+    } catch (err) {
+      console.error("Failed to extend deadline", err);
+      alert("Failed to extend deadline. Please try again.");
+    } finally {
+      setExtendingDeadline(false);
+    }
+  };
+
   if (loading) {
     return (
       <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
@@ -210,6 +232,25 @@ export default function QrSharePage() {
                   </p>
                   <button onClick={handleCloseUploads} disabled={closingUploads} style={{ ...secondaryBtnStyle, width: "100%" }}>
                     {closingUploads ? "Closing…" : "Close uploads & process now"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {eventInfo.tier === "keepsake" && eventInfo.status === "collecting" && !eventInfo.uploads_closed_at && (
+            <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
+              {eventInfo.deadline_extension_hours > 0 ? (
+                <p style={{ fontSize: 13, color: "#7A8B76", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+                  <CheckCircle2 size={16} /> Deadline extended by 2 days.
+                </p>
+              ) : (
+                <>
+                  <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 10px", lineHeight: 1.5, display: "flex", alignItems: "center", gap: 8 }}>
+                    <Clock size={16} color="#C97A3D" style={{ flexShrink: 0 }} /> Need more time? Luxe includes a one-time 2-day deadline extension.
+                  </p>
+                  <button onClick={handleExtendDeadline} disabled={extendingDeadline} style={{ ...secondaryBtnStyle, width: "100%" }}>
+                    {extendingDeadline ? "Extending…" : "Extend deadline by 2 days"}
                   </button>
                 </>
               )}

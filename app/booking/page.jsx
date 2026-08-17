@@ -10,7 +10,7 @@ const TIERS = [
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for select event types (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for select event types", "2-week upload deadline", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for select event types", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
   { id: "custom", name: "Custom Package", price: "Contact us", tagline: "Built entirely around your event",
     features: ["Tailored scope, pricing, and timeline", "Choose your editing style (optional)", "For large events, multi-day coverage, or special requests", "We'll follow up by email to work out the details"] },
 ];

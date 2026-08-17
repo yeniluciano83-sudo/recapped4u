@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Upload } from "lucide-react";
 
 // Signature/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -217,6 +217,11 @@ export default function QrSharePage() {
             <a href={qrImageUrl} download={`recapped-qr-${slug}.png`} style={{ ...secondaryBtnStyle, textDecoration: "none" }}>
               <Download size={16} /> Download QR image
             </a>
+            {eventInfo.status === "collecting" && !eventInfo.uploads_closed_at && (
+              <a href={uploadUrl} style={{ ...secondaryBtnStyle, textDecoration: "none" }}>
+                <Upload size={16} /> Add your own photos
+              </a>
+            )}
           </div>
 
           {eventInfo.status === "collecting" && (

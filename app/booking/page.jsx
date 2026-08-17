@@ -102,6 +102,11 @@ export default function BookingForm() {
               ? <>We've got your custom package inquiry and will follow up at <strong style={{ color: "#211F1D" }}>{form.email}</strong> to work out the details.</>
               : <>We'll email your upload link and QR code to <strong style={{ color: "#211F1D" }}>{form.email}</strong> within 24 hours, ready to share with guests on {form.eventDate}.</>}
           </p>
+          {form.tier === "custom" && (
+            <p style={{ color: "#8a857d", fontSize: "12.5px", marginTop: "14px" }}>
+              <span aria-hidden="true">📱</span> Want a faster answer? Message us on WhatsApp: <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>
+            </p>
+          )}
         </div>
       </Shell>
     );

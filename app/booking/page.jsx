@@ -104,7 +104,7 @@ export default function BookingForm() {
           </p>
           {form.tier === "custom" && (
             <p style={{ color: "#8a857d", fontSize: "12.5px", marginTop: "14px" }}>
-              <span aria-hidden="true">📱</span> Want a faster answer? Message us on WhatsApp: <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>
+              <span aria-hidden="true">📱</span> Want a faster answer? Message us on WhatsApp (text only): <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>
             </p>
           )}
         </div>

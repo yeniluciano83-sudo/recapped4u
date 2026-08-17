@@ -66,7 +66,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="Questions">
-          <p>Reach us at <a href="mailto:hello@recappedforyou.com" style={{ color: ACCENT, fontWeight: 600, textDecoration: "none" }}>hello@recappedforyou.com</a> or on WhatsApp at <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: ACCENT, fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>.</p>
+          <p>Reach us at <a href="mailto:hello@recappedforyou.com" style={{ color: ACCENT, fontWeight: 600, textDecoration: "none" }}>hello@recappedforyou.com</a> or on WhatsApp (text only) at <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: ACCENT, fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>.</p>
         </Section>
       </div>
     </main>

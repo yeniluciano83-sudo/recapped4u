@@ -42,18 +42,27 @@ export default function HostUploadPage() {
     setUploading(true);
     setUploadError(null);
     try {
-      const formData = new FormData();
-      formData.append("uploaderName", uploaderName || eventInfo?.host_name || "Host");
-      files.forEach((f) => formData.append("files", f));
+      // One request per file -- a single request bundling several real
+      // phone photos/videos easily exceeds Vercel's ~4.5MB request body
+      // limit and gets rejected with a 413 before our code even runs,
+      // failing the *entire* batch even though most files were fine.
+      let uploadedCount = 0;
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("uploaderName", uploaderName || eventInfo?.host_name || "Host");
+        formData.append("files", file);
 
-      const res = await fetch(`/api/events/${slug}/upload`, { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) {
-        setUploadError(data.error || "Upload failed. Please try again.");
-        return;
+        const res = await fetch(`/api/events/${slug}/upload`, { method: "POST", body: formData });
+        const data = await res.json();
+        if (!res.ok) {
+          setUploadError(data.error || "Upload failed. Please try again.");
+          setUploadCount((c) => c + uploadedCount);
+          return;
+        }
+        uploadedCount += 1;
       }
 
-      setUploadCount((c) => c + files.length);
+      setUploadCount((c) => c + uploadedCount);
       setJustUploaded(true);
       setFiles([]);
       setTimeout(() => setJustUploaded(false), 3500);

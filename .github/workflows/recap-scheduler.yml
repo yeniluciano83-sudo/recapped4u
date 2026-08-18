@@ -20,6 +20,13 @@ jobs:
 
       - run: npm ci
 
+      # ffmpeg-static's Linux binary (johnvansickle.com) is missing the
+      # drawtext filter despite claiming --enable-libfreetype -- confirmed
+      # live, Roast Reel rendering failed every time with "No such filter:
+      # 'drawtext'". Ubuntu's apt package is a full build that has it.
+      - name: Install ffmpeg (with drawtext support)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - run: node scripts/poll-and-recap.js
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -32,3 +39,4 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           APP_URL: ${{ secrets.APP_URL }}
           ADMIN_ALERT_EMAIL: ${{ secrets.ADMIN_ALERT_EMAIL }}
+          FFMPEG_PATH: /usr/bin/ffmpeg

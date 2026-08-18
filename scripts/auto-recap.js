@@ -23,7 +23,10 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
-ffmpeg.setFfmpegPath(require("ffmpeg-static"));
+// See the matching comment in lib/video-assemble.js -- ffmpeg-static's
+// Linux binary is missing the drawtext filter, so CI sets FFMPEG_PATH to
+// a real system ffmpeg instead.
+ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH || require("ffmpeg-static"));
 const { createClient } = require("@supabase/supabase-js");
 const { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const { enhancePhoto } = require("../lib/photo-enhance");

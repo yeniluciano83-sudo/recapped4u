@@ -50,7 +50,8 @@ export default function TermsPage() {
         </Section>
 
         <Section title="Acceptable use">
-          <p>Don't upload content that's illegal, infringes someone else's rights, or that you don't have permission to share. We can remove content or decline to process a booking that violates this.</p>
+          <p>Don't upload content that's illegal, sexually explicit or contains nudity, infringes someone else's rights, or that you don't have permission to share. We can remove content, reject specific photos or videos, or decline to process a booking that violates this.</p>
+          <p>The host booking the event must be at least 18 years old. If any guest uploads include a photo or video of a minor, the host is responsible for confirming that a parent or guardian has consented to that minor appearing in the event recap.</p>
         </Section>
 
         <Section title="No guarantee of outcome">

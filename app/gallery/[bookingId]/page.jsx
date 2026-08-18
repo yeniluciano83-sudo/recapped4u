@@ -21,6 +21,7 @@ export default function GalleryDeliveryPage() {
   const [template, setTemplate] = useState("grid");
   const [slideIndex, setSlideIndex] = useState(0);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     if (!lightbox) return;
@@ -40,6 +41,25 @@ export default function GalleryDeliveryPage() {
       .catch((err) => console.error("Failed to load gallery", err))
       .finally(() => setLoading(false));
   }, [bookingId]);
+
+  const handleShare = async () => {
+    const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: eventName, text: `Check out ${eventName}'s recap!`, url: shareUrl });
+      } catch (err) {
+        // AbortError when the user cancels the native share sheet -- not an error.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    } catch (err) {
+      console.error("Failed to copy gallery link", err);
+    }
+  };
 
   const changeTemplate = async (id) => {
     setTemplate(id);
@@ -161,8 +181,8 @@ export default function GalleryDeliveryPage() {
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <button style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer" }}>
-            <Share2 size={16} /> Share this gallery
+          <button onClick={handleShare} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer" }}>
+            {shareCopied ? <><Check size={16} /> Link copied</> : <><Share2 size={16} /> Share this gallery</>}
           </button>
           <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2", display: "flex", gap: "10px" }}>
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />

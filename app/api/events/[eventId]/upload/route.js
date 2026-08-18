@@ -69,6 +69,6 @@ export async function POST(req, { params }) {
     return NextResponse.json({ uploaded: results.length });
   } catch (err) {
     console.error(`Upload failed for booking ${booking.id}:`, err);
-    return NextResponse.json({ error: `Upload failed: ${err.message}`, stack: err.stack }, { status: 500 });
+    return NextResponse.json({ error: `Upload failed: ${err.message}` }, { status: 500 });
   }
 }

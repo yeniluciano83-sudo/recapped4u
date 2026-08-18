@@ -26,16 +26,16 @@ export async function POST(req, { params }) {
     );
   }
 
-  const formData = await req.formData();
-  const uploaderName = formData.get("uploaderName") || "Guest";
-  const files = formData.getAll("files");
-
-  if (!files.length) {
-    return NextResponse.json({ error: "No files provided" }, { status: 400 });
-  }
-
-  const results = [];
   try {
+    const formData = await req.formData();
+    const uploaderName = formData.get("uploaderName") || "Guest";
+    const files = formData.getAll("files");
+
+    if (!files.length) {
+      return NextResponse.json({ error: "No files provided" }, { status: 400 });
+    }
+
+    const results = [];
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer());
       const key = buildStorageKey({ bookingId: booking.id, kind: "raw", filename: file.name });
@@ -56,19 +56,19 @@ export async function POST(req, { params }) {
 
       if (!insertError) results.push(uploadRow);
     }
+
+    // First guest upload moves the event from "booked"/"collecting" if not already there
+    await supabase
+      .from("bookings")
+      .update({ status: "collecting" })
+      .eq("id", booking.id)
+      .neq("status", "editing")
+      .neq("status", "delivered")
+      .neq("status", "cancelled");
+
+    return NextResponse.json({ uploaded: results.length });
   } catch (err) {
     console.error(`Upload failed for booking ${booking.id}:`, err);
-    return NextResponse.json({ error: `Upload failed: ${err.message}` }, { status: 500 });
+    return NextResponse.json({ error: `Upload failed: ${err.message}`, stack: err.stack }, { status: 500 });
   }
-
-  // First guest upload moves the event from "booked"/"collecting" if not already there
-  await supabase
-    .from("bookings")
-    .update({ status: "collecting" })
-    .eq("id", booking.id)
-    .neq("status", "editing")
-    .neq("status", "delivered")
-    .neq("status", "cancelled");
-
-  return NextResponse.json({ uploaded: results.length });
 }

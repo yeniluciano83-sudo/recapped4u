@@ -35,25 +35,30 @@ export async function POST(req, { params }) {
   }
 
   const results = [];
-  for (const file of files) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const key = buildStorageKey({ bookingId: booking.id, kind: "raw", filename: file.name });
-    await uploadFile(key, buffer, file.type);
+  try {
+    for (const file of files) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const key = buildStorageKey({ bookingId: booking.id, kind: "raw", filename: file.name });
+      await uploadFile(key, buffer, file.type);
 
-    const fileType = file.type.startsWith("video") ? "video" : "photo";
+      const fileType = file.type.startsWith("video") ? "video" : "photo";
 
-    const { data: uploadRow, error: insertError } = await supabase
-      .from("uploads")
-      .insert({
-        booking_id: booking.id,
-        uploader_name: uploaderName,
-        storage_key: key,
-        file_type: fileType,
-      })
-      .select()
-      .single();
+      const { data: uploadRow, error: insertError } = await supabase
+        .from("uploads")
+        .insert({
+          booking_id: booking.id,
+          uploader_name: uploaderName,
+          storage_key: key,
+          file_type: fileType,
+        })
+        .select()
+        .single();
 
-    if (!insertError) results.push(uploadRow);
+      if (!insertError) results.push(uploadRow);
+    }
+  } catch (err) {
+    console.error(`Upload failed for booking ${booking.id}:`, err);
+    return NextResponse.json({ error: `Upload failed: ${err.message}` }, { status: 500 });
   }
 
   // First guest upload moves the event from "booked"/"collecting" if not already there

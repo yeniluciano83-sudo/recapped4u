@@ -3,6 +3,36 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Camera, Upload, Check, Image as ImageIcon, Film, Loader2, AlertTriangle } from "lucide-react";
 
+// A dropped connection (weak WiFi/cell signal at a real event, common with
+// a room full of phones) fails a request before it ever reaches our
+// server -- nothing to log, nothing retryable server-side. Retrying here,
+// client-side, is the only place that actually helps. A 4xx response means
+// the server looked at the request and rejected it for a reason retrying
+// won't fix (uploads closed, event cancelled) -- don't waste attempts on
+// those; only retry on network failures or 5xx.
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 900;
+
+async function uploadOneFile(endpoint, uploaderName, file) {
+  let lastError = "Upload failed. Please try again.";
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const formData = new FormData();
+      formData.append("uploaderName", uploaderName);
+      formData.append("files", file);
+      const res = await fetch(endpoint, { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) return { ok: true };
+      lastError = data.error || "Upload failed. Please try again.";
+      if (res.status >= 400 && res.status < 500) return { ok: false, error: lastError, retryable: false };
+    } catch (err) {
+      lastError = "Upload failed. Please try again.";
+    }
+    if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+  }
+  return { ok: false, error: lastError, retryable: true };
+}
+
 export default function EventUploadPage() {
   const params = useParams();
   const eventId = params?.eventId;
@@ -34,38 +64,50 @@ export default function EventUploadPage() {
     if (files.length === 0) return;
     setUploading(true);
     setUploadError(null);
-    try {
-      // One request per file -- a single request bundling several real
-      // phone photos/videos easily exceeds Vercel's ~4.5MB request body
-      // limit and gets rejected with a 413 before our code even runs,
-      // failing the *entire* batch even though most files were fine.
-      let uploadedCount = 0;
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("uploaderName", uploaderName || "Guest");
-        formData.append("files", file);
+    // One request per file -- a single request bundling several real
+    // phone photos/videos easily exceeds Vercel's ~4.5MB request body
+    // limit and gets rejected with a 413 before our code even runs,
+    // failing the *entire* batch even though most files were fine.
+    const endpoint = `/api/events/${eventId}/upload`;
+    const name = uploaderName || "Guest";
+    const stillFailed = [];
+    let uploadedCount = 0;
+    let stoppedEarly = null;
 
-        const res = await fetch(`/api/events/${eventId}/upload`, { method: "POST", body: formData });
-        const data = await res.json();
-        if (!res.ok) {
-          setUploadError(data.error || "Upload failed. Please try again.");
-          setUploadCount((c) => c + uploadedCount);
-          return;
-        }
+    for (const file of files) {
+      const result = await uploadOneFile(endpoint, name, file);
+      if (result.ok) {
         uploadedCount += 1;
+      } else if (!result.retryable) {
+        // Server rejected the request for a reason retrying won't fix
+        // (uploads closed, event cancelled) -- true of every remaining
+        // file too, so stop here instead of attempting the rest.
+        stoppedEarly = result.error;
+        break;
+      } else {
+        stillFailed.push(file);
       }
+    }
 
-      setUploadCount((c) => c + uploadedCount);
+    setUploadCount((c) => c + uploadedCount);
+
+    if (stoppedEarly) {
+      setUploadError(stoppedEarly);
+    } else if (stillFailed.length > 0) {
+      setUploadError(
+        uploadedCount > 0
+          ? `${uploadedCount} of ${files.length} added. ${stillFailed.length} didn't make it after retrying -- check your connection and tap "Add to the recap" again to retry just those.`
+          : `Upload failed after retrying. Please check your connection and try again.`
+      );
+      setFiles(stillFailed); // leave only the failed ones selected for an easy retry
+    } else {
       setJustUploaded(true);
       setFiles([]);
       setUploaderName("");
       setTimeout(() => setJustUploaded(false), 3500);
-    } catch (err) {
-      console.error("Upload failed", err);
-      setUploadError("Upload failed. Please try again.");
-    } finally {
-      setUploading(false);
     }
+
+    setUploading(false);
   };
 
   const uploadsClosed = eventInfo?.status === "cancelled" || Boolean(eventInfo?.uploads_closed_at);

@@ -290,7 +290,7 @@ export default function HomePage() {
       </Section>
 
       <Section id="demo" refs={sectionRefs} title="See a Sample Recap" icon={<Play size={20} color="#C97A3D" />}
-        subtitle="The best 90 seconds of your night, cut together automatically — here's a taste of what comes back.">
+        subtitle="The best moments of your event, cut together automatically — here's a taste of what comes back.">
         <div style={{ ...cardStyle, textAlign: "center", padding: "56px 24px", backgroundImage: "linear-gradient(135deg, #FBEEE0, #FFFFFF)" }}>
           <div style={{ width: 68, height: 68, borderRadius: "50%", background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", boxShadow: "0 8px 24px rgba(201,122,61,0.32)" }}>
             <Play size={26} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 3 }} />

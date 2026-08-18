@@ -18,22 +18,30 @@ const TIERS = [
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "Curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours", highlight: true,
-    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for select event types (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"] },
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for any event type (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"] },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for select event types", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for any event type", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
 ];
 
 const EVENT_TYPES = [
   { label: "Parties", emoji: "🎉" },
   { label: "Birthdays", emoji: "🎂" },
+  { label: "Weddings", emoji: "💍" },
+  { label: "Engagement Parties", emoji: "💐" },
+  { label: "Bridal Showers", emoji: "🎀" },
+  { label: "Gender Reveals", emoji: "🎈" },
+  { label: "Sweet 16s / Quinceañeras", emoji: "👑" },
   { label: "Corporate Events", emoji: "💼" },
   { label: "Family Reunions", emoji: "👨‍👩‍👧‍👦" },
+  { label: "Class/Friend Reunions", emoji: "🤝" },
   { label: "Housewarmings", emoji: "🏡" },
   { label: "Retirement Parties", emoji: "🥂" },
   { label: "Baby Showers", emoji: "🍼" },
   { label: "Graduations", emoji: "🎓" },
   { label: "Anniversaries", emoji: "✨" },
   { label: "Bachelor/Bachelorette Parties", emoji: "🎊" },
+  { label: "Religious Ceremonies", emoji: "🙏" },
+  { label: "Fundraisers & Galas", emoji: "🎗️" },
   { label: "Vacations", emoji: "✈️" },
   { label: "Holiday Celebrations", emoji: "🎇" },
   { label: "Something Else? Ask Us", emoji: "💬" },
@@ -49,13 +57,12 @@ const FAQS = [
   { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes 24-hour priority delivery (without the Roast Reel add-on, since that step waits on your approval)." },
   { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 2 months on Classic, 4 months on Signature, and 6 months on Luxe. Free's gallery and video are downloadable for 7 days after delivery, after which they're permanently removed. Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy. Your pictures, videos, and data are never sold to a third party." },
   { q: "Can guests upload without downloading an app?", a: "Yes — guests just scan a QR code or tap a link, no account or app required." },
-  { q: "Do you cover weddings?", a: "Not currently — we focus on birthdays, corporate events, reunions, and other milestone celebrations." },
   { q: "Is there a limit on how many guests can upload?", a: "No hard limit — the QR link works for any size gathering, from a small family dinner to a large corporate event." },
   { q: "What if we need to cancel or reschedule?", a: "Your booking confirmation email includes a cancellation link — cancel more than 24 hours before your event and you'll get a full refund automatically; cancellations inside 24 hours aren't eligible for a refund since guest uploads may already be underway. Prefer to reschedule instead? Just reach out and we'll move your date at no extra cost." },
   { q: "How do we pay?", a: "Payment is collected securely at booking through Stripe. We accept all major credit and debit cards." },
   { q: "Can we pick which photos and clips make the final cut?", a: "Our automated curation selects the best moments for your main video — those same photos also become your photo gallery. On Signature and Luxe, you can also star must-include photos for your social cut from your QR share page." },
   { q: "Do you travel, or is this remote-only?", a: "Fully remote — there's no need for us to be physically present. Guests upload directly, and our editing happens entirely online, so we can work with events anywhere." },
-  { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests. Currently offered for parties, family reunions, anniversaries, and bachelor/bachelorette parties." },
+  { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests. Available for any event type." },
 ];
 
 export default function HomePage() {
@@ -265,7 +272,7 @@ export default function HomePage() {
           </div>
           <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 8px" }}>Your recap, but make it savage. Affectionately.</p>
           <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 14px", maxWidth: 520 }}>
-            Witty, affectionate commentary layered over your photos — you pick how far to take it, and you approve the full script before anyone sees it. Available on Signature and Luxe for parties, reunions, anniversaries, and bachelor/bachelorette events.
+            Witty, affectionate commentary layered over your photos — you pick how far to take it, and you approve the full script before anyone sees it. Available on Signature and Luxe for any event type.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
@@ -313,7 +320,6 @@ export default function HomePage() {
             )
           )}
         </div>
-        <p style={{ marginTop: 18, fontSize: 13.5, color: "#6b655c" }}>We don't currently offer wedding coverage.</p>
       </Section>
 
       <Section id="faq" refs={sectionRefs} title="Frequently Asked Questions" icon={<HelpCircle size={20} color="#C97A3D" />}

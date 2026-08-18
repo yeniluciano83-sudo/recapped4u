@@ -8,9 +8,9 @@ const TIERS = [
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "Curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
-    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for select event types (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
+    features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for any event type (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for select event types", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for any event type", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
   { id: "custom", name: "Custom Package", price: "Contact us", tagline: "Built entirely around your event",
     features: ["Tailored scope, pricing, and timeline", "Choose your editing style (optional)", "For large events, multi-day coverage, or special requests", "We'll follow up by email to work out the details"] },
 ];
@@ -23,16 +23,15 @@ const STYLES = [
   { id: "highlight", label: "Highlight Reel", desc: "Bold text call-outs, punchy sports-style energy" },
 ];
 
-const EVENT_TYPES = ["Party", "Birthday", "Corporate Event", "Family Reunion", "Housewarming", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Bachelor/Bachelorette Party", "Vacation", "Holiday Celebration", "Other"];
+const EVENT_TYPES = ["Party", "Birthday", "Wedding", "Engagement Party", "Bridal Shower", "Gender Reveal", "Sweet 16 / Quinceañera", "Corporate Event", "Family Reunion", "Class/Friend Reunion", "Housewarming", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Bachelor/Bachelorette Party", "Religious Ceremony", "Fundraiser/Gala", "Vacation", "Holiday Celebration", "Other"];
 
 // Signature/Luxe only, per what those tiers actually advertise
 // ("Social cut (60-90 sec) + full cut"). Roast eligibility happens to use
-// the same two tiers but is a separate concern (also gated by event type).
+// the same two tiers but is a separate concern.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 // Matches what the homepage's Roast Reel card actually advertises --
-// Premium/Keepsake tiers, and this specific set of event types.
+// Premium/Keepsake tiers, available for any event type.
 const ROAST_ELIGIBLE_TIERS = ["premium", "keepsake"];
-const ROAST_ELIGIBLE_EVENT_TYPES = ["Party", "Family Reunion", "Anniversary", "Bachelor/Bachelorette Party"];
 // Signature charges extra for Roast Reel; Luxe includes it -- no entry
 // here means "included, no extra charge."
 const ROAST_ADDON_PRICE = { premium: 20 };
@@ -51,7 +50,7 @@ export default function BookingForm() {
   const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light" });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
-  const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier) && ROAST_ELIGIBLE_EVENT_TYPES.includes(form.eventType);
+  const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()

@@ -224,7 +224,19 @@ async function runAutoRecap(bookingId) {
     .maybeSingle();
 
   if (existingRoastScript) {
-    return finishAfterRoastApproval(booking);
+    try {
+      return await finishAfterRoastApproval(booking);
+    } catch (err) {
+      // Same reasoning as the runFullPipeline catch below -- without this,
+      // a failure here (e.g. the ffmpeg render itself) left the booking
+      // stuck at "editing" forever, since neither processCollectingBookings
+      // nor resumeApprovedRoastBookings re-query that status. Revert to
+      // awaiting_roast_approval (not collecting) so the next run retries
+      // just the render, not the whole analysis pipeline -- the approved
+      // roast_scripts row is untouched either way.
+      await supabase.from("bookings").update({ status: "awaiting_roast_approval" }).eq("id", bookingId).eq("status", "editing");
+      throw err;
+    }
   }
 
   try {

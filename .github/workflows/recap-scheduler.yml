@@ -11,6 +11,13 @@ on:
 jobs:
   poll-and-recap:
     runs-on: ubuntu-latest
+    # Default job timeout is 6 hours -- way too long for this. Real runs
+    # (a handful of bookings, each with real photo analysis + video
+    # encoding) take a few minutes; a genuine hang (confirmed live: apt-get
+    # install waiting on an interactive prompt with no terminal attached,
+    # see below) should fail fast and free up Actions minutes rather than
+    # sit there for hours.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +31,18 @@ jobs:
       # drawtext filter despite claiming --enable-libfreetype -- confirmed
       # live, Roast Reel rendering failed every time with "No such filter:
       # 'drawtext'". Ubuntu's apt package is a full build that has it.
+      #
+      # DEBIAN_FRONTEND/NEEDRESTART_* suppress two different interactive
+      # prompts that Ubuntu 24.04 runners can pop up during apt-get install
+      # (a debconf prompt, and needrestart's "which services should be
+      # restarted?" dialog) -- confirmed live, without these the install
+      # step hung indefinitely with no output, since there's no terminal
+      # attached in CI to answer either prompt.
       - name: Install ffmpeg (with drawtext support)
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
 
       - run: node scripts/poll-and-recap.js
         env:

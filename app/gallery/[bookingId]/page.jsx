@@ -127,7 +127,7 @@ export default function GalleryDeliveryPage() {
               <LengthToggle active={videoLength === "full"} onClick={() => setVideoLength("full")} label="Full cut" />
               <LengthToggle active={videoLength === "social"} onClick={() => setVideoLength("social")} label="Social cut" />
             </div>
-            <a href={videoLength === "full" ? data?.deliverable?.full_video_url : data?.deliverable?.social_video_url} download style={iconBtnStyle}>
+            <a href={videoLength === "full" ? data?.deliverable?.full_video_download_url : data?.deliverable?.social_video_download_url} download style={iconBtnStyle}>
               <Download size={16} /> Download
             </a>
           </div>
@@ -169,7 +169,7 @@ export default function GalleryDeliveryPage() {
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.6 }}>
               Your 7-day Free-tier window has ended and this gallery is being permanently removed — download anything you'd like to keep right away.
             </p>
-            <DownloadOnlyLayout photos={photos} />
+            <DownloadOnlyLayout photos={photos} downloadUrls={data?.photo_download_urls || []} />
           </div>
         ) : (
           <div style={{ marginBottom: "36px" }}>
@@ -248,11 +248,11 @@ function SlideshowLayout({ photos, index, setIndex }) {
   );
 }
 
-function DownloadOnlyLayout({ photos }) {
+function DownloadOnlyLayout({ photos, downloadUrls }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
       {photos.map((url, i) => (
-        <a key={i} href={url} download style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center", textDecoration: "none" }}>
+        <a key={i} href={downloadUrls[i] || url} download style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center", textDecoration: "none" }}>
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "6px", background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
             <Download size={12} color="#FFFFFF" />
           </div>

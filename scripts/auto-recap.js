@@ -35,10 +35,21 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // Royalty-free tracks (Pixabay License — free for commercial use, no
 // attribution required), one per editing style, matching the mood
 // described for that style on the booking page.
+//
+// Only 3 dedicated tracks exist -- retro and highlight had no entry at
+// all, so any booking using either style got a video with silently no
+// music (STYLE_MUSIC[style] was undefined, which assembleSlideshow
+// treats as "skip audio" rather than erroring). Until dedicated tracks
+// are sourced, map them to the closest mood match rather than ship a
+// silent video: retro's warm/nostalgic feel is closer to cinematic than
+// documentary's minimal/candid feel; highlight's bold sports-style energy
+// is a direct match for upbeat's fast-cuts/high-energy track.
 const STYLE_MUSIC = {
   cinematic: path.join(__dirname, "..", "lib", "music", "cinematic.mp3"),
   upbeat: path.join(__dirname, "..", "lib", "music", "upbeat.mp3"),
   documentary: path.join(__dirname, "..", "lib", "music", "documentary.mp3"),
+  retro: path.join(__dirname, "..", "lib", "music", "cinematic.mp3"),
+  highlight: path.join(__dirname, "..", "lib", "music", "upbeat.mp3"),
 };
 
 // Video clips get their own, smaller cap -- a handful of the best
@@ -196,11 +207,23 @@ async function runAutoRecap(bookingId) {
   const { data: booking, error: bookingErr } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
   if (bookingErr || !booking) throw new Error("Booking not found");
 
-  // A booking paused for Roast Reel approval has already been analyzed and
-  // enhanced -- re-running the full pipeline would redo that (wasted Claude
-  // spend) and generate a second, conflicting script. Resume at final
-  // rendering instead once the host has approved.
-  if (booking.status === "awaiting_roast_approval") {
+  // A booking that already has a roast_scripts row has already been
+  // analyzed and enhanced -- re-running the full pipeline would redo that
+  // (wasted Claude spend) and generate a second, conflicting script. Resume
+  // at final rendering instead. Checking for the row's existence rather
+  // than booking.status === "awaiting_roast_approval" directly matters for
+  // poll-and-recap.js's atomic claim (which flips status to "editing"
+  // before invoking this, to close a race where an overlapping run could
+  // otherwise pick up the same booking twice) -- this way the dispatch is
+  // correct no matter which status the booking is claimed from.
+  const { data: existingRoastScript } = await supabase
+    .from("roast_scripts")
+    .select("id")
+    .eq("booking_id", bookingId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingRoastScript) {
     return finishAfterRoastApproval(booking);
   }
 

@@ -82,6 +82,25 @@ async function processCollectingBookings(failures) {
     const effectiveProcessHours = schedule.processHours + extensionHours;
 
     if (hours >= effectiveProcessHours || closedEarly) {
+      // Atomic claim: this run and an overlapping one (e.g. a manual
+      // workflow_dispatch landing near the top of the hour, next to the
+      // cron tick) could otherwise both see this booking as "collecting"
+      // from their own initial query and both process it, generating
+      // duplicate roast scripts/emails. The conditional .eq("status",
+      // "collecting") means only one run's UPDATE actually matches a row.
+      const { data: claimed } = await supabase
+        .from("bookings")
+        .update({ status: "editing" })
+        .eq("id", booking.id)
+        .eq("status", "collecting")
+        .select("id")
+        .maybeSingle();
+
+      if (!claimed) {
+        console.log(`\nBooking ${booking.id} was already claimed by another run -- skipping.`);
+        continue;
+      }
+
       const reason = closedEarly ? "host closed uploads early" : `event was ~${Math.round(hours)}h ago`;
       console.log(`\nProcessing booking ${booking.id} (${booking.tier}, ${reason})...`);
       try {
@@ -133,6 +152,22 @@ async function resumeApprovedRoastBookings(failures) {
       .maybeSingle();
 
     if (script?.status === "approved") {
+      // Same atomic-claim reasoning as processCollectingBookings above --
+      // guards against an overlapping run resuming the same approved
+      // booking twice.
+      const { data: claimed } = await supabase
+        .from("bookings")
+        .update({ status: "editing" })
+        .eq("id", booking.id)
+        .eq("status", "awaiting_roast_approval")
+        .select("id")
+        .maybeSingle();
+
+      if (!claimed) {
+        console.log(`\nBooking ${booking.id} was already claimed by another run -- skipping.`);
+        continue;
+      }
+
       console.log(`\nResuming approved booking ${booking.id}...`);
       try {
         runRecap(booking.id);

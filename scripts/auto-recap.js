@@ -28,7 +28,7 @@ const ffmpeg = require("fluent-ffmpeg");
 // a real system ffmpeg instead.
 ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH || require("ffmpeg-static"));
 const { createClient } = require("@supabase/supabase-js");
-const { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
+const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const { enhancePhoto } = require("../lib/photo-enhance");
 const { assembleSlideshow } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
@@ -125,6 +125,10 @@ async function uploadToR2(key, buffer, contentType) {
   return key;
 }
 
+async function deleteFromR2(key) {
+  await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+}
+
 // Used to recover things a prior run already uploaded (video clips, the
 // social cut's photo selection) without re-analyzing/re-enhancing them --
 // both survive a roast-approval pause this way, since finalizeDelivery may
@@ -189,8 +193,14 @@ function parseJson(raw) {
   return JSON.parse(raw.replace(/```json|```/g, "").trim());
 }
 
+// `flagged`/`flag_reason` implement the "Acceptable use" terms (sexually
+// explicit content or nudity isn't allowed) -- checked on every photo and,
+// for video clips, the one representative frame analyzePhoto is already
+// called with (see the two call sites below). A single frame can't catch
+// explicit content elsewhere in a clip, but that's the same sampling
+// tradeoff the existing quality/emotion scoring already makes for video.
 async function analyzePhoto(buffer, mediaType) {
-  const prompt = `Analyze this event photo. Respond ONLY with JSON: {"technical_quality": 1-10, "emotional_strength": 1-10, "moment_type": "string", "notes": "short phrase"}`;
+  const prompt = `Analyze this event photo. Also check whether it contains nudity or sexually explicit content that would be inappropriate for a general event recap shared with the host and their guests. Respond ONLY with JSON: {"technical_quality": 1-10, "emotional_strength": 1-10, "moment_type": "string", "notes": "short phrase", "flagged": boolean, "flag_reason": "short phrase or null"}`;
   const raw = await callClaude([
     { role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data: buffer.toString("base64") } }, { type: "text", text: prompt }] },
   ]);
@@ -327,12 +337,30 @@ async function runFullPipeline(booking) {
   const analyzed = [];
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-"));
 
+  // Terms of Service, "Acceptable use": we can reject specific photos/videos
+  // for nudity or sexually explicit content. Flagged uploads are removed
+  // from R2 and the uploads table entirely -- not just excluded from the
+  // shortlist -- so they don't linger in storage or get a second look.
+  async function rejectFlaggedUpload(upload, analysis, label) {
+    console.log(`  ⚠ ${upload.storage_key}${label} — flagged (${analysis.flag_reason || "inappropriate content"}), removing`);
+    try {
+      await deleteFromR2(upload.storage_key);
+    } catch (err) {
+      console.error(`    failed to delete ${upload.storage_key} from R2: ${err.message}`);
+    }
+    await supabase.from("uploads").delete().eq("id", upload.id);
+  }
+
   for (const upload of photoUploads) {
     try {
       const buffer = await downloadFromR2(upload.storage_key);
       const ext = path.extname(upload.storage_key).toLowerCase();
       const mediaType = ext === ".png" ? "image/png" : "image/jpeg";
       const analysis = await analyzePhoto(buffer, mediaType);
+      if (analysis.flagged) {
+        await rejectFlaggedUpload(upload, analysis, "");
+        continue;
+      }
       analyzed.push({ upload, buffer, analysis });
       console.log(`  ✓ ${upload.storage_key} — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
     } catch (err) {
@@ -346,6 +374,10 @@ async function runFullPipeline(booking) {
       const buffer = await downloadFromR2(upload.storage_key);
       const frameBuffer = await extractVideoFrame(buffer);
       const analysis = await analyzePhoto(frameBuffer, "image/jpeg");
+      if (analysis.flagged) {
+        await rejectFlaggedUpload(upload, analysis, " (video)");
+        continue;
+      }
       analyzedClips.push({ upload, buffer, analysis });
       console.log(`  ✓ ${upload.storage_key} (video) — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
     } catch (err) {

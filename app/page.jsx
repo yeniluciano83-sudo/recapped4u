@@ -197,7 +197,7 @@ export default function HomePage() {
         subtitle="From your guests' camera rolls to your inbox — four steps, zero editing skills required.">
         <div className="how-timeline">
           {[
-            { n: "1", icon: Calendar, t: "Book", d: "Pick your package and event date — takes about two minutes." },
+            { n: "1", icon: Calendar, t: "Book", d: "Pick your package and event date — takes less than 2 minutes." },
             { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Share your QR code digitally or print it on cards. Guests add photos & video with zero apps and zero fuss, and you can toss in your own from the same page." },
             { n: "3", icon: Wand2, t: "We do the editing", d: "While you get back to the party, every clip is scored for focus, light, and energy, then cut, graded, and paced into your story — automatically, start to finish." },
             { n: "4", icon: PartyPopper, t: "It lands in your inbox", d: "A polished video and gallery, ready to relive, share, and keep." },

@@ -187,26 +187,41 @@ export default function HomePage() {
         }
         .hero-reel-badge-select { animation-name: heroReelBadgeSelect; color: #C97A3D; }
         .hero-reel-badge-reject { animation-name: heroReelBadgeReject; color: #8a857d; }
+        .hero-reel-chip {
+          position: absolute; width: 22px; height: 28px; border-radius: 5px;
+          border: 2px solid #FFFFFF; box-shadow: 0 3px 8px rgba(33,31,29,0.28);
+          animation-name: heroReelChipJump; animation-duration: 10s; animation-iteration-count: infinite; animation-timing-function: ease-in-out;
+        }
         .hero-reel-caption {
-          position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
-          background: #C97A3D; color: #211F1D; font-size: 9.5px; font-weight: 700;
-          padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+          position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+          background: #C97A3D; color: #211F1D; font-size: 9px; font-weight: 700;
+          padding: 3px 7px; border-radius: 999px; white-space: nowrap;
           animation: heroReelCaption 10s ease-in-out infinite;
         }
-        .hero-reel-strip {
-          position: absolute; left: 0; right: 0; top: 106px; height: 76px;
-          border-top: 2px dotted #D8CFC0; border-bottom: 2px dotted #D8CFC0;
+        .hero-reel-frame {
+          position: absolute; left: 10px; top: 124px; width: 280px; height: 44px;
+          border: 2px solid #C97A3D; border-radius: 10px; background: rgba(255,255,255,0.55);
           animation: heroReelStrip 10s ease-in-out infinite;
+        }
+        .hero-reel-frame-play {
+          position: absolute; bottom: -9px; right: -9px; width: 20px; height: 20px; border-radius: 50%;
+          background: #C97A3D; color: #FFFFFF; font-size: 8px; display: flex; align-items: center; justify-content: center;
+          padding-left: 1.5px; box-shadow: 0 2px 6px rgba(33,31,29,0.3);
         }
 
         @keyframes heroReelSelect {
-          0%   { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.85); }
-          16%  { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); }
-          44%  { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); }
-          64%  { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
-          90%  { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
-          98%  { opacity: 0; transform: translate(0,0) rotate(0deg) scale(1); }
-          100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.85); }
+          0%   { opacity: 0; transform: rotate(var(--rot)) scale(0.85); }
+          10%  { opacity: 1; transform: rotate(var(--rot)) scale(1); }
+          90%  { opacity: 1; transform: rotate(var(--rot)) scale(1); }
+          100% { opacity: 0; transform: rotate(var(--rot)) scale(0.85); }
+        }
+        @keyframes heroReelChipJump {
+          0%, 48% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.5); }
+          55%  { opacity: 1; transform: translate(calc(var(--dx) * 0.45), calc(var(--dy) * 0.45 - 16px)) scale(0.85) rotate(8deg); }
+          64%  { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
+          90%  { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
+          98%  { opacity: 0; transform: translate(0,0) scale(1) rotate(0deg); }
+          100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.5); }
         }
         @keyframes heroReelReject {
           0%   { opacity: 0; transform: rotate(var(--rot)) scale(0.85); }
@@ -240,11 +255,12 @@ export default function HomePage() {
           96%, 100% { opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .hero-reel-card, .hero-reel-badge, .hero-reel-caption, .hero-reel-strip { animation: none !important; }
-          .hero-reel-card-select { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
+          .hero-reel-card, .hero-reel-badge, .hero-reel-caption, .hero-reel-frame, .hero-reel-chip { animation: none !important; }
+          .hero-reel-card-select { opacity: 1; transform: rotate(var(--rot)) scale(1); }
           .hero-reel-card-reject { display: none; }
           .hero-reel-badge, .hero-reel-caption { opacity: 0; }
-          .hero-reel-strip { opacity: 1; }
+          .hero-reel-frame { opacity: 1; }
+          .hero-reel-chip { opacity: 1; transform: translate(0,0) scale(1); }
         }
         @media (max-width: 380px) {
           .hero-reel { transform: scale(0.86); transform-origin: top center; }
@@ -498,8 +514,13 @@ const HERO_REEL_CARDS = [
   { id: 6, kind: "select", emoji: "📸", grad: "linear-gradient(160deg, #D9684F, #B6432C)", score: 88, scatter: { x: 140, y: 55, rot: -10 }, slot: 3 },
   { id: 7, kind: "select", emoji: "✨", grad: "linear-gradient(160deg, #9269B5, #6F4C93)", score: 90, scatter: { x: 210, y: 65, rot: 10 }, slot: 4 },
 ];
-const REEL_SLOT_X = [6, 64, 122, 180, 238];
-const REEL_SLOT_Y = 118;
+// Phones stay put -- only their winning photo leaps out and lands in the
+// frame, since that's the actual metaphor (guests keep their phones; we
+// just borrow the photo). Slot positions are for the smaller landed photo
+// chip, re-centered under where each phone roughly sits.
+const CARD_W = 50, CARD_H = 64, CHIP_W = 22, CHIP_H = 28;
+const FRAME_SLOT_X = [20, 78, 136, 194, 252];
+const FRAME_TOP = 132;
 
 function HeroReel() {
   return (
@@ -507,19 +528,15 @@ function HeroReel() {
       <p style={{ fontSize: 11.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8a857d", fontWeight: 600, marginBottom: 12 }}>
         How your best moments get picked
       </p>
-      <div className="hero-reel" role="img" aria-label="Animated illustration of scattered guest photos being scored, with the best ones assembling into a film reel">
+      <div className="hero-reel" role="img" aria-label="Animated illustration of scattered guest photos jumping out of phones into a video frame">
         {HERO_REEL_CARDS.map((c) => {
           const isSelected = c.kind === "select";
-          const left = isSelected ? REEL_SLOT_X[c.slot] : c.scatter.x;
-          const top = isSelected ? REEL_SLOT_Y : c.scatter.y;
-          const dx = isSelected ? c.scatter.x - REEL_SLOT_X[c.slot] : 0;
-          const dy = isSelected ? c.scatter.y - REEL_SLOT_Y : 0;
           return (
             <div key={c.id}
               className={`hero-reel-card ${isSelected ? "hero-reel-card-select" : "hero-reel-card-reject"}`}
               style={{
-                left, top,
-                "--dx": `${dx}px`, "--dy": `${dy}px`, "--rot": `${c.scatter.rot}deg`,
+                left: c.scatter.x, top: c.scatter.y,
+                "--rot": `${c.scatter.rot}deg`,
                 animationDelay: `${(c.id % 3) * -0.35}s`,
               }}>
               <span className="hero-reel-speaker" />
@@ -527,11 +544,30 @@ function HeroReel() {
                 <span className="hero-reel-emoji" aria-hidden="true">{c.emoji}</span>
               </div>
               <span className={`hero-reel-badge ${isSelected ? "hero-reel-badge-select" : "hero-reel-badge-reject"}`} style={{ animationDelay: `${(c.id % 3) * -0.35}s` }}>{c.score}</span>
+            </div>
+          );
+        })}
+
+        <div className="hero-reel-frame" aria-hidden="true"><span className="hero-reel-frame-play">▶</span></div>
+
+        {HERO_REEL_CARDS.filter((c) => c.kind === "select").map((c) => {
+          const chipTargetX = FRAME_SLOT_X[c.slot];
+          const phoneAnchorX = c.scatter.x + (CARD_W - CHIP_W) / 2;
+          const phoneAnchorY = c.scatter.y + (CARD_H - CHIP_H) / 2;
+          const dx = phoneAnchorX - chipTargetX;
+          const dy = phoneAnchorY - FRAME_TOP;
+          return (
+            <div key={`chip-${c.id}`}
+              className="hero-reel-chip"
+              style={{
+                left: chipTargetX, top: FRAME_TOP, backgroundImage: c.grad,
+                "--dx": `${dx}px`, "--dy": `${dy}px`,
+                animationDelay: `${(c.id % 3) * -0.35}s`,
+              }}>
               {c.roast && <span className="hero-reel-caption">😂 iconic</span>}
             </div>
           );
         })}
-        <div className="hero-reel-strip" aria-hidden="true" />
       </div>
     </div>
   );

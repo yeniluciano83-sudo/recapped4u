@@ -163,6 +163,87 @@ export default function HomePage() {
         @media (min-width: 560px) {
           .contact-row { flex-direction: row; }
         }
+
+        .hero-reel { position: relative; width: 300px; height: 190px; margin: 0 auto; }
+        .hero-reel-card {
+          position: absolute; width: 50px; height: 64px; border-radius: 10px;
+          border: 2px solid #FFFFFF; box-shadow: 0 4px 10px rgba(33,31,29,0.18);
+          display: flex; align-items: center; justify-content: center;
+          animation-duration: 10s; animation-iteration-count: infinite; animation-timing-function: ease-in-out;
+        }
+        .hero-reel-card-select { animation-name: heroReelSelect; }
+        .hero-reel-card-reject { animation-name: heroReelReject; }
+        .hero-reel-notch { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 14px; height: 4px; border-radius: 3px; background: rgba(33,31,29,0.35); }
+        .hero-reel-emoji { font-size: 16px; }
+        .hero-reel-badge {
+          position: absolute; top: -8px; right: -8px; background: #FFFFFF;
+          font-size: 9px; font-weight: 700; border-radius: 999px; padding: 2px 5px;
+          border: 1px solid #E4DED2; animation-duration: 10s; animation-iteration-count: infinite; animation-timing-function: ease-in-out;
+        }
+        .hero-reel-badge-select { animation-name: heroReelBadgeSelect; color: #C97A3D; }
+        .hero-reel-badge-reject { animation-name: heroReelBadgeReject; color: #8a857d; }
+        .hero-reel-caption {
+          position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+          background: #C97A3D; color: #211F1D; font-size: 9.5px; font-weight: 700;
+          padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+          animation: heroReelCaption 10s ease-in-out infinite;
+        }
+        .hero-reel-strip {
+          position: absolute; left: 0; right: 0; top: 106px; height: 76px;
+          border-top: 2px dotted #D8CFC0; border-bottom: 2px dotted #D8CFC0;
+          animation: heroReelStrip 10s ease-in-out infinite;
+        }
+
+        @keyframes heroReelSelect {
+          0%   { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.85); }
+          16%  { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); }
+          44%  { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1); }
+          64%  { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
+          90%  { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
+          98%  { opacity: 0; transform: translate(0,0) rotate(0deg) scale(1); }
+          100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.85); }
+        }
+        @keyframes heroReelReject {
+          0%   { opacity: 0; transform: rotate(var(--rot)) scale(0.85); }
+          16%  { opacity: 1; transform: rotate(var(--rot)) scale(1); }
+          40%  { opacity: 1; transform: rotate(var(--rot)) scale(1); }
+          54%  { opacity: 0; transform: rotate(var(--rot)) scale(0.5); }
+          100% { opacity: 0; transform: rotate(var(--rot)) scale(0.5); }
+        }
+        @keyframes heroReelBadgeSelect {
+          0%, 18% { opacity: 0; transform: scale(0.6); }
+          24% { opacity: 1; transform: scale(1); }
+          42% { opacity: 1; transform: scale(1); }
+          48%, 100% { opacity: 0; transform: scale(0.8); }
+        }
+        @keyframes heroReelBadgeReject {
+          0%, 18% { opacity: 0; transform: scale(0.6); }
+          24% { opacity: 1; transform: scale(1); }
+          38% { opacity: 1; transform: scale(1); }
+          52%, 100% { opacity: 0; transform: scale(0.8); }
+        }
+        @keyframes heroReelCaption {
+          0%, 64% { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.9); }
+          70% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+          84% { opacity: 1; }
+          90%, 100% { opacity: 0; transform: translateX(-50%) translateY(-2px) scale(0.95); }
+        }
+        @keyframes heroReelStrip {
+          0%, 46% { opacity: 0; }
+          56% { opacity: 1; }
+          92% { opacity: 1; }
+          96%, 100% { opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-reel-card, .hero-reel-badge, .hero-reel-caption, .hero-reel-strip { animation: none !important; }
+          .hero-reel-card-select { opacity: 1; transform: translate(0,0) rotate(0deg) scale(1); }
+          .hero-reel-card-reject { display: none; }
+          .hero-reel-badge, .hero-reel-caption { opacity: 0; }
+          .hero-reel-strip { opacity: 1; }
+        }
+        @media (max-width: 380px) {
+          .hero-reel { transform: scale(0.86); transform-origin: top center; }
+        }
       `}</style>
 
       <main>
@@ -191,6 +272,8 @@ export default function HomePage() {
             </span>
           ))}
         </div>
+
+        <HeroReel />
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
@@ -388,6 +471,58 @@ export default function HomePage() {
       <footer style={{ textAlign: "center", padding: "40px 20px", color: "#8a857d", fontSize: 12.5, borderTop: "1px solid #E4DED2" }}>
         © {new Date().getFullYear()} Recapped For You LLC · <a href="/privacy" style={{ color: "#8a857d", textDecoration: "underline" }}>Privacy Policy</a> · <a href="/terms" style={{ color: "#8a857d", textDecoration: "underline" }}>Terms of Service</a>
       </footer>
+    </div>
+  );
+}
+
+// Illustrates the actual thing this product does that no one else shows:
+// guest phone photos get auto-scored, the low scorers get dropped, and only
+// the winners get pulled into the final reel. Deliberately abstract/iconic
+// (colored cards + emoji, not photorealistic thumbnails) so it can never be
+// mistaken for a real customer's footage -- that would contradict the
+// "real footage, never generated" claim sitting right next to it.
+const HERO_REEL_CARDS = [
+  { id: 1, kind: "select", emoji: "🎉", grad: "linear-gradient(135deg, #F5A855, #E0985A)", score: 94, scatter: { x: 20, y: 10, rot: -12 }, slot: 0 },
+  { id: 2, kind: "reject", emoji: "🙈", grad: "linear-gradient(135deg, #D8CFC0, #C9BFA9)", score: 41, scatter: { x: 90, y: 25, rot: 8 } },
+  { id: 3, kind: "select", emoji: "🥂", grad: "linear-gradient(135deg, #7A8B76, #97A791)", score: 91, scatter: { x: 160, y: 5, rot: -6 }, slot: 1 },
+  { id: 4, kind: "select", emoji: "😂", grad: "linear-gradient(135deg, #C97A3D, #E0985A)", score: 97, scatter: { x: 225, y: 20, rot: 14 }, slot: 2, roast: true },
+  { id: 5, kind: "reject", emoji: "😑", grad: "linear-gradient(135deg, #D8CFC0, #C9BFA9)", score: 53, scatter: { x: 55, y: 60, rot: 5 } },
+  { id: 6, kind: "select", emoji: "📸", grad: "linear-gradient(135deg, #E0985A, #F5A855)", score: 88, scatter: { x: 140, y: 55, rot: -10 }, slot: 3 },
+  { id: 7, kind: "select", emoji: "✨", grad: "linear-gradient(135deg, #97A791, #7A8B76)", score: 90, scatter: { x: 210, y: 65, rot: 10 }, slot: 4 },
+];
+const REEL_SLOT_X = [6, 64, 122, 180, 238];
+const REEL_SLOT_Y = 118;
+
+function HeroReel() {
+  return (
+    <div style={{ marginTop: 40 }}>
+      <p style={{ fontSize: 11.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8a857d", fontWeight: 600, marginBottom: 12 }}>
+        How your best moments get picked
+      </p>
+      <div className="hero-reel" role="img" aria-label="Animated illustration of scattered guest photos being scored, with the best ones assembling into a film reel">
+        {HERO_REEL_CARDS.map((c) => {
+          const isSelected = c.kind === "select";
+          const left = isSelected ? REEL_SLOT_X[c.slot] : c.scatter.x;
+          const top = isSelected ? REEL_SLOT_Y : c.scatter.y;
+          const dx = isSelected ? c.scatter.x - REEL_SLOT_X[c.slot] : 0;
+          const dy = isSelected ? c.scatter.y - REEL_SLOT_Y : 0;
+          return (
+            <div key={c.id}
+              className={`hero-reel-card ${isSelected ? "hero-reel-card-select" : "hero-reel-card-reject"}`}
+              style={{
+                left, top, backgroundImage: c.grad,
+                "--dx": `${dx}px`, "--dy": `${dy}px`, "--rot": `${c.scatter.rot}deg`,
+                animationDelay: `${(c.id % 3) * -0.35}s`,
+              }}>
+              <span className="hero-reel-notch" />
+              <span className="hero-reel-emoji" aria-hidden="true">{c.emoji}</span>
+              <span className={`hero-reel-badge ${isSelected ? "hero-reel-badge-select" : "hero-reel-badge-reject"}`} style={{ animationDelay: `${(c.id % 3) * -0.35}s` }}>{c.score}</span>
+              {c.roast && <span className="hero-reel-caption">😂 iconic</span>}
+            </div>
+          );
+        })}
+        <div className="hero-reel-strip" aria-hidden="true" />
+      </div>
     </div>
   );
 }

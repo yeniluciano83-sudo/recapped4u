@@ -13,7 +13,7 @@ export function middleware(req) {
     if (req.nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/dashboard-login?test=1", req.url));
+    return NextResponse.redirect(new URL("/dashboard-login", req.url));
   }
   return NextResponse.next();
 }

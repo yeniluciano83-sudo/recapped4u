@@ -3,13 +3,13 @@ import React, { useState } from "react";
 
 export default function DashboardLogin() {
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(false);
+    setError(null);
     const res = await fetch("/api/dashboard-auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -18,7 +18,8 @@ export default function DashboardLogin() {
     if (res.ok) {
       window.location.href = "/dashboard";
     } else {
-      setError(true);
+      const data = await res.json().catch(() => ({}));
+      setError(res.status === 429 ? data.error || "Too many attempts. Try again later." : "Incorrect password.");
       setLoading(false);
     }
   };
@@ -39,7 +40,7 @@ export default function DashboardLogin() {
         <button type="submit" disabled={loading} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "15px", fontWeight: 700, cursor: "pointer" }}>
           {loading ? "Checking..." : "Enter"}
         </button>
-        {error && <p role="alert" style={{ color: "#e07a5f", fontSize: "13px", textAlign: "center", marginTop: "12px" }}>Incorrect password.</p>}
+        {error && <p role="alert" style={{ color: "#e07a5f", fontSize: "13px", textAlign: "center", marginTop: "12px" }}>{error}</p>}
       </form>
     </main>
   );

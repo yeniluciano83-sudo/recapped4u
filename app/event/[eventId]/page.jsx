@@ -110,7 +110,8 @@ export default function EventUploadPage() {
     setUploading(false);
   };
 
-  const uploadsClosed = eventInfo?.status === "cancelled" || Boolean(eventInfo?.uploads_closed_at);
+  const notActivated = eventInfo?.status === "pending_confirmation";
+  const uploadsClosed = notActivated || eventInfo?.status === "cancelled" || Boolean(eventInfo?.uploads_closed_at);
 
   const reelSegments = Math.min(uploadCount, 24);
   const eventName = eventInfo?.host_name ? `${eventInfo.host_name}'s ${eventInfo.event_type}` : "This event";
@@ -140,7 +141,9 @@ export default function EventUploadPage() {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
               <AlertTriangle size={24} color="#C97A3D" />
               <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
-                {eventInfo.status === "cancelled"
+                {notActivated
+                  ? "This event hasn't been activated yet."
+                  : eventInfo.status === "cancelled"
                   ? "This event has been cancelled and is no longer accepting uploads."
                   : "The host has closed uploads for this event — the recap is already being put together."}
               </p>

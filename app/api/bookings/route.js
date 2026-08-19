@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
+import { generateConfirmToken } from "@/lib/confirmToken";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -53,32 +54,32 @@ export async function POST(req) {
 
     const price = TIER_PRICES[tier];
 
-    // Free tier has nothing to charge -- skip Stripe entirely rather than
-    // create a $0 checkout session, and confirm right away instead of
-    // waiting on a payment webhook that will never fire.
+    // Free tier has nothing to charge and no Stripe payment webhook to wait
+    // on, but skipping straight to "collecting" would let anyone book a free
+    // event under a stranger's email and have it go live immediately -- the
+    // guest upload link would be active and confirmation/reminder emails
+    // would go out to someone who never asked for any of it. Instead, hold
+    // it at "pending_confirmation" (no upload link, no QR) until whoever
+    // owns the email clicks the confirm link. Paid tiers don't need this:
+    // Stripe payment is already a real-money barrier before anything's live.
     if (price.amount === 0) {
       await supabase
         .from("bookings")
-        .update({ status: "collecting", stripe_payment_status: "paid" })
+        .update({ status: "pending_confirmation" })
         .eq("id", booking.id);
 
       // Dynamic import, not a top-level one: constructing the Resend client
       // throws synchronously when RESEND_API_KEY is unset, which would
       // otherwise break booking creation for every tier, not just free.
       try {
-        const { sendBookingConfirmation } = await import("@/lib/email");
-        await sendBookingConfirmation({
+        const { sendConfirmBookingEmail } = await import("@/lib/email");
+        const token = generateConfirmToken(booking.id);
+        await sendConfirmBookingEmail({
           to: email,
           hostName,
           eventDate,
           eventType,
-          guestCount,
-          tier,
-          style,
-          amountPaid: "$0.00",
-          roastEnabled: body.roastEnabled || false,
-          uploadUrl: `${process.env.APP_URL}/event/${uploadSlug}`,
-          uploadSlug,
+          confirmUrl: `${process.env.APP_URL}/api/bookings/${booking.id}/confirm?token=${token}`,
         });
       } catch (err) {
         console.error("Confirmation email failed:", err.message);

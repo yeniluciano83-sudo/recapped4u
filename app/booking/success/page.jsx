@@ -6,13 +6,14 @@ import { Check } from "lucide-react";
 function SuccessContent() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("booking_id");
+  const isEmailConfirm = searchParams.get("type") === "email";
 
   return (
     <div style={{ textAlign: "center", maxWidth: 420 }}>
       <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
         <Check size={30} color="#211F1D" strokeWidth={2.5} />
       </div>
-      <h1 style={{ fontFamily: "Georgia, serif", fontSize: "28px", margin: "0 0 12px" }}>Payment confirmed</h1>
+      <h1 style={{ fontFamily: "Georgia, serif", fontSize: "28px", margin: "0 0 12px" }}>{isEmailConfirm ? "Booking activated" : "Payment confirmed"}</h1>
       <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, margin: 0 }}>
         Your booking is complete. Check your email for your guest upload link and confirmation details.
       </p>

@@ -19,6 +19,10 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: "This event has been cancelled." }, { status: 400 });
   }
 
+  if (booking.status === "pending_confirmation") {
+    return NextResponse.json({ error: "This event hasn't been activated yet." }, { status: 400 });
+  }
+
   if (booking.uploads_closed_at) {
     return NextResponse.json(
       { error: "The host has closed uploads for this event -- the recap is already being put together." },

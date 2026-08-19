@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useId } from "react";
-import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame, AlertTriangle } from "lucide-react";
 
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
@@ -44,6 +45,16 @@ const ROAST_LEVELS = [
 ];
 
 export default function BookingForm() {
+  return (
+    <React.Suspense fallback={null}>
+      <BookingFormInner />
+    </React.Suspense>
+  );
+}
+
+function BookingFormInner() {
+  const searchParams = useSearchParams();
+  const confirmError = searchParams.get("confirm_error") === "1";
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -113,6 +124,12 @@ export default function BookingForm() {
 
   return (
     <Shell>
+      {confirmError && (
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "14px 16px", borderRadius: "10px", background: "#FBEEE0", border: "1px solid #E4DED2", marginBottom: "20px" }}>
+          <AlertTriangle size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "2px" }} />
+          <p style={{ fontSize: "13px", color: "#4a4642", margin: 0, lineHeight: 1.5 }}>That confirmation link is invalid or expired. If you're trying to activate a free booking, check your email for the most recent confirmation link, or book again below.</p>
+        </div>
+      )}
       <div style={{ display: "flex", gap: "6px", marginBottom: "28px" }}>
         {[1, 2, 3, 4].map((n) => (
           <div key={n} style={{ flex: 1, height: "3px", borderRadius: "2px", background: n <= step ? "#C97A3D" : "#E4DED2" }} />

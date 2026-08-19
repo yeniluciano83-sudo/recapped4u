@@ -6,6 +6,14 @@ export function middleware(req) {
     return NextResponse.next();
   }
 
+  // Clicked from the confirmation email by whoever owns that address --
+  // must stay open to unauthenticated visitors. The token itself (verified
+  // in the route handler) is what proves the click is legitimate, not this
+  // dashboard cookie.
+  if (/^\/api\/bookings\/[^/]+\/confirm$/.test(req.nextUrl.pathname) && req.method === "GET") {
+    return NextResponse.next();
+  }
+
   const isAuthed =
     !!process.env.DASHBOARD_PASSWORD &&
     req.cookies.get("dashboard_auth")?.value === process.env.DASHBOARD_PASSWORD;

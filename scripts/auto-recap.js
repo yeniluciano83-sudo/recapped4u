@@ -428,7 +428,15 @@ async function runFullPipeline(booking) {
     for (let i = 0; i < socialSelection.length; i++) {
       const { buffer, upload } = socialSelection[i];
       const enhanced = enhancedByUploadId.get(upload.id) || (await enhancePhoto(buffer, booking.style));
-      await uploadToR2(`deliverable/${bookingId}/social-${i + 1}.jpg`, enhanced, "image/jpeg");
+      // "social-photo-", not "social-" -- a plain "social-" prefix also
+      // matches the rendered "social-cut.mp4" output further down (an S3
+      // prefix listing has no concept of "photos only"). Harmless on a
+      // booking's first delivery since that file doesn't exist yet when
+      // this uploads, but on a reprocess it's already sitting in R2 from
+      // the prior run, gets listed alongside the real photos below, and
+      // ffmpeg rejects it with "Option loop not found" when it's fed in
+      // as an image input -- confirmed live reprocessing a real booking.
+      await uploadToR2(`deliverable/${bookingId}/social-photo-${i + 1}.jpg`, enhanced, "image/jpeg");
     }
   }
 
@@ -515,7 +523,7 @@ async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedK
   // per-slot pacing.
   let socialVideoKey = null;
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier)) {
-    const socialKeys = await listDeliverableFiles(bookingId, "social-");
+    const socialKeys = await listDeliverableFiles(bookingId, "social-photo-");
     if (socialKeys.length > 0) {
       console.log(`Assembling social cut from ${socialKeys.length} photo(s)...`);
       const socialLocalPaths = [];

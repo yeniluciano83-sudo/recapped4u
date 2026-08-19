@@ -164,7 +164,7 @@ export default function HomePage() {
           .contact-row { flex-direction: row; }
         }
 
-        .hero-reel { position: relative; width: 300px; height: 190px; margin: 0 auto; }
+        .hero-reel { position: relative; width: 320px; height: 190px; margin: 0 auto; }
         .hero-reel-card {
           position: absolute; width: 50px; height: 64px; border-radius: 13px;
           background: linear-gradient(160deg, #322F2A, #211F1D);
@@ -199,7 +199,7 @@ export default function HomePage() {
           animation: heroReelCaption 10s ease-in-out infinite;
         }
         .hero-reel-frame {
-          position: absolute; left: 10px; top: 124px; width: 280px; height: 44px;
+          position: absolute; left: 4px; top: 124px; width: 312px; height: 44px;
           border: 2px solid #C97A3D; border-radius: 10px; background: rgba(255,255,255,0.55);
           animation: heroReelStrip 10s ease-in-out infinite;
         }
@@ -506,20 +506,22 @@ export default function HomePage() {
 // at a glance. The dark phone body around every screen is fixed/neutral,
 // so color variety lives entirely in the "photo" each phone is showing.
 const HERO_REEL_CARDS = [
-  { id: 1, kind: "select", emoji: "🎉", grad: "linear-gradient(160deg, #E8873D, #C2611E)", score: 94, scatter: { x: 20, y: 10, rot: -12 }, slot: 0 },
-  { id: 2, kind: "reject", emoji: "🙈", grad: "linear-gradient(160deg, #C9BFA9, #ADA28C)", score: 41, scatter: { x: 90, y: 25, rot: 8 } },
-  { id: 3, kind: "select", emoji: "🥂", grad: "linear-gradient(160deg, #2FA593, #1B7D6E)", score: 91, scatter: { x: 160, y: 5, rot: -6 }, slot: 1 },
-  { id: 4, kind: "select", emoji: "😂", grad: "linear-gradient(160deg, #E0AC42, #C68A1F)", score: 97, scatter: { x: 225, y: 20, rot: 14 }, slot: 2, roast: true },
-  { id: 5, kind: "reject", emoji: "😑", grad: "linear-gradient(160deg, #C9BFA9, #ADA28C)", score: 53, scatter: { x: 55, y: 60, rot: 5 } },
+  { id: 1, kind: "select", emoji: "🎉", grad: "linear-gradient(160deg, #E8873D, #C2611E)", score: 94, scatter: { x: 15, y: 10, rot: -12 }, slot: 0 },
+  { id: 2, kind: "reject", emoji: "🙈", grad: "linear-gradient(160deg, #C9BFA9, #ADA28C)", score: 41, scatter: { x: 95, y: 25, rot: 8 } },
+  { id: 3, kind: "select", emoji: "🥂", grad: "linear-gradient(160deg, #2FA593, #1B7D6E)", score: 91, scatter: { x: 155, y: 5, rot: -6 }, slot: 1 },
+  { id: 4, kind: "select", emoji: "😂", grad: "linear-gradient(160deg, #E0AC42, #C68A1F)", score: 97, scatter: { x: 230, y: 18, rot: 14 }, slot: 2, roast: true },
+  { id: 5, kind: "reject", emoji: "😑", grad: "linear-gradient(160deg, #C9BFA9, #ADA28C)", score: 53, scatter: { x: 60, y: 68, rot: 5 } },
   { id: 6, kind: "select", emoji: "📸", grad: "linear-gradient(160deg, #D9684F, #B6432C)", score: 88, scatter: { x: 140, y: 55, rot: -10 }, slot: 3 },
-  { id: 7, kind: "select", emoji: "✨", grad: "linear-gradient(160deg, #9269B5, #6F4C93)", score: 90, scatter: { x: 210, y: 65, rot: 10 }, slot: 4 },
+  { id: 7, kind: "select", emoji: "✨", grad: "linear-gradient(160deg, #9269B5, #6F4C93)", score: 90, scatter: { x: 215, y: 65, rot: 10 }, slot: 4 },
+  { id: 8, kind: "select", emoji: "🎊", grad: "linear-gradient(160deg, #B5524A, #8F3D36)", score: 86, scatter: { x: 8, y: 58, rot: 9 }, slot: 5 },
+  { id: 9, kind: "select", emoji: "🎶", grad: "linear-gradient(160deg, #4A6FA5, #33517D)", score: 93, scatter: { x: 265, y: 45, rot: -8 }, slot: 6 },
 ];
 // Phones stay put -- only their winning photo leaps out and lands in the
 // frame, since that's the actual metaphor (guests keep their phones; we
 // just borrow the photo). Slot positions are for the smaller landed photo
 // chip, re-centered under where each phone roughly sits.
 const CARD_W = 50, CARD_H = 64, CHIP_W = 22, CHIP_H = 28;
-const FRAME_SLOT_X = [20, 78, 136, 194, 252];
+const FRAME_SLOT_X = [4, 52, 101, 149, 197, 246, 294];
 const FRAME_TOP = 132;
 
 function HeroReel() {

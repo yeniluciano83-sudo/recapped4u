@@ -433,13 +433,10 @@ export default function HomePage() {
             Somewhere across your guests' phones is the real story of your event — the candid laugh, the toast, the moment the whole room lit up at once.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
-            It's just scattered across many different camera rolls, most of it destined to be seen once and forgotten. Recapped For You gathers it, sorts through it, and hands it back as one film worth watching — no stranger holding a camera all night. Every photo and clip is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cut, graded, and paced automatically.
+            It's just scattered across many different camera rolls, most of it destined to be seen once and forgotten. Recapped For You gathers it, sorts through it, and hands it back as a film worth watching and a photo gallery worth keeping — no stranger holding a camera all night. Every photo and clip is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cut, graded, and paced automatically.
           </p>
-          <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
+          <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7 }}>
             Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.
-          </p>
-          <p style={{ fontSize: 15, fontWeight: 600, color: "#211F1D", lineHeight: 1.6 }}>
-            No crew to coordinate, no camera in anyone's face. Just the party, remembered well.
           </p>
         </div>
       </Section>

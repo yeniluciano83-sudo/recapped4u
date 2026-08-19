@@ -65,10 +65,12 @@ const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 const TARGET_SOCIAL_SECONDS = 75; // middle of the advertised 60-90s range
 const MAX_SOCIAL_PHOTOS = 15;
 
-// Free's gallery/video allows more photos than the 15 default (its own
-// advertised cap, not the general shortlist size), and its short highlight
-// video targets a duration like the social cut rather than the other
-// tiers' fixed per-photo pacing. Tiers not listed here keep the defaults.
+// Paid tiers advertise unlimited uploads with no stated gallery cap, so
+// their shortlist is genuinely uncapped -- every photo that clears the
+// technical_quality bar in buildShortlist makes it in, how ever many that
+// is. Only Free has a real, advertised cap (up to 20 photos). A paying
+// customer's gallery being smaller than Free's was a real bug, not an
+// acceptable default -- see the SHORTLIST_CAP lookup below.
 const SHORTLIST_CAP = { free: 20 };
 const FULL_CUT_TARGET_SECONDS = { free: 75 }; // middle of the advertised 60-90s range
 
@@ -385,7 +387,7 @@ async function runFullPipeline(booking) {
     }
   }
 
-  const shortlist = await buildShortlist(analyzed, SHORTLIST_CAP[booking.tier] || 15);
+  const shortlist = await buildShortlist(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
   const clipShortlist = await buildShortlist(analyzedClips, MAX_VIDEO_CLIPS);
   console.log(`Shortlisted ${shortlist.length} photos and ${clipShortlist.length} video clip(s) for the final cut.`);
 

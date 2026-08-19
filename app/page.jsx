@@ -166,15 +166,20 @@ export default function HomePage() {
 
         .hero-reel { position: relative; width: 300px; height: 190px; margin: 0 auto; }
         .hero-reel-card {
-          position: absolute; width: 50px; height: 64px; border-radius: 10px;
-          border: 2px solid #FFFFFF; box-shadow: 0 4px 10px rgba(33,31,29,0.18);
-          display: flex; align-items: center; justify-content: center;
+          position: absolute; width: 50px; height: 64px; border-radius: 13px;
+          background: linear-gradient(160deg, #322F2A, #211F1D);
+          box-shadow: 0 6px 14px rgba(33,31,29,0.32), inset 0 0 0 1px rgba(255,255,255,0.06);
+          display: flex; flex-direction: column; align-items: center; padding: 5px 4px 6px;
           animation-duration: 10s; animation-iteration-count: infinite; animation-timing-function: ease-in-out;
         }
         .hero-reel-card-select { animation-name: heroReelSelect; }
         .hero-reel-card-reject { animation-name: heroReelReject; }
-        .hero-reel-notch { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 14px; height: 4px; border-radius: 3px; background: rgba(33,31,29,0.35); }
-        .hero-reel-emoji { font-size: 16px; }
+        .hero-reel-speaker { flex-shrink: 0; width: 14px; height: 3px; border-radius: 3px; background: rgba(255,255,255,0.22); margin-bottom: 4px; }
+        .hero-reel-screen {
+          flex: 1; width: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+        }
+        .hero-reel-emoji { font-size: 15px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
         .hero-reel-badge {
           position: absolute; top: -8px; right: -8px; background: #FFFFFF;
           font-size: 9px; font-weight: 700; border-radius: 999px; padding: 2px 5px;
@@ -478,14 +483,20 @@ export default function HomePage() {
 // (colored cards + emoji, not photorealistic thumbnails) so it can never be
 // mistaken for a real customer's footage -- that would contradict the
 // "real footage, never generated" claim sitting right next to it.
+// A bold, deliberately gender-neutral palette for the "winning" cards'
+// screens (terracotta, teal, gold, coral, plum) -- no color reused across
+// them, none reaching for the pink/blue binary. Rejected cards' screens
+// stay muted gray on purpose, so the "these got cut" signal still reads
+// at a glance. The dark phone body around every screen is fixed/neutral,
+// so color variety lives entirely in the "photo" each phone is showing.
 const HERO_REEL_CARDS = [
-  { id: 1, kind: "select", emoji: "🎉", grad: "linear-gradient(135deg, #F5A855, #E0985A)", score: 94, scatter: { x: 20, y: 10, rot: -12 }, slot: 0 },
-  { id: 2, kind: "reject", emoji: "🙈", grad: "linear-gradient(135deg, #D8CFC0, #C9BFA9)", score: 41, scatter: { x: 90, y: 25, rot: 8 } },
-  { id: 3, kind: "select", emoji: "🥂", grad: "linear-gradient(135deg, #7A8B76, #97A791)", score: 91, scatter: { x: 160, y: 5, rot: -6 }, slot: 1 },
-  { id: 4, kind: "select", emoji: "😂", grad: "linear-gradient(135deg, #C97A3D, #E0985A)", score: 97, scatter: { x: 225, y: 20, rot: 14 }, slot: 2, roast: true },
-  { id: 5, kind: "reject", emoji: "😑", grad: "linear-gradient(135deg, #D8CFC0, #C9BFA9)", score: 53, scatter: { x: 55, y: 60, rot: 5 } },
-  { id: 6, kind: "select", emoji: "📸", grad: "linear-gradient(135deg, #E0985A, #F5A855)", score: 88, scatter: { x: 140, y: 55, rot: -10 }, slot: 3 },
-  { id: 7, kind: "select", emoji: "✨", grad: "linear-gradient(135deg, #97A791, #7A8B76)", score: 90, scatter: { x: 210, y: 65, rot: 10 }, slot: 4 },
+  { id: 1, kind: "select", emoji: "🎉", grad: "linear-gradient(160deg, #E8873D, #C2611E)", score: 94, scatter: { x: 20, y: 10, rot: -12 }, slot: 0 },
+  { id: 2, kind: "reject", emoji: "🙈", grad: "linear-gradient(160deg, #C9BFA9, #ADA28C)", score: 41, scatter: { x: 90, y: 25, rot: 8 } },
+  { id: 3, kind: "select", emoji: "🥂", grad: "linear-gradient(160deg, #2FA593, #1B7D6E)", score: 91, scatter: { x: 160, y: 5, rot: -6 }, slot: 1 },
+  { id: 4, kind: "select", emoji: "😂", grad: "linear-gradient(160deg, #E0AC42, #C68A1F)", score: 97, scatter: { x: 225, y: 20, rot: 14 }, slot: 2, roast: true },
+  { id: 5, kind: "reject", emoji: "😑", grad: "linear-gradient(160deg, #C9BFA9, #ADA28C)", score: 53, scatter: { x: 55, y: 60, rot: 5 } },
+  { id: 6, kind: "select", emoji: "📸", grad: "linear-gradient(160deg, #D9684F, #B6432C)", score: 88, scatter: { x: 140, y: 55, rot: -10 }, slot: 3 },
+  { id: 7, kind: "select", emoji: "✨", grad: "linear-gradient(160deg, #9269B5, #6F4C93)", score: 90, scatter: { x: 210, y: 65, rot: 10 }, slot: 4 },
 ];
 const REEL_SLOT_X = [6, 64, 122, 180, 238];
 const REEL_SLOT_Y = 118;
@@ -507,12 +518,14 @@ function HeroReel() {
             <div key={c.id}
               className={`hero-reel-card ${isSelected ? "hero-reel-card-select" : "hero-reel-card-reject"}`}
               style={{
-                left, top, backgroundImage: c.grad,
+                left, top,
                 "--dx": `${dx}px`, "--dy": `${dy}px`, "--rot": `${c.scatter.rot}deg`,
                 animationDelay: `${(c.id % 3) * -0.35}s`,
               }}>
-              <span className="hero-reel-notch" />
-              <span className="hero-reel-emoji" aria-hidden="true">{c.emoji}</span>
+              <span className="hero-reel-speaker" />
+              <div className="hero-reel-screen" style={{ backgroundImage: c.grad }}>
+                <span className="hero-reel-emoji" aria-hidden="true">{c.emoji}</span>
+              </div>
               <span className={`hero-reel-badge ${isSelected ? "hero-reel-badge-select" : "hero-reel-badge-reject"}`} style={{ animationDelay: `${(c.id % 3) * -0.35}s` }}>{c.score}</span>
               {c.roast && <span className="hero-reel-caption">😂 iconic</span>}
             </div>

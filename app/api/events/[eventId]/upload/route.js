@@ -39,13 +39,19 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
+    // Photos only -- the upload pages already restrict file pickers to
+    // image/*, but that's a client-side hint, not a guarantee, so it's
+    // still enforced here.
+    const nonImage = files.find((file) => !file.type.startsWith("image/"));
+    if (nonImage) {
+      return NextResponse.json({ error: "Only photos can be uploaded." }, { status: 400 });
+    }
+
     const results = [];
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer());
       const key = buildStorageKey({ bookingId: booking.id, kind: "raw", filename: file.name });
       await uploadFile(key, buffer, file.type);
-
-      const fileType = file.type.startsWith("video") ? "video" : "photo";
 
       const { data: uploadRow, error: insertError } = await supabase
         .from("uploads")
@@ -53,7 +59,7 @@ export async function POST(req, { params }) {
           booking_id: booking.id,
           uploader_name: uploaderName,
           storage_key: key,
-          file_type: fileType,
+          file_type: "photo",
         })
         .select()
         .single();

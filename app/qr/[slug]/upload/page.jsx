@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Camera, Upload, Check, Image as ImageIcon, Film, Loader2, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle, ArrowLeft } from "lucide-react";
 
 // A dropped connection (weak WiFi/cell signal at a real event, common with
 // a room full of phones) fails a request before it ever reaches our
@@ -177,16 +177,16 @@ export default function HostUploadPage() {
 
               <label htmlFor="host-file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "32px 16px", borderRadius: "12px", border: "1.5px dashed #C9BFA9", cursor: "pointer", textAlign: "center" }}>
                 <Camera size={28} color="#C97A3D" strokeWidth={1.6} />
-                <span style={{ fontSize: "15px", fontWeight: 500 }}>{files.length > 0 ? `${files.length} file${files.length > 1 ? "s" : ""} ready` : "Tap to add photos or video"}</span>
+                <span style={{ fontSize: "15px", fontWeight: 500 }}>{files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} ready` : "Tap to add photos"}</span>
                 <span style={{ fontSize: "13px", color: "#6b655c" }}>Straight from your camera roll</span>
-                <input id="host-file-input" type="file" accept="image/*,video/*" multiple onChange={handleFiles} style={{ display: "none" }} />
+                <input id="host-file-input" type="file" accept="image/*" multiple onChange={handleFiles} style={{ display: "none" }} />
               </label>
 
               {files.length > 0 && (
                 <div style={{ marginTop: "14px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                   {files.slice(0, 6).map((f, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", background: "#FAF7F2", padding: "5px 9px", borderRadius: "999px", color: "#4a4642" }}>
-                      {f.type.startsWith("video") ? <Film size={12} /> : <ImageIcon size={12} />}
+                      <ImageIcon size={12} />
                       {f.name.length > 14 ? f.name.slice(0, 12) + "…" : f.name}
                     </div>
                   ))}

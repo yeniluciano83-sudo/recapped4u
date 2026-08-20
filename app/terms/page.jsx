@@ -36,7 +36,7 @@ export default function TermsPage() {
         </div>
 
         <Section title="What we provide">
-          <p>Recapped For You turns photos and videos your event's guests upload into an edited recap video and curated photo gallery. Turnaround times we quote (a few days on Classic/Signature, 24 hours on Luxe without a Roast Reel) are estimates, not guarantees — delivery can take longer if guest uploads arrive late or in unusually large volume.</p>
+          <p>Recapped For You turns photos your event's guests upload into an edited recap video and curated photo gallery. Turnaround times we quote (a few days on Classic/Signature, 24 hours on Luxe without a Roast Reel) are estimates, not guarantees — delivery can take longer if guest uploads arrive late or in unusually large volume.</p>
         </Section>
 
         <Section title="Guest-uploaded content">
@@ -50,7 +50,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="Acceptable use">
-          <p>Don't upload content that's illegal, sexually explicit or contains nudity, infringes someone else's rights, or that you don't have permission to share. We can remove content, reject specific photos or videos, or decline to process a booking that violates this.</p>
+          <p>Don't upload content that's illegal, sexually explicit or contains nudity, infringes someone else's rights, or that you don't have permission to share. We can remove content, reject specific photos, or decline to process a booking that violates this.</p>
           <p>The host booking the event must be at least 18 years old. If any guest uploads include a photo or video of a minor, the host is responsible for confirming that a parent or guardian has consented to that minor appearing in the event recap.</p>
         </Section>
 

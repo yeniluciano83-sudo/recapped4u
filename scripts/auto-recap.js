@@ -2,18 +2,15 @@
  * Recapped For You — Fully Automated Recap Pipeline
  * ----------------------------------------------------
  * Given a booking ID, this script does everything end-to-end with no
- * human editing step:
+ * human editing step. Photos only -- guests upload photos, never video
+ * (enforced at the upload API), so there's no raw footage to incorporate:
  *
- *   1. Pulls the booking's raw uploads (photos AND video clips) from
- *      Supabase + R2
- *   2. Sends each photo -- and a representative frame from each video clip
- *      -- to Claude for curation (score + shortlist)
+ *   1. Pulls the booking's raw uploaded photos from Supabase + R2
+ *   2. Sends each photo to Claude for curation (score + shortlist)
  *   3. Auto-enhances the shortlisted photos (color, sharpness, style grade)
  *   4. Assembles an automated slideshow video (Ken Burns + crossfades + a
- *      royalty-free soundtrack matched to the booking's editing style),
- *      with the best guest video clips appended after the photo montage
- *   5. Uploads the finished photos + clips + video to R2 under a
- *      deliverable/ path
+ *      royalty-free soundtrack matched to the booking's editing style)
+ *   5. Uploads the finished photos + video to R2 under a deliverable/ path
  *   6. Writes the `deliverables` row and flips the booking to "delivered"
  *
  * Run: node scripts/auto-recap.js <bookingId>
@@ -54,11 +51,6 @@ const STYLE_MUSIC = {
   retro: path.join(__dirname, "..", "lib", "music", "cinematic.mp3"),
   highlight: path.join(__dirname, "..", "lib", "music", "upbeat.mp3"),
 };
-
-// Video clips get their own, smaller cap -- a handful of the best
-// guest-recorded moments, not every clip anyone uploaded, so the final
-// video's length and this run's Claude spend both stay bounded.
-const MAX_VIDEO_CLIPS = 5;
 
 // Signature/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -131,49 +123,13 @@ async function deleteFromR2(key) {
   await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
 }
 
-// Used to recover things a prior run already uploaded (video clips, the
-// social cut's photo selection) without re-analyzing/re-enhancing them --
-// both survive a roast-approval pause this way, since finalizeDelivery may
-// run in a completely separate process invocation after approval.
+// Used to recover the social cut's photo selection a prior run already
+// uploaded, without re-analyzing/re-enhancing it -- it survives a
+// roast-approval pause this way, since finalizeDelivery may run in a
+// completely separate process invocation after approval.
 async function listDeliverableFiles(bookingId, prefix) {
   const res = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: `deliverable/${bookingId}/${prefix}` }));
   return (res.Contents || []).map((o) => o.Key).sort();
-}
-
-// Claude's vision input doesn't accept video directly -- pull one
-// representative frame so a video clip can be scored with the same
-// photo-analysis call as an actual photo. Uses a fixed 1s input-side seek
-// (via -ss before -i, not fluent-ffmpeg's .screenshots() helper) because
-// this project only bundles ffmpeg-static, not ffprobe -- .screenshots()'s
-// percentage-based timestamps require ffprobe to resolve the clip's
-// duration first, which isn't available here. A fixed offset needs no
-// duration lookup at all. ffmpeg clamps automatically for clips under 1s.
-function extractVideoFrame(videoBuffer) {
-  return new Promise((resolve, reject) => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "frame-"));
-    const videoPath = path.join(tmpDir, "clip.mp4");
-    const framePath = path.join(tmpDir, "frame.jpg");
-    fs.writeFileSync(videoPath, videoBuffer);
-    ffmpeg(videoPath)
-      .inputOptions(["-ss", "1"])
-      .outputOptions(["-frames:v", "1", "-vf", "scale=1280:-1"])
-      .output(framePath)
-      .on("end", () => {
-        try {
-          const buffer = fs.readFileSync(framePath);
-          resolve(buffer);
-        } catch (err) {
-          reject(err);
-        } finally {
-          fs.rmSync(tmpDir, { recursive: true, force: true });
-        }
-      })
-      .on("error", (err) => {
-        fs.rmSync(tmpDir, { recursive: true, force: true });
-        reject(err);
-      })
-      .run();
-  });
 }
 
 async function callClaude(messages, maxTokens = 1024) {
@@ -196,11 +152,7 @@ function parseJson(raw) {
 }
 
 // `flagged`/`flag_reason` implement the "Acceptable use" terms (sexually
-// explicit content or nudity isn't allowed) -- checked on every photo and,
-// for video clips, the one representative frame analyzePhoto is already
-// called with (see the two call sites below). A single frame can't catch
-// explicit content elsewhere in a clip, but that's the same sampling
-// tradeoff the existing quality/emotion scoring already makes for video.
+// explicit content or nudity isn't allowed) -- checked on every photo.
 async function analyzePhoto(buffer, mediaType) {
   const prompt = `Analyze this event photo. Also check whether it contains nudity or sexually explicit content that would be inappropriate for a general event recap shared with the host and their guests. Respond ONLY with JSON: {"technical_quality": 1-10, "emotional_strength": 1-10, "moment_type": "string", "notes": "short phrase", "flagged": boolean, "flag_reason": "short phrase or null"}`;
   const raw = await callClaude([
@@ -302,24 +254,10 @@ async function finishAfterRoastApproval(booking) {
     roastLines.push(entry.line);
   }
 
-  // Video clips never go through roast approval -- they were already
-  // uploaded to R2 earlier in the run that generated this script. Recover
-  // them by listing rather than re-analyzing, so resuming doesn't pay for
-  // clip analysis twice.
-  const clipKeys = await listDeliverableFiles(bookingId, "clip-");
-  const clipLocalPaths = [];
-  for (const key of clipKeys) {
-    const buffer = await downloadFromR2(key);
-    const localPath = path.join(tmpDir, path.basename(key));
-    fs.writeFileSync(localPath, buffer);
-    clipLocalPaths.push(localPath);
-  }
-  if (clipKeys.length > 0) console.log(`Recovered ${clipKeys.length} previously-uploaded video clip(s).`);
-
   const enhancedKeys = roastScript.script.map((entry) => entry.storage_key);
   const musicPath = STYLE_MUSIC[booking.style];
   const socialMusicPath = STYLE_MUSIC[booking.social_style || booking.style];
-  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath);
 }
 
 async function runFullPipeline(booking) {
@@ -332,9 +270,8 @@ async function runFullPipeline(booking) {
   if (!uploads || uploads.length === 0) throw new Error("No uploads found for this booking");
 
   const photoUploads = uploads.filter((u) => u.file_type === "photo");
-  const videoUploads = uploads.filter((u) => u.file_type === "video");
 
-  console.log(`Found ${photoUploads.length} raw photos and ${videoUploads.length} video clips. Downloading and analyzing...`);
+  console.log(`Found ${photoUploads.length} raw photos. Downloading and analyzing...`);
 
   const analyzed = [];
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-"));
@@ -370,32 +307,14 @@ async function runFullPipeline(booking) {
     }
   }
 
-  const analyzedClips = [];
-  for (const upload of videoUploads) {
-    try {
-      const buffer = await downloadFromR2(upload.storage_key);
-      const frameBuffer = await extractVideoFrame(buffer);
-      const analysis = await analyzePhoto(frameBuffer, "image/jpeg");
-      if (analysis.flagged) {
-        await rejectFlaggedUpload(upload, analysis, " (video)");
-        continue;
-      }
-      analyzedClips.push({ upload, buffer, analysis });
-      console.log(`  ✓ ${upload.storage_key} (video) — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
-    } catch (err) {
-      console.error(`  ✗ ${upload.storage_key} (video) — analysis failed: ${err.message}`);
-    }
-  }
-
   const shortlist = await buildShortlist(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
-  const clipShortlist = await buildShortlist(analyzedClips, MAX_VIDEO_CLIPS);
-  console.log(`Shortlisted ${shortlist.length} photos and ${clipShortlist.length} video clip(s) for the final cut.`);
+  console.log(`Shortlisted ${shortlist.length} photos for the final cut.`);
 
-  if (shortlist.length === 0 && clipShortlist.length === 0) {
+  if (shortlist.length === 0) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
     await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId);
     throw new Error(
-      `No photos or video clips met the quality threshold for booking ${bookingId} -- reverted status to "collecting".`
+      `No photos met the quality threshold for booking ${bookingId} -- reverted status to "collecting".`
     );
   }
 
@@ -419,9 +338,9 @@ async function runFullPipeline(booking) {
 
   // The social cut's photo selection can include host-starred photos that
   // didn't make the main shortlist -- upload the whole selection under its
-  // own R2 prefix now (same reasoning as video clips: this survives a
-  // roast-approval pause, since finalizeDelivery recovers it by listing
-  // rather than needing anything still in memory from this run).
+  // own R2 prefix now, so it survives a roast-approval pause: finalizeDelivery
+  // recovers it by listing rather than needing anything still in memory
+  // from this run.
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier)) {
     const socialSelection = buildSocialSelection(analyzed, shortlist);
     console.log(`Uploading ${socialSelection.length} photo(s) for the social cut selection...`);
@@ -438,23 +357,6 @@ async function runFullPipeline(booking) {
       // as an image input -- confirmed live reprocessing a real booking.
       await uploadToR2(`deliverable/${bookingId}/social-photo-${i + 1}.jpg`, enhanced, "image/jpeg");
     }
-  }
-
-  // Video clips don't go through photo-style enhancement (that's sharp's
-  // image-only pipeline) -- upload as-is. They're stored now, before the
-  // roast-approval pause below, so finishAfterRoastApproval can recover
-  // them later via listDeliverableFiles without re-downloading/re-analyzing.
-  console.log("Uploading shortlisted video clips...");
-  const clipLocalPaths = [];
-  for (let i = 0; i < clipShortlist.length; i++) {
-    const { buffer, upload } = clipShortlist[i];
-    const ext = path.extname(upload.storage_key).toLowerCase() || ".mp4";
-    const key = `deliverable/${bookingId}/clip-${i + 1}${ext}`;
-    await uploadToR2(key, buffer, ext === ".mov" ? "video/quicktime" : "video/mp4");
-
-    const localPath = path.join(tmpDir, `clip-${i + 1}${ext}`);
-    fs.writeFileSync(localPath, buffer);
-    clipLocalPaths.push(localPath);
   }
 
   if (booking.roast_enabled) {
@@ -494,10 +396,10 @@ async function runFullPipeline(booking) {
 
   const musicPath = STYLE_MUSIC[booking.style];
   const socialMusicPath = STYLE_MUSIC[booking.social_style || booking.style];
-  await finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name, booking.tier, socialMusicPath);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name, booking.tier, socialMusicPath);
 }
 
-async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath) {
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath) {
   console.log("Assembling automated slideshow video...");
   const videoLocalPath = path.join(tmpDir, "recap.mp4");
 
@@ -506,10 +408,9 @@ async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedK
   // many photos made the shortlist. Same duration-solving math as the
   // social cut; see the comment further down for the formula itself.
   const fullCutTarget = FULL_CUT_TARGET_SECONDS[tier];
-  const fullCutSlotCount = localPaths.length + clipLocalPaths.length;
-  const fullCutSlotSeconds = fullCutTarget ? (fullCutTarget + (fullCutSlotCount - 1) * 0.6) / fullCutSlotCount : undefined;
+  const fullCutSlotSeconds = fullCutTarget ? (fullCutTarget + (localPaths.length - 1) * 0.6) / localPaths.length : undefined;
 
-  await assembleSlideshow(localPaths, clipLocalPaths, videoLocalPath, musicPath, roastLines, fullCutSlotSeconds);
+  await assembleSlideshow(localPaths, [], videoLocalPath, musicPath, roastLines, fullCutSlotSeconds);
   const videoBuffer = fs.readFileSync(videoLocalPath);
   const videoKey = `deliverable/${bookingId}/full-cut.mp4`;
   await uploadToR2(videoKey, videoBuffer, "video/mp4");
@@ -592,7 +493,7 @@ async function finalizeDelivery(bookingId, localPaths, clipLocalPaths, enhancedK
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 
-  console.log(`Done. Booking ${bookingId} marked delivered with ${enhancedKeys.length} photos, ${clipLocalPaths.length} video clip(s), and a full-cut video.`);
+  console.log(`Done. Booking ${bookingId} marked delivered with ${enhancedKeys.length} photos and a full-cut video.`);
 }
 
 if (require.main === module) {

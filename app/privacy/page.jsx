@@ -37,12 +37,12 @@ export default function PrivacyPage() {
 
         <Section title="What we collect">
           <p><strong style={{ color: HEADING }}>From the person booking:</strong> name, email address, event type and date, optional guest count, and any notes or style preferences you give us in the booking form.</p>
-          <p><strong style={{ color: HEADING }}>From event guests:</strong> the photos and videos they upload via the QR code or link, and optionally the name they enter so we know who to thank.</p>
+          <p><strong style={{ color: HEADING }}>From event guests:</strong> the photos they upload via the QR code or link, and optionally the name they enter so we know who to thank.</p>
           <p><strong style={{ color: HEADING }}>Payment:</strong> card details are entered directly on Stripe's own hosted checkout page. We never see or store your card number — our servers only receive a payment confirmation from Stripe.</p>
         </Section>
 
         <Section title="How we use it">
-          <p>To build your recap video and photo gallery, send booking/upload confirmations and reminders, process payment and refunds, and follow up on custom package inquiries. We don't use your photos, videos, or contact details for advertising, and we don't sell them.</p>
+          <p>To build your recap video and photo gallery, send booking/upload confirmations and reminders, process payment and refunds, and follow up on custom package inquiries. We don't use your photos or contact details for advertising, and we don't sell them.</p>
         </Section>
 
         <Section title="Who we share it with">
@@ -50,14 +50,14 @@ export default function PrivacyPage() {
           <ul style={{ margin: "8px 0 0", paddingLeft: 20 }}>
             <li>Stripe — payment processing and refunds</li>
             <li>Resend — sending booking, reminder, and delivery emails</li>
-            <li>Cloudflare — storing uploaded photos and videos</li>
+            <li>Cloudflare — storing uploaded photos</li>
             <li>Supabase — hosting the database that tracks bookings and uploads</li>
           </ul>
           <p style={{ marginTop: 8 }}>None of these providers get to use your data for their own purposes — they only process it on our behalf.</p>
         </Section>
 
         <Section title="How long we keep it">
-          <p><strong style={{ color: HEADING }}>Raw guest uploads</strong> (the original photos/videos guests submit) are permanently deleted 30 days after your final recap is delivered — once the curated gallery and video are ready, we don't need the originals anymore.</p>
+          <p><strong style={{ color: HEADING }}>Raw guest uploads</strong> (the original photos guests submit) are permanently deleted 30 days after your final recap is delivered — once the curated gallery and video are ready, we don't need the originals anymore.</p>
           <p><strong style={{ color: HEADING }}>Your delivered gallery and video</strong> stay accessible based on your tier: Free's gallery is downloadable for 7 days after delivery, then permanently deleted; Classic for 2 months; Signature for 4 months; Luxe for 6 months.</p>
           <p><strong style={{ color: HEADING }}>Custom package inquiries</strong> don't create a stored booking record at all — the details you submit are sent directly to us by email to follow up with you.</p>
         </Section>

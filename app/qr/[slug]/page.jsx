@@ -60,7 +60,7 @@ export default function QrSharePage() {
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: eventName, text: `Add your photos and videos to ${eventName}`, url: uploadUrl });
+        await navigator.share({ title: eventName, text: `Add your photos to ${eventName}`, url: uploadUrl });
       } catch (err) {
         // user cancelled the native share sheet — nothing to do
       }

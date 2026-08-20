@@ -16,7 +16,7 @@ const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
     features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "Guests have 24hrs after the event to upload", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Downloadable gallery for 7 days"] },
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
-    features: ["Unlimited photo & video uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "Curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
+    features: ["Unlimited photo uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "Curated photo gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours", highlight: true,
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for any event type (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"] },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
@@ -52,15 +52,15 @@ const EVENT_TYPES = [
 const TIER_ICONS = { free: Gift, standard: Camera, premium: Star, keepsake: Crown };
 
 const FAQS = [
-  { q: "Is this real footage, or generated?", a: "It's all real — every photo and video clip is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
-  { q: "Will our photos be shared with anyone else?", a: "No. Your photos and videos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
+  { q: "Is this real footage, or generated?", a: "It's all real — every photo is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
+  { q: "Will our photos be shared with anyone else?", a: "No. Your photos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
   { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes 24-hour priority delivery (without the Roast Reel add-on, since that step waits on your approval)." },
   { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 2 months on Classic, 4 months on Signature, and 6 months on Luxe. Free's gallery and video are downloadable for 7 days after delivery, after which they're permanently removed. Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy. Your pictures, videos, and data are never sold to a third party." },
   { q: "Can guests upload without downloading an app?", a: "Yes — guests just scan a QR code or tap a link, no account or app required." },
   { q: "Is there a limit on how many guests can upload?", a: "No hard limit — the QR link works for any size gathering, from a small family dinner to a large corporate event." },
   { q: "What if we need to cancel or reschedule?", a: "Your booking confirmation email includes both a reschedule link and a cancellation link. Reschedule for free anytime up to 24 hours before your event — your guest upload link and QR code stay the same. Cancel more than 24 hours before your event for a full refund automatically; cancellations inside 24 hours aren't eligible for a refund since guest uploads may already be underway. Either one inside that 24-hour window just needs a reply to your confirmation email instead." },
   { q: "How do we pay?", a: "Payment is collected securely at booking through Stripe. We accept all major credit and debit cards." },
-  { q: "Can we pick which photos and clips make the final cut?", a: "Our automated curation selects the best moments for your main video — those same photos also become your photo gallery. On Signature and Luxe, you can also star must-include photos for your social cut from your QR share page." },
+  { q: "Can we pick which photos make the final cut?", a: "Our automated curation selects the best moments for your main video — those same photos also become your photo gallery. On Signature and Luxe, you can also star must-include photos for your social cut from your QR share page." },
   { q: "What editing styles can I choose from?", a: "Cinematic (slow, emotional, warm color grade), Upbeat (fast cuts, high energy, beat-synced), Documentary (minimal, candid, true to the moment), Nostalgic / Retro (warm film grain, vintage titles, scrapbook feel), and Highlight Reel (bold text call-outs, punchy sports-style energy). On Signature and Luxe, you can also pick a separate style just for your social cut." },
   { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests. Available for any event type." },
 ];
@@ -276,7 +276,7 @@ export default function HomePage() {
           Your event, recapped — no photographer or videographer needed.
         </h1>
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
-          We turn the photos and videos your own guests already took into one polished recap video and gallery.
+          We turn the photos your own guests already took into one polished recap video and gallery.
         </p>
         <a href="/booking" style={{ display: "inline-flex", alignItems: "center", gap: 8, backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 15, fontWeight: 700, padding: "14px 26px", borderRadius: 10, textDecoration: "none", boxShadow: "0 8px 22px rgba(201,122,61,0.28)" }}>
           Book Your Event <ChevronRight size={17} />
@@ -303,7 +303,7 @@ export default function HomePage() {
           {[
             { n: "1", icon: Calendar, t: "Book", d: "Pick your package and event date — takes less than 2 minutes." },
             { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Share your QR code digitally or print it on cards. Guests add photos & video with zero apps and zero fuss, and you can toss in your own from the same page." },
-            { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, every clip is scored for focus, light, and energy, then cut, graded, and paced into your story — automatically, start to finish." },
+            { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, every photo is scored for focus, light, and energy, then cut, graded, and paced into your story — automatically, start to finish." },
             { n: "4", icon: PartyPopper, t: "It lands in your inbox", d: "A polished video and gallery, ready to relive, share, and keep." },
           ].map((s, i, arr) => {
             const Icon = s.icon;
@@ -323,7 +323,7 @@ export default function HomePage() {
         </div>
         <div style={{ marginTop: 8, display: "inline-flex", alignItems: "flex-start", gap: 8, fontSize: 13.5, color: "#6b655c", lineHeight: 1.6, maxWidth: 560, background: "#FBEEE0", border: "1px solid #E4DED2", borderRadius: 10, padding: "12px 14px" }}>
           <Check size={15} color="#7A8B76" style={{ flexShrink: 0, marginTop: 2 }} />
-          <span>Nothing here is synthetic or computer-generated — every photo and clip is real footage from your event. Our process finds the best moments in hundreds of files, then automatically cuts, grades, and paces them into your story.</span>
+          <span>Nothing here is synthetic or computer-generated — every photo is real footage from your event. Our process finds the best moments in hundreds of files, then automatically cuts, grades, and paces them into your story.</span>
         </div>
       </Section>
 
@@ -454,7 +454,7 @@ export default function HomePage() {
             Somewhere across your guests' phones is the real story of your event — the candid laugh, the toast, the moment the whole room lit up at once.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
-            It's just scattered across many different camera rolls, most of it destined to be seen once and forgotten. Recapped For You gathers it, sorts through it, and hands it back as a film worth watching and a photo gallery worth keeping — no stranger holding a camera all night. Every photo and clip is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cut, graded, and paced automatically.
+            It's just scattered across many different camera rolls, most of it destined to be seen once and forgotten. Recapped For You gathers it, sorts through it, and hands it back as a film worth watching and a photo gallery worth keeping — no stranger holding a camera all night. Every photo is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cut, graded, and paced automatically.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7 }}>
             Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.

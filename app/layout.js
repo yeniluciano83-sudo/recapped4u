@@ -8,13 +8,13 @@ export const metadata = {
   description: "Curated event recap videos and photo galleries.",
   openGraph: {
     title: "Recapped For You",
-    description: "Your event, recapped — no photographer or videographer needed.",
+    description: "Your event, recapped — no photographer needed.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Recapped For You",
-    description: "Your event, recapped — no photographer or videographer needed.",
+    description: "Your event, recapped — no photographer needed.",
   },
 };
 

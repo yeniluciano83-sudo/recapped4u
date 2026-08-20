@@ -273,7 +273,7 @@ export default function HomePage() {
           Event recap videos & photo galleries
         </p>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 18px" }}>
-          Your event, recapped — no photographer or videographer needed.
+          Your event, recapped — no photographer needed.
         </h1>
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
           We turn the photos your own guests already took into one polished recap video and gallery.

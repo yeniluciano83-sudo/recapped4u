@@ -169,11 +169,6 @@ export default function HomePage() {
           background-size: cover; background-position: center 30%; background-color: #E4DED2;
           box-shadow: inset 0 0 0 1px rgba(33,31,29,0.06); overflow: hidden;
         }
-        .event-badge {
-          position: absolute; left: 6px; top: 6px; width: 24px; height: 24px; border-radius: 50%;
-          background: #FFFFFF; box-shadow: 0 2px 6px rgba(33,31,29,0.15);
-          display: flex; align-items: center; justify-content: center; font-size: 13px; z-index: 1;
-        }
         .event-flash { position: absolute; inset: 0; background: #FFFFFF; opacity: 0; }
         .event-flash-1 { animation: eventFlash1 10s ease-in-out infinite; }
         .event-flash-2 { animation: eventFlash2 10s ease-in-out infinite; }
@@ -426,7 +421,7 @@ export default function HomePage() {
           {[
             { n: "1", icon: Calendar, t: "Book", d: "Pick your package and event date — takes less than 2 minutes." },
             { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Share your QR code digitally or print it on cards. Guests add photos with zero apps and zero fuss, and you can toss in your own from the same page." },
-            { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, every photo is scored for focus, light, and energy, then cut, graded, and paced into your story — automatically, start to finish." },
+            { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, hundreds of photos become one story. We find the moments worth keeping — the real laugh, not the posed one — then cut, grade, and pace them together automatically, start to finish." },
             { n: "4", icon: PartyPopper, t: "It lands in your inbox", d: "A polished video and gallery, ready to relive, share, and keep." },
           ].map((s, i, arr) => {
             const Icon = s.icon;
@@ -601,42 +596,41 @@ export default function HomePage() {
   );
 }
 
-// Illustrates the actual thing this product does: guests at different kinds
-// of events snap phone photos, and those photos get cut into one polished
-// video. The stage card shows the guest holding their phone up
-// (stagePhoto) -- what the polaroid and video show is a DIFFERENT photo,
-// the actual moment that guest is capturing (scenePhotoRaw / scenePhotoHQ),
-// not another shot of the guest themselves -- the same distinction as a
-// photographer versus what's in their frame. Stage cards and polaroids use
-// a deliberately degraded, low-quality version of each photo, since that
-// is what a guest's raw phone shot actually looks like. The video
-// slideshow at the bottom is the only place the sharp, high-quality
-// version shows up, since that is the finished, polished output -- the
-// whole point being shown, not just described. These stills are
-// AI-generated portraits (not real customer photos, not real people) --
-// picked deliberately generic/anonymous rather than anything that could
-// be mistaken for actual event footage, since real, unedited guest
-// uploads are what the product itself delivers (see the "Real footage,
-// never generated" badge above).
+// Illustrates the actual thing this product does: ten guests at the SAME
+// daytime backyard party each snap a phone photo, and those photos get cut
+// into one polished video. The stage card shows the guest holding their
+// phone up (stagePhoto) -- what the polaroid and video show is a DIFFERENT
+// photo, the actual moment that guest is capturing (scenePhotoRaw /
+// scenePhotoHQ), not another shot of the guest themselves -- the same
+// distinction as a photographer versus what is in their frame. Stage cards
+// and polaroids use an ordinary, unedited-looking version of each photo --
+// a real casual phone photo, not a professional shot, but not artificially
+// degraded either. The video slideshow at the bottom is the only place the
+// sharp, high-quality version shows up, since that is the finished,
+// polished output -- the whole point being shown, not just described.
+// These stills are AI-generated portraits (not real customer photos, not
+// real people) -- picked deliberately generic/anonymous rather than
+// anything that could be mistaken for actual event footage, since real,
+// unedited guest uploads are what the product itself delivers (see the
+// Real footage, never generated badge above).
 const EVENT_SCENES = [
-  { id: 1, x: 0, y: 0, emoji: "💍", label: "Wedding", stagePhoto: "/images/hero-1-raw.jpg", scenePhotoRaw: "/images/scene-1-raw.jpg", scenePhotoHQ: "/images/scene-1.jpg" },
-  { id: 2, x: 104, y: 0, emoji: "🎂", label: "Birthday", stagePhoto: "/images/hero-2-raw.jpg", scenePhotoRaw: "/images/scene-2-raw.jpg", scenePhotoHQ: "/images/scene-2.jpg" },
-  { id: 3, x: 208, y: 0, emoji: "🎉", label: "Party", stagePhoto: "/images/hero-3-raw.jpg", scenePhotoRaw: "/images/scene-3-raw.jpg", scenePhotoHQ: "/images/scene-3.jpg" },
-  { id: 4, x: 312, y: 0, emoji: "🎓", label: "Graduation", stagePhoto: "/images/hero-4-raw.jpg", scenePhotoRaw: "/images/scene-4-raw.jpg", scenePhotoHQ: "/images/scene-4.jpg" },
-  { id: 5, x: 416, y: 0, emoji: "🎊", label: "Celebration", stagePhoto: "/images/hero-5-raw.jpg", scenePhotoRaw: "/images/scene-5-raw.jpg", scenePhotoHQ: "/images/scene-5.jpg" },
-  { id: 6, x: 0, y: 157, emoji: "🏡", label: "Housewarming", stagePhoto: "/images/hero-6-raw.jpg", scenePhotoRaw: "/images/scene-6-raw.jpg", scenePhotoHQ: "/images/scene-6.jpg" },
-  { id: 7, x: 104, y: 157, emoji: "💐", label: "Engagement", stagePhoto: "/images/hero-7-raw.jpg", scenePhotoRaw: "/images/scene-7-raw.jpg", scenePhotoHQ: "/images/scene-7.jpg" },
-  { id: 8, x: 208, y: 157, emoji: "💼", label: "Corporate event", stagePhoto: "/images/hero-8-raw.jpg", scenePhotoRaw: "/images/scene-8-raw.jpg", scenePhotoHQ: "/images/scene-8.jpg" },
-  { id: 9, x: 312, y: 157, emoji: "🍼", label: "Baby shower", stagePhoto: "/images/hero-9-raw.jpg", scenePhotoRaw: "/images/scene-9-raw.jpg", scenePhotoHQ: "/images/scene-9.jpg" },
-  { id: 10, x: 416, y: 157, emoji: "🤝", label: "Reunion", stagePhoto: "/images/hero-10-raw.jpg", scenePhotoRaw: "/images/scene-10-raw.jpg", scenePhotoHQ: "/images/scene-10.jpg" },
+  { id: 1, x: 0, y: 0, stagePhoto: "/images/hero-1-raw.jpg", scenePhotoRaw: "/images/scene-1-raw.jpg", scenePhotoHQ: "/images/scene-1.jpg" },
+  { id: 2, x: 104, y: 0, stagePhoto: "/images/hero-2-raw.jpg", scenePhotoRaw: "/images/scene-2-raw.jpg", scenePhotoHQ: "/images/scene-2.jpg" },
+  { id: 3, x: 208, y: 0, stagePhoto: "/images/hero-3-raw.jpg", scenePhotoRaw: "/images/scene-3-raw.jpg", scenePhotoHQ: "/images/scene-3.jpg" },
+  { id: 4, x: 312, y: 0, stagePhoto: "/images/hero-4-raw.jpg", scenePhotoRaw: "/images/scene-4-raw.jpg", scenePhotoHQ: "/images/scene-4.jpg" },
+  { id: 5, x: 416, y: 0, stagePhoto: "/images/hero-5-raw.jpg", scenePhotoRaw: "/images/scene-5-raw.jpg", scenePhotoHQ: "/images/scene-5.jpg" },
+  { id: 6, x: 0, y: 157, stagePhoto: "/images/hero-6-raw.jpg", scenePhotoRaw: "/images/scene-6-raw.jpg", scenePhotoHQ: "/images/scene-6.jpg" },
+  { id: 7, x: 104, y: 157, stagePhoto: "/images/hero-7-raw.jpg", scenePhotoRaw: "/images/scene-7-raw.jpg", scenePhotoHQ: "/images/scene-7.jpg" },
+  { id: 8, x: 208, y: 157, stagePhoto: "/images/hero-8-raw.jpg", scenePhotoRaw: "/images/scene-8-raw.jpg", scenePhotoHQ: "/images/scene-8.jpg" },
+  { id: 9, x: 312, y: 157, stagePhoto: "/images/hero-9-raw.jpg", scenePhotoRaw: "/images/scene-9-raw.jpg", scenePhotoHQ: "/images/scene-9.jpg" },
+  { id: 10, x: 416, y: 157, stagePhoto: "/images/hero-10-raw.jpg", scenePhotoRaw: "/images/scene-10-raw.jpg", scenePhotoHQ: "/images/scene-10.jpg" },
 ];
 
 function EventPhotoScene() {
   return (
-    <div className="event-scene" role="img" aria-label="Animated illustration of ten guests at different events each taking a phone photo of the moment in front of them, which falls into a monitor screen as a polaroid, then plays as a polished video slideshow below it">
+    <div className="event-scene" role="img" aria-label="Animated illustration of ten guests at a daytime party each taking a phone photo of the moment in front of them, which falls into a monitor screen as a polaroid, then plays as a polished video slideshow below it">
       {EVENT_SCENES.map((s) => (
         <div key={s.id} className="event-stage" style={{ left: s.x, top: s.y, backgroundImage: `url(${s.stagePhoto})` }}>
-          <span className="event-badge" aria-hidden="true">{s.emoji}</span>
           <div className={`event-flash event-flash-${s.id}`} />
         </div>
       ))}

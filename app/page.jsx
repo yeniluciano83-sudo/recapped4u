@@ -1,11 +1,10 @@
 "use client";
 import React, { useState, useRef } from "react";
-import { Camera, Sparkles, Users, Check, ChevronRight, Play, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
   { id: "services", label: "Pricing" },
-  { id: "demo", label: "Demo" },
   { id: "events", label: "Event Types" },
   { id: "faq", label: "FAQ" },
   { id: "about", label: "About" },
@@ -164,107 +163,113 @@ export default function HomePage() {
           .contact-row { flex-direction: row; }
         }
 
-        .hero-reel { position: relative; width: 320px; height: 190px; margin: 0 auto; }
-        .hero-reel-card {
-          position: absolute; width: 50px; height: 64px; border-radius: 13px;
-          background: linear-gradient(160deg, #322F2A, #211F1D);
-          box-shadow: 0 6px 14px rgba(33,31,29,0.32), inset 0 0 0 1px rgba(255,255,255,0.06);
-          display: flex; flex-direction: column; align-items: center; padding: 5px 4px 6px;
-          animation-duration: 10s; animation-iteration-count: infinite; animation-timing-function: ease-in-out;
+        .event-scene { position: relative; width: 320px; height: 214px; margin: 40px auto 0; }
+        .event-stage {
+          position: absolute; top: 0; width: 96px; height: 140px; border-radius: 16px;
+          box-shadow: inset 0 0 0 1px rgba(33,31,29,0.06);
         }
-        .hero-reel-card-select { animation-name: heroReelSelect; }
-        .hero-reel-card-reject { animation-name: heroReelReject; }
-        .hero-reel-speaker { flex-shrink: 0; width: 14px; height: 3px; border-radius: 3px; background: rgba(255,255,255,0.22); margin-bottom: 4px; }
-        .hero-reel-screen {
-          flex: 1; width: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+        .event-badge {
+          position: absolute; left: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%;
+          background: #FFFFFF; box-shadow: 0 2px 6px rgba(33,31,29,0.15);
+          display: flex; align-items: center; justify-content: center; font-size: 12px;
         }
-        .hero-reel-emoji { font-size: 15px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
-        .hero-reel-badge {
-          position: absolute; top: -8px; right: -8px; background: #FFFFFF;
-          font-size: 9px; font-weight: 700; border-radius: 999px; padding: 2px 5px;
-          border: 1px solid #E4DED2; animation-duration: 10s; animation-iteration-count: infinite; animation-timing-function: ease-in-out;
+        .event-shadow { position: absolute; left: 31px; top: 132px; width: 34px; height: 7px; border-radius: 50%; background: rgba(33,31,29,0.14); }
+        .event-person-head { position: absolute; left: 35px; top: 32px; width: 26px; height: 26px; border-radius: 50%; background: #322F2A; }
+        .event-person-torso { position: absolute; left: 31px; top: 56px; width: 34px; height: 48px; border-radius: 17px 17px 11px 11px; background: #3A362F; }
+        .event-person-arm {
+          position: absolute; left: 58px; top: 18px; width: 9px; height: 40px; border-radius: 4.5px;
+          background: #3A362F; transform: rotate(35deg); transform-origin: bottom center;
         }
-        .hero-reel-badge-select { animation-name: heroReelBadgeSelect; color: #C97A3D; }
-        .hero-reel-badge-reject { animation-name: heroReelBadgeReject; color: #8a857d; }
-        .hero-reel-chip {
-          position: absolute; width: 22px; height: 28px; border-radius: 5px;
-          border: 2px solid #FFFFFF; box-shadow: 0 3px 8px rgba(33,31,29,0.28);
-          animation-name: heroReelChipJump; animation-duration: 10s; animation-iteration-count: infinite; animation-timing-function: ease-in-out;
+        .event-phone {
+          position: absolute; left: 65px; top: 5px; width: 15px; height: 24px; border-radius: 4px;
+          background: linear-gradient(160deg, #3A362F, #211F1D); box-shadow: 0 3px 8px rgba(33,31,29,0.3);
         }
-        .hero-reel-caption {
-          position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
-          background: #C97A3D; color: #211F1D; font-size: 9px; font-weight: 700;
-          padding: 3px 7px; border-radius: 999px; white-space: nowrap;
-          animation: heroReelCaption 10s ease-in-out infinite;
+        .event-phone-screen {
+          position: absolute; left: 2px; top: 2px; right: 2px; bottom: 4px; border-radius: 2px;
+          background: linear-gradient(160deg, #6b655c, #4a4642);
         }
-        .hero-reel-frame {
-          position: absolute; left: 4px; top: 124px; width: 312px; height: 44px;
-          border: 2px solid #C97A3D; border-radius: 10px; background: rgba(255,255,255,0.55);
-          animation: heroReelStrip 10s ease-in-out infinite;
+        .event-phone-1 .event-phone-screen { animation: eventFlash1 10s ease-in-out infinite; }
+        .event-phone-2 .event-phone-screen { animation: eventFlash2 10s ease-in-out infinite; }
+        .event-phone-3 .event-phone-screen { animation: eventFlash3 10s ease-in-out infinite; }
+
+        .event-frame {
+          position: absolute; left: 4px; top: 162px; width: 312px; height: 44px;
+          border: 2px solid #C97A3D; border-radius: 10px; background: rgba(255,255,255,0.6);
+          animation: eventFrameGlow 10s ease-in-out infinite;
         }
-        .hero-reel-frame-play {
+        .event-frame-play {
           position: absolute; bottom: -9px; right: -9px; width: 20px; height: 20px; border-radius: 50%;
           background: #C97A3D; color: #FFFFFF; font-size: 8px; display: flex; align-items: center; justify-content: center;
           padding-left: 1.5px; box-shadow: 0 2px 6px rgba(33,31,29,0.3);
         }
 
-        @keyframes heroReelSelect {
-          0%   { opacity: 0; transform: rotate(var(--rot)) scale(0.85); }
-          10%  { opacity: 1; transform: rotate(var(--rot)) scale(1); }
-          90%  { opacity: 1; transform: rotate(var(--rot)) scale(1); }
-          100% { opacity: 0; transform: rotate(var(--rot)) scale(0.85); }
+        .event-polaroid {
+          position: absolute; top: 167px; width: 28px; height: 34px; border-radius: 3px;
+          background: #FFFFFF; box-shadow: 0 4px 10px rgba(33,31,29,0.28);
+          padding: 2px 2px 6px; box-sizing: border-box;
         }
-        @keyframes heroReelChipJump {
-          0%, 48% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.5); }
-          55%  { opacity: 1; transform: translate(calc(var(--dx) * 0.45), calc(var(--dy) * 0.45 - 16px)) scale(0.85) rotate(8deg); }
-          64%  { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
-          90%  { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
-          98%  { opacity: 0; transform: translate(0,0) scale(1) rotate(0deg); }
-          100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.5); }
+        .event-polaroid-photo { width: 100%; height: 100%; border-radius: 1px; }
+        .event-polaroid-1 { left: 34px; animation: eventFly1 10s ease-in-out infinite; }
+        .event-polaroid-2 { left: 146px; animation: eventFly2 10s ease-in-out infinite; }
+        .event-polaroid-3 { left: 258px; animation: eventFly3 10s ease-in-out infinite; }
+
+        @keyframes eventFlash1 {
+          0%, 3% { background: linear-gradient(160deg, #6b655c, #4a4642); }
+          5% { background: #FFFFFF; }
+          8%, 100% { background: linear-gradient(160deg, #6b655c, #4a4642); }
         }
-        @keyframes heroReelReject {
-          0%   { opacity: 0; transform: rotate(var(--rot)) scale(0.85); }
-          16%  { opacity: 1; transform: rotate(var(--rot)) scale(1); }
-          40%  { opacity: 1; transform: rotate(var(--rot)) scale(1); }
-          54%  { opacity: 0; transform: rotate(var(--rot)) scale(0.5); }
-          100% { opacity: 0; transform: rotate(var(--rot)) scale(0.5); }
+        @keyframes eventFlash2 {
+          0%, 19% { background: linear-gradient(160deg, #6b655c, #4a4642); }
+          21% { background: #FFFFFF; }
+          24%, 100% { background: linear-gradient(160deg, #6b655c, #4a4642); }
         }
-        @keyframes heroReelBadgeSelect {
-          0%, 18% { opacity: 0; transform: scale(0.6); }
-          24% { opacity: 1; transform: scale(1); }
-          42% { opacity: 1; transform: scale(1); }
-          48%, 100% { opacity: 0; transform: scale(0.8); }
+        @keyframes eventFlash3 {
+          0%, 35% { background: linear-gradient(160deg, #6b655c, #4a4642); }
+          37% { background: #FFFFFF; }
+          40%, 100% { background: linear-gradient(160deg, #6b655c, #4a4642); }
         }
-        @keyframes heroReelBadgeReject {
-          0%, 18% { opacity: 0; transform: scale(0.6); }
-          24% { opacity: 1; transform: scale(1); }
-          38% { opacity: 1; transform: scale(1); }
-          52%, 100% { opacity: 0; transform: scale(0.8); }
+        @keyframes eventFly1 {
+          0%, 4% { opacity: 0; transform: translate(26px, -166px) scale(0.35) rotate(0deg); }
+          10% { opacity: 1; transform: translate(26px, -166px) scale(0.5) rotate(0deg); }
+          28% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-6deg); }
+          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-6deg); }
+          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-6deg); }
         }
-        @keyframes heroReelCaption {
-          0%, 64% { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.9); }
-          70% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-          84% { opacity: 1; }
-          90%, 100% { opacity: 0; transform: translateX(-50%) translateY(-2px) scale(0.95); }
+        @keyframes eventFly2 {
+          0%, 20% { opacity: 0; transform: translate(26px, -166px) scale(0.35) rotate(0deg); }
+          26% { opacity: 1; transform: translate(26px, -166px) scale(0.5) rotate(0deg); }
+          44% { opacity: 1; transform: translate(0, 0) scale(1) rotate(4deg); }
+          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(4deg); }
+          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(4deg); }
         }
-        @keyframes heroReelStrip {
-          0%, 46% { opacity: 0; }
-          56% { opacity: 1; }
-          92% { opacity: 1; }
-          96%, 100% { opacity: 0; }
+        @keyframes eventFly3 {
+          0%, 36% { opacity: 0; transform: translate(26px, -166px) scale(0.35) rotate(0deg); }
+          42% { opacity: 1; transform: translate(26px, -166px) scale(0.5) rotate(0deg); }
+          58% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-3deg); }
+        }
+        @keyframes eventFrameGlow {
+          0%, 50% { box-shadow: none; border-color: #C97A3D; }
+          58% { border-color: #C97A3D; box-shadow: 0 0 0 4px rgba(201,122,61,0.14); }
+          88% { box-shadow: 0 0 0 4px rgba(201,122,61,0.14); }
+          96%, 100% { box-shadow: none; }
+        }
+        .event-frame-play { opacity: 0; animation: eventPlayFade 10s ease-in-out infinite; }
+        @keyframes eventPlayFade {
+          0%, 54% { opacity: 0; }
+          62%, 90% { opacity: 1; }
+          97%, 100% { opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .hero-reel-card, .hero-reel-badge, .hero-reel-caption, .hero-reel-frame, .hero-reel-chip { animation: none !important; }
-          .hero-reel-card-select { opacity: 1; transform: rotate(var(--rot)) scale(1); }
-          .hero-reel-card-reject { display: none; }
-          .hero-reel-badge, .hero-reel-caption { opacity: 0; }
-          .hero-reel-frame { opacity: 1; }
-          .hero-reel-chip { opacity: 1; transform: translate(0,0) scale(1); }
+          .event-phone-screen, .event-frame, .event-polaroid, .event-frame-play { animation: none !important; }
+          .event-polaroid { opacity: 1; transform: translate(0,0) scale(1) rotate(-4deg); }
+          .event-frame-play { opacity: 1; }
         }
         @media (max-width: 380px) {
-          .hero-reel { transform: scale(0.86); transform-origin: top center; }
+          .event-scene { transform: scale(0.86); transform-origin: top center; }
         }
+
       `}</style>
 
       <main>
@@ -294,7 +299,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        <HeroReel />
+        <EventPhotoScene />
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
@@ -393,21 +398,6 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section id="demo" refs={sectionRefs} title="See a Sample Recap" icon={<Play size={20} color="#C97A3D" />}
-        subtitle="The best moments of your event, cut together automatically — here's a taste of what comes back.">
-        <div style={{ ...cardStyle, textAlign: "center", padding: "56px 24px", backgroundImage: "linear-gradient(135deg, #FBEEE0, #FFFFFF)" }}>
-          <div style={{ width: 68, height: 68, borderRadius: "50%", background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", boxShadow: "0 8px 24px rgba(201,122,61,0.32)" }}>
-            <Play size={26} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 3 }} />
-          </div>
-          <p style={{ fontSize: 14.5, fontWeight: 600, color: "#211F1D", margin: "0 0 4px" }}>Sample recap coming soon</p>
-          <p style={{ fontSize: 13, color: "#6b655c", margin: 0 }}>Check back shortly — we're putting together our first showcase.</p>
-        </div>
-
-        <p style={{ marginTop: 16, fontSize: 13, color: "#8a857d" }}>
-          Want to see real work sooner? Ask us for examples when you reach out.
-        </p>
-      </Section>
-
       <Section id="events" refs={sectionRefs} title="Events We Cover" icon={<Users size={20} color="#C97A3D" />} band="white"
         subtitle="If people are gathered and phones are out, we've probably got it covered.">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
@@ -493,84 +483,42 @@ export default function HomePage() {
   );
 }
 
-// Illustrates the actual thing this product does that no one else shows:
-// guest phone photos get auto-scored, the low scorers get dropped, and only
-// the winners get pulled into the final reel. Deliberately abstract/iconic
-// (colored cards + emoji, not photorealistic thumbnails) so it can never be
-// mistaken for a real customer's footage -- that would contradict the
-// "real footage, never generated" claim sitting right next to it.
-// A bold, deliberately gender-neutral palette for the "winning" cards'
-// screens (terracotta, teal, gold, coral, plum) -- no color reused across
-// them, none reaching for the pink/blue binary. Rejected cards' screens
-// stay muted gray on purpose, so the "these got cut" signal still reads
-// at a glance. The dark phone body around every screen is fixed/neutral,
-// so color variety lives entirely in the "photo" each phone is showing.
-const HERO_REEL_CARDS = [
-  { id: 1, kind: "select", emoji: "🎉", grad: "linear-gradient(160deg, #E8873D, #C2611E)", score: 94, scatter: { x: 15, y: 10, rot: -12 }, slot: 0 },
-  { id: 2, kind: "reject", emoji: "🙈", grad: "linear-gradient(160deg, #C9BFA9, #ADA28C)", score: 41, scatter: { x: 95, y: 25, rot: 8 } },
-  { id: 3, kind: "select", emoji: "🥂", grad: "linear-gradient(160deg, #2FA593, #1B7D6E)", score: 91, scatter: { x: 155, y: 5, rot: -6 }, slot: 1 },
-  { id: 4, kind: "select", emoji: "😂", grad: "linear-gradient(160deg, #E0AC42, #C68A1F)", score: 97, scatter: { x: 230, y: 18, rot: 14 }, slot: 2, roast: true },
-  { id: 5, kind: "reject", emoji: "😑", grad: "linear-gradient(160deg, #C9BFA9, #ADA28C)", score: 53, scatter: { x: 60, y: 68, rot: 5 } },
-  { id: 6, kind: "select", emoji: "📸", grad: "linear-gradient(160deg, #D9684F, #B6432C)", score: 88, scatter: { x: 140, y: 55, rot: -10 }, slot: 3 },
-  { id: 7, kind: "select", emoji: "✨", grad: "linear-gradient(160deg, #9269B5, #6F4C93)", score: 90, scatter: { x: 215, y: 65, rot: 10 }, slot: 4 },
-  { id: 8, kind: "select", emoji: "🎊", grad: "linear-gradient(160deg, #B5524A, #8F3D36)", score: 86, scatter: { x: 8, y: 58, rot: 9 }, slot: 5 },
-  { id: 9, kind: "select", emoji: "🎶", grad: "linear-gradient(160deg, #4A6FA5, #33517D)", score: 93, scatter: { x: 265, y: 45, rot: -8 }, slot: 6 },
+// Illustrates the actual thing this product does: guests at different kinds
+// of events snap phone photos, and those photos become the polaroid-style
+// clips that get cut into one video. Deliberately flat/illustrated (a
+// silhouette figure, not a photorealistic person) rather than a real or
+// AI-generated photo -- that would contradict the "real footage, never
+// generated" claim sitting right next to it, and no photo/image-generation
+// tool is available to produce one anyway.
+const EVENT_SCENES = [
+  { id: 1, x: 0, emoji: "💍", label: "Wedding", backdrop: "linear-gradient(160deg, #F3E4D0, #E4C8A0)", photo: "linear-gradient(160deg, #E8873D, #C2611E)" },
+  { id: 2, x: 112, emoji: "🎂", label: "Birthday", backdrop: "linear-gradient(160deg, #FBE0C4, #F0B87A)", photo: "linear-gradient(160deg, #D9684F, #B6432C)" },
+  { id: 3, x: 224, emoji: "🎉", label: "Party", backdrop: "linear-gradient(160deg, #DCEEE9, #B7DED3)", photo: "linear-gradient(160deg, #2FA593, #1B7D6E)" },
 ];
-// Phones stay put -- only their winning photo leaps out and lands in the
-// frame, since that's the actual metaphor (guests keep their phones; we
-// just borrow the photo). Slot positions are for the smaller landed photo
-// chip, re-centered under where each phone roughly sits.
-const CARD_W = 50, CARD_H = 64, CHIP_W = 22, CHIP_H = 28;
-const FRAME_SLOT_X = [4, 52, 101, 149, 197, 246, 294];
-const FRAME_TOP = 132;
 
-function HeroReel() {
+function EventPhotoScene() {
   return (
-    <div style={{ marginTop: 40 }}>
-      <p style={{ fontSize: 11.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8a857d", fontWeight: 600, marginBottom: 12 }}>
-        How your best moments get picked
-      </p>
-      <div className="hero-reel" role="img" aria-label="Animated illustration of scattered guest photos jumping out of phones into a video frame">
-        {HERO_REEL_CARDS.map((c) => {
-          const isSelected = c.kind === "select";
-          return (
-            <div key={c.id}
-              className={`hero-reel-card ${isSelected ? "hero-reel-card-select" : "hero-reel-card-reject"}`}
-              style={{
-                left: c.scatter.x, top: c.scatter.y,
-                "--rot": `${c.scatter.rot}deg`,
-                animationDelay: `${(c.id % 3) * -0.35}s`,
-              }}>
-              <span className="hero-reel-speaker" />
-              <div className="hero-reel-screen" style={{ backgroundImage: c.grad }}>
-                <span className="hero-reel-emoji" aria-hidden="true">{c.emoji}</span>
-              </div>
-              <span className={`hero-reel-badge ${isSelected ? "hero-reel-badge-select" : "hero-reel-badge-reject"}`} style={{ animationDelay: `${(c.id % 3) * -0.35}s` }}>{c.score}</span>
-            </div>
-          );
-        })}
+    <div className="event-scene" role="img" aria-label="Animated illustration of guests at a wedding, a birthday, and a party each taking a phone photo that becomes a polaroid landing in a filmstrip, which turns into a video">
+      {EVENT_SCENES.map((s) => (
+        <div key={s.id} className="event-stage" style={{ left: s.x, backgroundImage: s.backdrop }}>
+          <span className="event-badge" aria-hidden="true">{s.emoji}</span>
+          <div className="event-shadow" />
+          <div className="event-person-torso" />
+          <div className="event-person-arm" />
+          <div className="event-person-head" />
+          <div className={`event-phone event-phone-${s.id}`}>
+            <div className="event-phone-screen" />
+          </div>
+        </div>
+      ))}
 
-        <div className="hero-reel-frame" aria-hidden="true"><span className="hero-reel-frame-play">▶</span></div>
+      <div className="event-frame" aria-hidden="true"><span className="event-frame-play">▶</span></div>
 
-        {HERO_REEL_CARDS.filter((c) => c.kind === "select").map((c) => {
-          const chipTargetX = FRAME_SLOT_X[c.slot];
-          const phoneAnchorX = c.scatter.x + (CARD_W - CHIP_W) / 2;
-          const phoneAnchorY = c.scatter.y + (CARD_H - CHIP_H) / 2;
-          const dx = phoneAnchorX - chipTargetX;
-          const dy = phoneAnchorY - FRAME_TOP;
-          return (
-            <div key={`chip-${c.id}`}
-              className="hero-reel-chip"
-              style={{
-                left: chipTargetX, top: FRAME_TOP, backgroundImage: c.grad,
-                "--dx": `${dx}px`, "--dy": `${dy}px`,
-                animationDelay: `${(c.id % 3) * -0.35}s`,
-              }}>
-              {c.roast && <span className="hero-reel-caption">😂 iconic</span>}
-            </div>
-          );
-        })}
-      </div>
+      {EVENT_SCENES.map((s) => (
+        <div key={`polaroid-${s.id}`} className={`event-polaroid event-polaroid-${s.id}`}>
+          <div className="event-polaroid-photo" style={{ backgroundImage: s.photo }} />
+        </div>
+      ))}
     </div>
   );
 }

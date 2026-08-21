@@ -163,9 +163,9 @@ export default function HomePage() {
           .contact-row { flex-direction: row; }
         }
 
-        .event-scene { position: relative; width: 512px; height: 498px; margin-top: 40px; flex-shrink: 0; }
+        .event-scene { position: relative; width: 512px; height: 752px; margin-top: 40px; flex-shrink: 0; }
         .event-stage {
-          position: absolute; top: 0; width: 96px; height: 145px; border-radius: 16px;
+          position: absolute; width: 96px; height: 145px; border-radius: 16px;
           background-size: cover; background-position: center 30%; background-color: #E4DED2;
           box-shadow: inset 0 0 0 1px rgba(33,31,29,0.06); overflow: hidden;
         }
@@ -180,6 +180,11 @@ export default function HomePage() {
         .event-flash-3 { animation: eventFlash3 10s ease-in-out infinite; }
         .event-flash-4 { animation: eventFlash4 10s ease-in-out infinite; }
         .event-flash-5 { animation: eventFlash5 10s ease-in-out infinite; }
+        .event-flash-6 { animation: eventFlash6 10s ease-in-out infinite; }
+        .event-flash-7 { animation: eventFlash7 10s ease-in-out infinite; }
+        .event-flash-8 { animation: eventFlash8 10s ease-in-out infinite; }
+        .event-flash-9 { animation: eventFlash9 10s ease-in-out infinite; }
+        .event-flash-10 { animation: eventFlash10 10s ease-in-out infinite; }
 
         /* A high-tech landing zone for the photos to fall into -- a stylized
            monitor (bezel + glowing screen + stand) rather than a plain
@@ -189,7 +194,7 @@ export default function HomePage() {
            centered logo dot push it further away from looking like a flat
            rectangle, toward actual hardware. */
         .event-monitor-bezel {
-          position: absolute; left: 0; top: 161px; width: 512px; height: 120px; border-radius: 10px;
+          position: absolute; left: 0; top: 318px; width: 512px; height: 120px; border-radius: 10px;
           background: linear-gradient(155deg, #4A453C, #221F1A 55%, #17140F);
           box-shadow: 0 14px 28px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08);
         }
@@ -210,109 +215,159 @@ export default function HomePage() {
         .event-monitor-logo { position: absolute; left: 254px; bottom: 6px; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.25); }
         .event-monitor-led { position: absolute; right: 14px; bottom: 5px; width: 5px; height: 5px; border-radius: 50%; background: #4A9EA8; animation: eventLedPulse 2.4s ease-in-out infinite; }
         .event-monitor-neck {
-          position: absolute; left: 247px; top: 281px; width: 18px; height: 20px;
+          position: absolute; left: 247px; top: 438px; width: 18px; height: 20px;
           background: linear-gradient(90deg, #211F1D, #3A362F 45%, #211F1D);
         }
         .event-monitor-base {
-          position: absolute; left: 196px; top: 301px; width: 120px; height: 10px; border-radius: 5px;
+          position: absolute; left: 196px; top: 458px; width: 120px; height: 10px; border-radius: 5px;
           background: linear-gradient(160deg, #3A362F, #17140F);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 3px 8px rgba(0,0,0,0.25);
         }
 
-        /* One photo lands per person, staggered across the loop and
-           arriving in the same column under their stage, then all five
-           hold together near the end before the loop resets -- reads as
-           the gallery filling up. */
+        /* One photo lands per person, staggered across the loop, arriving
+           in the same column under their stage (row-1 people land in the
+           top half of the monitor screen, row-2 people in the bottom
+           half), then all ten hold together near the end before the loop
+           resets -- reads as the gallery filling up. These still use the
+           low-quality photoRaw source, same as the stage cards -- only the
+           video slideshow below gets the sharp version, since that is the
+           finished, polished output. */
         .event-polaroid {
-          position: absolute; top: 216px; width: 26px; height: 32px; border-radius: 3px;
+          position: absolute; width: 26px; height: 32px; border-radius: 3px;
           background: #FFFFFF; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
           padding: 2px 2px 6px; box-sizing: border-box; z-index: 1;
         }
         .event-polaroid-photo { width: 100%; height: 100%; border-radius: 1px; background-size: cover; background-position: center 25%; }
-        .event-polaroid-1 { left: 35px; animation: eventFly1 10s ease-in-out infinite; }
-        .event-polaroid-2 { left: 139px; animation: eventFly2 10s ease-in-out infinite; }
-        .event-polaroid-3 { left: 243px; animation: eventFly3 10s ease-in-out infinite; }
-        .event-polaroid-4 { left: 347px; animation: eventFly4 10s ease-in-out infinite; }
-        .event-polaroid-5 { left: 451px; animation: eventFly5 10s ease-in-out infinite; }
+        .event-polaroid-1 { left: 35px; top: 334px; animation: eventFly1 10s ease-in-out infinite; }
+        .event-polaroid-2 { left: 139px; top: 334px; animation: eventFly2 10s ease-in-out infinite; }
+        .event-polaroid-3 { left: 243px; top: 334px; animation: eventFly3 10s ease-in-out infinite; }
+        .event-polaroid-4 { left: 347px; top: 334px; animation: eventFly4 10s ease-in-out infinite; }
+        .event-polaroid-5 { left: 451px; top: 334px; animation: eventFly5 10s ease-in-out infinite; }
+        .event-polaroid-6 { left: 35px; top: 382px; animation: eventFly6 10s ease-in-out infinite; }
+        .event-polaroid-7 { left: 139px; top: 382px; animation: eventFly7 10s ease-in-out infinite; }
+        .event-polaroid-8 { left: 243px; top: 382px; animation: eventFly8 10s ease-in-out infinite; }
+        .event-polaroid-9 { left: 347px; top: 382px; animation: eventFly9 10s ease-in-out infinite; }
+        .event-polaroid-10 { left: 451px; top: 382px; animation: eventFly10 10s ease-in-out infinite; }
 
-        /* The video slideshow the monitor feeds into -- a real-sized player
-           below the stand that cross-fades through the same five photos
-           with a scrubbing progress bar so it reads as playing rather than
-           just another static frame. */
-        .event-video { position: absolute; left: 20px; top: 327px; width: 472px; height: 170px; border-radius: 14px; border: 2px solid #C97A3D; background: #211F1D; overflow: hidden; }
+        /* The video slideshow the monitor feeds into -- a real 16:9 preview
+           (not a sliver) so the photo actually playing is clearly visible,
+           cross-fading through all ten HIGH-quality photos with a
+           scrubbing progress bar so it reads as playing rather than just
+           another static frame. */
+        .event-video { position: absolute; left: 20px; top: 484px; width: 472px; height: 266px; border-radius: 14px; border: 2px solid #C97A3D; background: #211F1D; overflow: hidden; }
         .event-video-slide { position: absolute; inset: 0; background-size: cover; background-position: center 22%; opacity: 0; }
         .event-video-slide-1 { animation: eventSlide1 10s ease-in-out infinite; }
         .event-video-slide-2 { animation: eventSlide2 10s ease-in-out infinite; }
         .event-video-slide-3 { animation: eventSlide3 10s ease-in-out infinite; }
         .event-video-slide-4 { animation: eventSlide4 10s ease-in-out infinite; }
         .event-video-slide-5 { animation: eventSlide5 10s ease-in-out infinite; }
+        .event-video-slide-6 { animation: eventSlide6 10s ease-in-out infinite; }
+        .event-video-slide-7 { animation: eventSlide7 10s ease-in-out infinite; }
+        .event-video-slide-8 { animation: eventSlide8 10s ease-in-out infinite; }
+        .event-video-slide-9 { animation: eventSlide9 10s ease-in-out infinite; }
+        .event-video-slide-10 { animation: eventSlide10 10s ease-in-out infinite; }
         .event-video-play {
           position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.85);
-          color: #211F1D; font-size: 15px; display: flex; align-items: center; justify-content: center; padding-left: 2.5px;
+          width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.85);
+          color: #211F1D; font-size: 19px; display: flex; align-items: center; justify-content: center; padding-left: 3px;
         }
         .event-video-progress { position: absolute; left: 0; bottom: 0; height: 4px; background: #C97A3D; width: 0%; animation: eventProgress 10s ease-in-out infinite; }
 
         /* One flash pulse per phone, timed just before that persons
            eventFlyN pop-out moment. */
-        @keyframes eventFlash1 { 0%, 3% { opacity: 0; } 5% { opacity: 0.85; } 8%, 100% { opacity: 0; } }
-        @keyframes eventFlash2 { 0%, 16% { opacity: 0; } 18% { opacity: 0.85; } 21%, 100% { opacity: 0; } }
-        @keyframes eventFlash3 { 0%, 30% { opacity: 0; } 32% { opacity: 0.85; } 35%, 100% { opacity: 0; } }
-        @keyframes eventFlash4 { 0%, 44% { opacity: 0; } 46% { opacity: 0.85; } 49%, 100% { opacity: 0; } }
-        @keyframes eventFlash5 { 0%, 58% { opacity: 0; } 60% { opacity: 0.85; } 63%, 100% { opacity: 0; } }
+        @keyframes eventFlash1 { 0%, 2% { opacity: 0; } 4% { opacity: 0.85; } 7%, 100% { opacity: 0; } }
+        @keyframes eventFlash2 { 0%, 9% { opacity: 0; } 11% { opacity: 0.85; } 14%, 100% { opacity: 0; } }
+        @keyframes eventFlash3 { 0%, 18% { opacity: 0; } 20% { opacity: 0.85; } 23%, 100% { opacity: 0; } }
+        @keyframes eventFlash4 { 0%, 27% { opacity: 0; } 29% { opacity: 0.85; } 32%, 100% { opacity: 0; } }
+        @keyframes eventFlash5 { 0%, 36% { opacity: 0; } 38% { opacity: 0.85; } 41%, 100% { opacity: 0; } }
+        @keyframes eventFlash6 { 0%, 45% { opacity: 0; } 47% { opacity: 0.85; } 50%, 100% { opacity: 0; } }
+        @keyframes eventFlash7 { 0%, 54% { opacity: 0; } 56% { opacity: 0.85; } 59%, 100% { opacity: 0; } }
+        @keyframes eventFlash8 { 0%, 63% { opacity: 0; } 65% { opacity: 0.85; } 68%, 100% { opacity: 0; } }
+        @keyframes eventFlash9 { 0%, 72% { opacity: 0; } 74% { opacity: 0.85; } 77%, 100% { opacity: 0; } }
+        @keyframes eventFlash10 { 0%, 81% { opacity: 0; } 83% { opacity: 0.85; } 86%, 100% { opacity: 0; } }
         @keyframes eventLedPulse {
           0%, 100% { opacity: 0.5; } 50% { opacity: 1; }
         }
         @keyframes eventFly1 {
-          0%, 3% { opacity: 0; transform: translate(0, -142px) scale(0.35) rotate(0deg); }
-          7% { opacity: 1; transform: translate(0, -142px) scale(0.5) rotate(0deg); }
-          16% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
-          94%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          0%, 2% { opacity: 0; transform: translate(0, -260px) scale(0.35) rotate(0deg); }
+          4% { opacity: 1; transform: translate(0, -260px) scale(0.5) rotate(0deg); }
+          14% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-4deg); }
         }
         @keyframes eventFly2 {
-          0%, 15% { opacity: 0; transform: translate(0, -142px) scale(0.35) rotate(0deg); }
-          18% { opacity: 1; transform: translate(0, -142px) scale(0.5) rotate(0deg); }
-          30% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
-          94%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(3deg); }
+          0%, 11% { opacity: 0; transform: translate(0, -260px) scale(0.35) rotate(0deg); }
+          13% { opacity: 1; transform: translate(0, -260px) scale(0.5) rotate(0deg); }
+          23% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(3deg); }
         }
         @keyframes eventFly3 {
-          0%, 29% { opacity: 0; transform: translate(0, -142px) scale(0.35) rotate(0deg); }
-          32% { opacity: 1; transform: translate(0, -142px) scale(0.5) rotate(0deg); }
-          44% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
-          94%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          0%, 20% { opacity: 0; transform: translate(0, -260px) scale(0.35) rotate(0deg); }
+          22% { opacity: 1; transform: translate(0, -260px) scale(0.5) rotate(0deg); }
+          32% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-3deg); }
         }
         @keyframes eventFly4 {
-          0%, 43% { opacity: 0; transform: translate(0, -142px) scale(0.35) rotate(0deg); }
-          46% { opacity: 1; transform: translate(0, -142px) scale(0.5) rotate(0deg); }
-          58% { opacity: 1; transform: translate(0, 0) scale(1) rotate(5deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(5deg); }
-          94%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(5deg); }
+          0%, 29% { opacity: 0; transform: translate(0, -260px) scale(0.35) rotate(0deg); }
+          31% { opacity: 1; transform: translate(0, -260px) scale(0.5) rotate(0deg); }
+          41% { opacity: 1; transform: translate(0, 0) scale(1) rotate(5deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(5deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(5deg); }
         }
         @keyframes eventFly5 {
-          0%, 57% { opacity: 0; transform: translate(0, -142px) scale(0.35) rotate(0deg); }
-          60% { opacity: 1; transform: translate(0, -142px) scale(0.5) rotate(0deg); }
-          72% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-5deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-5deg); }
-          94%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-5deg); }
+          0%, 38% { opacity: 0; transform: translate(0, -260px) scale(0.35) rotate(0deg); }
+          40% { opacity: 1; transform: translate(0, -260px) scale(0.5) rotate(0deg); }
+          50% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-5deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-5deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-5deg); }
         }
-        @keyframes eventSlide1 {
-          0%, 3% { opacity: 0; } 6%, 16% { opacity: 1; } 19%, 100% { opacity: 0; }
+        @keyframes eventFly6 {
+          0%, 47% { opacity: 0; transform: translate(0, -151px) scale(0.35) rotate(0deg); }
+          49% { opacity: 1; transform: translate(0, -151px) scale(0.5) rotate(0deg); }
+          59% { opacity: 1; transform: translate(0, 0) scale(1) rotate(4deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(4deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(4deg); }
         }
-        @keyframes eventSlide2 {
-          0%, 19% { opacity: 0; } 22%, 32% { opacity: 1; } 35%, 100% { opacity: 0; }
+        @keyframes eventFly7 {
+          0%, 56% { opacity: 0; transform: translate(0, -151px) scale(0.35) rotate(0deg); }
+          58% { opacity: 1; transform: translate(0, -151px) scale(0.5) rotate(0deg); }
+          68% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-4deg); }
         }
-        @keyframes eventSlide3 {
-          0%, 35% { opacity: 0; } 38%, 48% { opacity: 1; } 51%, 100% { opacity: 0; }
+        @keyframes eventFly8 {
+          0%, 65% { opacity: 0; transform: translate(0, -151px) scale(0.35) rotate(0deg); }
+          67% { opacity: 1; transform: translate(0, -151px) scale(0.5) rotate(0deg); }
+          77% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(3deg); }
         }
-        @keyframes eventSlide4 {
-          0%, 51% { opacity: 0; } 54%, 64% { opacity: 1; } 67%, 100% { opacity: 0; }
+        @keyframes eventFly9 {
+          0%, 74% { opacity: 0; transform: translate(0, -151px) scale(0.35) rotate(0deg); }
+          76% { opacity: 1; transform: translate(0, -151px) scale(0.5) rotate(0deg); }
+          86% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-3deg); }
         }
-        @keyframes eventSlide5 {
-          0%, 67% { opacity: 0; } 70%, 80% { opacity: 1; } 83%, 100% { opacity: 0; }
+        @keyframes eventFly10 {
+          0%, 83% { opacity: 0; transform: translate(0, -151px) scale(0.35) rotate(0deg); }
+          85% { opacity: 1; transform: translate(0, -151px) scale(0.5) rotate(0deg); }
+          95% { opacity: 1; transform: translate(0, 0) scale(1) rotate(5deg); }
+          97% { opacity: 1; transform: translate(0, 0) scale(1) rotate(5deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(5deg); }
         }
+        @keyframes eventSlide1 { 0%, 2% { opacity: 0; } 5%, 9% { opacity: 1; } 12%, 100% { opacity: 0; } }
+        @keyframes eventSlide2 { 0%, 11% { opacity: 0; } 14%, 18% { opacity: 1; } 21%, 100% { opacity: 0; } }
+        @keyframes eventSlide3 { 0%, 20% { opacity: 0; } 23%, 27% { opacity: 1; } 30%, 100% { opacity: 0; } }
+        @keyframes eventSlide4 { 0%, 29% { opacity: 0; } 32%, 36% { opacity: 1; } 39%, 100% { opacity: 0; } }
+        @keyframes eventSlide5 { 0%, 38% { opacity: 0; } 41%, 45% { opacity: 1; } 48%, 100% { opacity: 0; } }
+        @keyframes eventSlide6 { 0%, 47% { opacity: 0; } 50%, 54% { opacity: 1; } 57%, 100% { opacity: 0; } }
+        @keyframes eventSlide7 { 0%, 56% { opacity: 0; } 59%, 63% { opacity: 1; } 66%, 100% { opacity: 0; } }
+        @keyframes eventSlide8 { 0%, 65% { opacity: 0; } 68%, 72% { opacity: 1; } 75%, 100% { opacity: 0; } }
+        @keyframes eventSlide9 { 0%, 74% { opacity: 0; } 77%, 81% { opacity: 1; } 84%, 100% { opacity: 0; } }
+        @keyframes eventSlide10 { 0%, 83% { opacity: 0; } 86%, 90% { opacity: 1; } 93%, 100% { opacity: 0; } }
         @keyframes eventProgress {
           0% { width: 0%; } 97% { width: 100%; } 100% { width: 100%; }
         }
@@ -547,26 +602,36 @@ export default function HomePage() {
 }
 
 // Illustrates the actual thing this product does: guests at different kinds
-// of events snap phone photos, and those photos become the polaroid-style
-// clips that get cut into one video. These stills are AI-generated
-// portraits (not real customer photos, not real people) -- picked
-// deliberately generic/anonymous rather than anything that could be
-// mistaken for actual event footage, since real, unedited guest uploads
-// are what the product itself delivers (see the "Real footage, never
-// generated" badge above).
+// of events snap phone photos, and those photos get cut into one polished
+// video. The stage cards and the polaroids that land on the monitor use a
+// deliberately degraded, low-quality version of each photo (photoRaw) --
+// that is what a guest's raw phone shot actually looks like. The video
+// slideshow at the bottom is the only place the sharp, high-quality
+// version (photo) shows up, since that is the finished, polished output
+// -- the whole point being shown, not just described. These stills are
+// AI-generated portraits (not real customer photos, not real people) --
+// picked deliberately generic/anonymous rather than anything that could
+// be mistaken for actual event footage, since real, unedited guest
+// uploads are what the product itself delivers (see the "Real footage,
+// never generated" badge above).
 const EVENT_SCENES = [
-  { id: 1, x: 0, emoji: "💍", label: "Wedding", photo: "/images/hero-1.jpg" },
-  { id: 2, x: 104, emoji: "🎂", label: "Birthday", photo: "/images/hero-2.jpg" },
-  { id: 3, x: 208, emoji: "🎉", label: "Party", photo: "/images/hero-3.jpg" },
-  { id: 4, x: 312, emoji: "🎓", label: "Graduation", photo: "/images/hero-4.jpg" },
-  { id: 5, x: 416, emoji: "🎊", label: "Celebration", photo: "/images/hero-5.jpg" },
+  { id: 1, x: 0, y: 0, emoji: "💍", label: "Wedding", photo: "/images/hero-1.jpg", photoRaw: "/images/hero-1-raw.jpg" },
+  { id: 2, x: 104, y: 0, emoji: "🎂", label: "Birthday", photo: "/images/hero-2.jpg", photoRaw: "/images/hero-2-raw.jpg" },
+  { id: 3, x: 208, y: 0, emoji: "🎉", label: "Party", photo: "/images/hero-3.jpg", photoRaw: "/images/hero-3-raw.jpg" },
+  { id: 4, x: 312, y: 0, emoji: "🎓", label: "Graduation", photo: "/images/hero-4.jpg", photoRaw: "/images/hero-4-raw.jpg" },
+  { id: 5, x: 416, y: 0, emoji: "🎊", label: "Celebration", photo: "/images/hero-5.jpg", photoRaw: "/images/hero-5-raw.jpg" },
+  { id: 6, x: 0, y: 157, emoji: "🏡", label: "Housewarming", photo: "/images/hero-6.jpg", photoRaw: "/images/hero-6-raw.jpg" },
+  { id: 7, x: 104, y: 157, emoji: "💐", label: "Engagement", photo: "/images/hero-7.jpg", photoRaw: "/images/hero-7-raw.jpg" },
+  { id: 8, x: 208, y: 157, emoji: "💼", label: "Corporate event", photo: "/images/hero-8.jpg", photoRaw: "/images/hero-8-raw.jpg" },
+  { id: 9, x: 312, y: 157, emoji: "🍼", label: "Baby shower", photo: "/images/hero-9.jpg", photoRaw: "/images/hero-9-raw.jpg" },
+  { id: 10, x: 416, y: 157, emoji: "🤝", label: "Reunion", photo: "/images/hero-10.jpg", photoRaw: "/images/hero-10-raw.jpg" },
 ];
 
 function EventPhotoScene() {
   return (
-    <div className="event-scene" role="img" aria-label="Animated illustration of five guests at different events each taking a phone photo that falls into a monitor screen as a polaroid, then plays as a video slideshow below it">
+    <div className="event-scene" role="img" aria-label="Animated illustration of ten guests at different events each taking a phone photo that falls into a monitor screen as a polaroid, then plays as a polished video slideshow below it">
       {EVENT_SCENES.map((s) => (
-        <div key={s.id} className="event-stage" style={{ left: s.x, backgroundImage: `url(${s.photo})` }}>
+        <div key={s.id} className="event-stage" style={{ left: s.x, top: s.y, backgroundImage: `url(${s.photoRaw})` }}>
           <span className="event-badge" aria-hidden="true">{s.emoji}</span>
           <div className={`event-flash event-flash-${s.id}`} />
         </div>
@@ -585,7 +650,7 @@ function EventPhotoScene() {
 
       {EVENT_SCENES.map((s) => (
         <div key={`polaroid-${s.id}`} className={`event-polaroid event-polaroid-${s.id}`}>
-          <div className="event-polaroid-photo" style={{ backgroundImage: `url(${s.photo})` }} />
+          <div className="event-polaroid-photo" style={{ backgroundImage: `url(${s.photoRaw})` }} />
         </div>
       ))}
 

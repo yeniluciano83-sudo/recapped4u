@@ -32,24 +32,18 @@ const { generateRoastScript } = require("../lib/roast");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// Royalty-free tracks (Pixabay License — free for commercial use, no
-// attribution required), one per editing style, matching the mood
-// described for that style on the booking page.
-//
-// Only 3 dedicated tracks exist -- retro and highlight had no entry at
-// all, so any booking using either style got a video with silently no
-// music (STYLE_MUSIC[style] was undefined, which assembleSlideshow
-// treats as "skip audio" rather than erroring). Until dedicated tracks
-// are sourced, map them to the closest mood match rather than ship a
-// silent video: retro's warm/nostalgic feel is closer to cinematic than
-// documentary's minimal/candid feel; highlight's bold sports-style energy
-// is a direct match for upbeat's fast-cuts/high-energy track.
+// Royalty-free tracks (Pixabay Content License — free for commercial use,
+// no attribution required), one per editing style, matching the mood
+// described for that style on the booking page. Living under public/
+// (rather than lib/) so the same files double as browser-playable style
+// previews on the booking and QR share pages -- see MUSIC_PREVIEW_URL in
+// app/booking/page.jsx and app/qr/[slug]/page.jsx.
 const STYLE_MUSIC = {
-  cinematic: path.join(__dirname, "..", "lib", "music", "cinematic.mp3"),
-  upbeat: path.join(__dirname, "..", "lib", "music", "upbeat.mp3"),
-  documentary: path.join(__dirname, "..", "lib", "music", "documentary.mp3"),
-  retro: path.join(__dirname, "..", "lib", "music", "cinematic.mp3"),
-  highlight: path.join(__dirname, "..", "lib", "music", "upbeat.mp3"),
+  cinematic: path.join(__dirname, "..", "public", "music", "cinematic.mp3"),
+  upbeat: path.join(__dirname, "..", "public", "music", "upbeat.mp3"),
+  documentary: path.join(__dirname, "..", "public", "music", "documentary.mp3"),
+  retro: path.join(__dirname, "..", "public", "music", "retro.mp3"),
+  highlight: path.join(__dirname, "..", "public", "music", "highlight.mp3"),
 };
 
 // Signature/Luxe only, matching what those tiers actually advertise.

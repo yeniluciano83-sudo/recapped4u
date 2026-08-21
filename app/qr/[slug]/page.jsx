@@ -1,7 +1,7 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause } from "lucide-react";
 
 // Signature/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -16,6 +16,35 @@ const STYLES = [
 // unset (which falls back to matching the main video's style/music).
 const SOCIAL_STYLE_OPTIONS = [...STYLES, { id: "none", label: "No theme (no music)" }];
 
+// Mirrors the STYLE_MUSIC map in scripts/auto-recap.js -- same files, served
+// from public/ so they're directly playable here for a style preview.
+const MUSIC_PREVIEW_URL = {
+  cinematic: "/music/cinematic.mp3",
+  upbeat: "/music/upbeat.mp3",
+  documentary: "/music/documentary.mp3",
+  retro: "/music/retro.mp3",
+  highlight: "/music/highlight.mp3",
+};
+
+function StylePreviewButton({ styleId, playingId, onToggle }) {
+  const url = MUSIC_PREVIEW_URL[styleId];
+  if (!url) return null;
+  const isPlaying = playingId === styleId;
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(styleId); }}
+      aria-label={isPlaying ? `Pause ${styleId} soundtrack preview` : `Preview ${styleId} soundtrack`}
+      style={{
+        position: "absolute", top: "50%", right: "8px", transform: "translateY(-50%)",
+        width: "22px", height: "22px", borderRadius: "50%", flexShrink: 0, cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        border: "1px solid #D8CFC0", background: isPlaying ? "#C97A3D" : "#FFFFFF",
+        color: isPlaying ? "#FFFFFF" : "#4a4642",
+      }}>
+      {isPlaying ? <Pause size={11} fill="currentColor" /> : <Play size={11} fill="currentColor" style={{ marginLeft: "1px" }} />}
+    </button>
+  );
+}
+
 export default function QrSharePage() {
   const params = useParams();
   const slug = params?.slug;
@@ -29,6 +58,24 @@ export default function QrSharePage() {
   const [photos, setPhotos] = useState([]);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+
+  // One shared <audio> element for every style preview button on this page --
+  // starting a new preview stops whatever was already playing.
+  const previewAudioRef = useRef(null);
+  const [previewingStyle, setPreviewingStyle] = useState(null);
+  const togglePreview = (styleId) => {
+    const audio = previewAudioRef.current || (previewAudioRef.current = new Audio());
+    if (previewingStyle === styleId) {
+      audio.pause();
+      setPreviewingStyle(null);
+      return;
+    }
+    audio.src = MUSIC_PREVIEW_URL[styleId];
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+    audio.onended = () => setPreviewingStyle(null);
+    setPreviewingStyle(styleId);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -282,17 +329,20 @@ export default function QrSharePage() {
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
                 {SOCIAL_STYLE_OPTIONS.map((s) => (
-                  <button key={s.id} onClick={() => handleSetSocialStyle(s.id)} disabled={savingStyle}
-                    aria-pressed={eventInfo.social_style === s.id}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: 4,
-                      padding: "6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                      border: eventInfo.social_style === s.id ? "1px solid #C97A3D" : "1px solid #D8CFC0",
-                      background: eventInfo.social_style === s.id ? "#FBEEE0" : "transparent",
-                      color: eventInfo.social_style === s.id ? "#C97A3D" : "#4a4642",
-                    }}>
-                    {eventInfo.social_style === s.id && <Check size={12} strokeWidth={3} />} {s.label}
-                  </button>
+                  <div key={s.id} style={{ position: "relative", display: "inline-flex" }}>
+                    <button onClick={() => handleSetSocialStyle(s.id)} disabled={savingStyle}
+                      aria-pressed={eventInfo.social_style === s.id}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        padding: MUSIC_PREVIEW_URL[s.id] ? "6px 28px 6px 12px" : "6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+                        border: eventInfo.social_style === s.id ? "1px solid #C97A3D" : "1px solid #D8CFC0",
+                        background: eventInfo.social_style === s.id ? "#FBEEE0" : "transparent",
+                        color: eventInfo.social_style === s.id ? "#C97A3D" : "#4a4642",
+                      }}>
+                      {eventInfo.social_style === s.id && <Check size={12} strokeWidth={3} />} {s.label}
+                    </button>
+                    <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
+                  </div>
                 ))}
               </div>
 

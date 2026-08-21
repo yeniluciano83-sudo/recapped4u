@@ -1,7 +1,36 @@
 "use client";
-import React, { useState, useId } from "react";
+import React, { useState, useId, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame, AlertTriangle } from "lucide-react";
+import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame, AlertTriangle, Play, Pause } from "lucide-react";
+
+// Mirrors the STYLE_MUSIC map in scripts/auto-recap.js -- same files, served
+// from public/ so they're directly playable here for a style preview.
+const MUSIC_PREVIEW_URL = {
+  cinematic: "/music/cinematic.mp3",
+  upbeat: "/music/upbeat.mp3",
+  documentary: "/music/documentary.mp3",
+  retro: "/music/retro.mp3",
+  highlight: "/music/highlight.mp3",
+};
+
+function StylePreviewButton({ styleId, playingId, onToggle }) {
+  const url = MUSIC_PREVIEW_URL[styleId];
+  if (!url) return null;
+  const isPlaying = playingId === styleId;
+  return (
+    <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(styleId); }}
+      aria-label={isPlaying ? `Pause ${styleId} soundtrack preview` : `Preview ${styleId} soundtrack`}
+      style={{
+        position: "absolute", top: "50%", right: "10px", transform: "translateY(-50%)",
+        width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0, cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        border: "1px solid #D8CFC0", background: isPlaying ? "#C97A3D" : "#FFFFFF",
+        color: isPlaying ? "#FFFFFF" : "#6b655c",
+      }}>
+      {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" style={{ marginLeft: "1px" }} />}
+    </button>
+  );
+}
 
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
@@ -66,6 +95,26 @@ function BookingFormInner() {
   const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", deliveryFormat: "recap", fullVideoNoMusic: false });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+
+  // One shared <audio> element for every style preview button on this page --
+  // starting a new preview stops whatever was already playing, so hosts
+  // never get two soundtracks layered on top of each other.
+  const previewAudioRef = useRef(null);
+  const [previewingStyle, setPreviewingStyle] = useState(null);
+  const togglePreview = (styleId) => {
+    const audio = previewAudioRef.current || (previewAudioRef.current = new Audio());
+    if (previewingStyle === styleId) {
+      audio.pause();
+      setPreviewingStyle(null);
+      return;
+    }
+    audio.src = MUSIC_PREVIEW_URL[styleId];
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+    audio.onended = () => setPreviewingStyle(null);
+    setPreviewingStyle(styleId);
+  };
+
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
@@ -192,12 +241,15 @@ function BookingFormInner() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (
-              <button key={s.id} onClick={() => update("style", s.id)} aria-pressed={form.style === s.id} style={{ textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#FBEEE0" : "#FFFFFF", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
-                <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  {form.style === s.id && <Check size={15} color="#C97A3D" strokeWidth={3} />} {s.label}
-                </div>
-                <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>{s.desc}</div>
-              </button>
+              <div key={s.id} style={{ position: "relative" }}>
+                <button onClick={() => update("style", s.id)} aria-pressed={form.style === s.id} style={{ width: "100%", textAlign: "left", padding: "16px", paddingRight: "48px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#FBEEE0" : "#FFFFFF", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
+                  <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
+                    {form.style === s.id && <Check size={15} color="#C97A3D" strokeWidth={3} />} {s.label}
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>{s.desc}</div>
+                </button>
+                <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
+              </div>
             ))}
           </div>
 
@@ -209,17 +261,20 @@ function BookingFormInner() {
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {SOCIAL_STYLE_OPTIONS.map((s) => (
-                  <button key={s.id} onClick={() => update("socialStyle", form.socialStyle === s.id ? "" : s.id)}
-                    aria-pressed={form.socialStyle === s.id}
-                    style={{
-                      display: "inline-flex", alignItems: "center", gap: "4px",
-                      padding: "8px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
-                      border: form.socialStyle === s.id ? "1px solid #C97A3D" : "1px solid #D8CFC0",
-                      background: form.socialStyle === s.id ? "#FBEEE0" : "transparent",
-                      color: form.socialStyle === s.id ? "#C97A3D" : "#6b655c",
-                    }}>
-                    {form.socialStyle === s.id && <Check size={12} strokeWidth={3} />} {s.label}
-                  </button>
+                  <div key={s.id} style={{ position: "relative", display: "inline-flex" }}>
+                    <button onClick={() => update("socialStyle", form.socialStyle === s.id ? "" : s.id)}
+                      aria-pressed={form.socialStyle === s.id}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: "4px",
+                        padding: MUSIC_PREVIEW_URL[s.id] ? "8px 34px 8px 13px" : "8px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
+                        border: form.socialStyle === s.id ? "1px solid #C97A3D" : "1px solid #D8CFC0",
+                        background: form.socialStyle === s.id ? "#FBEEE0" : "transparent",
+                        color: form.socialStyle === s.id ? "#C97A3D" : "#6b655c",
+                      }}>
+                      {form.socialStyle === s.id && <Check size={12} strokeWidth={3} />} {s.label}
+                    </button>
+                    <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
+                  </div>
                 ))}
               </div>
             </div>

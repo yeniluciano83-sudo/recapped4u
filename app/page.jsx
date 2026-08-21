@@ -440,10 +440,6 @@ export default function HomePage() {
             );
           })}
         </div>
-        <div style={{ marginTop: 8, display: "inline-flex", alignItems: "flex-start", gap: 8, fontSize: 13.5, color: "#6b655c", lineHeight: 1.6, maxWidth: 560, background: "#FBEEE0", border: "1px solid #E4DED2", borderRadius: 10, padding: "12px 14px" }}>
-          <Check size={15} color="#7A8B76" style={{ flexShrink: 0, marginTop: 2 }} />
-          <span>Nothing here is synthetic or computer-generated — every photo is real footage from your event. Our process finds the best moments in hundreds of files, then automatically cuts, grades, and paces them into your story.</span>
-        </div>
       </Section>
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"

@@ -163,42 +163,69 @@ export default function HomePage() {
           .contact-row { flex-direction: row; }
         }
 
-        .event-scene { position: relative; width: 320px; height: 214px; margin: 40px auto 0; }
+        .event-scene { position: relative; width: 350px; height: 390px; margin: 40px auto 0; }
         .event-stage {
-          position: absolute; top: 0; width: 96px; height: 140px; border-radius: 16px;
+          position: absolute; top: 0; width: 110px; height: 160px; border-radius: 16px;
           background-size: cover; background-position: center 30%; background-color: #E4DED2;
           box-shadow: inset 0 0 0 1px rgba(33,31,29,0.06); overflow: hidden;
         }
         .event-badge {
-          position: absolute; left: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%;
+          position: absolute; left: 6px; top: 6px; width: 24px; height: 24px; border-radius: 50%;
           background: #FFFFFF; box-shadow: 0 2px 6px rgba(33,31,29,0.15);
-          display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 1;
+          display: flex; align-items: center; justify-content: center; font-size: 13px; z-index: 1;
         }
         .event-flash { position: absolute; inset: 0; background: #FFFFFF; opacity: 0; }
         .event-flash-1 { animation: eventFlash1 10s ease-in-out infinite; }
         .event-flash-2 { animation: eventFlash2 10s ease-in-out infinite; }
         .event-flash-3 { animation: eventFlash3 10s ease-in-out infinite; }
 
-        .event-frame {
-          position: absolute; left: 4px; top: 162px; width: 312px; height: 44px;
-          border: 2px solid #C97A3D; border-radius: 10px; background: rgba(255,255,255,0.6);
-          animation: eventFrameGlow 10s ease-in-out infinite;
+        /* A high-tech landing zone for the photos to fall into -- a stylized
+           monitor (bezel + glowing screen + stand) rather than a plain
+           frame, so it feels like real hardware rather than an abstract
+           filmstrip outline. */
+        .event-monitor-bezel {
+          position: absolute; left: 0; top: 176px; width: 350px; height: 120px; border-radius: 14px;
+          background: linear-gradient(160deg, #3A362F, #1A1815); box-shadow: 0 10px 24px rgba(33,31,29,0.28);
         }
-        .event-frame-play {
-          position: absolute; bottom: -9px; right: -9px; width: 20px; height: 20px; border-radius: 50%;
-          background: #C97A3D; color: #FFFFFF; font-size: 8px; display: flex; align-items: center; justify-content: center;
-          padding-left: 1.5px; box-shadow: 0 2px 6px rgba(33,31,29,0.3);
+        .event-monitor-screen {
+          position: absolute; left: 10px; top: 10px; right: 10px; bottom: 10px; border-radius: 6px;
+          background: linear-gradient(160deg, #1C2128, #10131A);
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07), inset 0 0 26px rgba(74,158,168,0.16);
+          overflow: hidden;
         }
+        .event-monitor-scanlines {
+          position: absolute; inset: 0; pointer-events: none;
+          background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 3px);
+        }
+        .event-monitor-led { position: absolute; right: 14px; bottom: 7px; width: 5px; height: 5px; border-radius: 50%; background: #4A9EA8; animation: eventLedPulse 2.4s ease-in-out infinite; }
+        .event-monitor-neck { position: absolute; left: 167px; top: 296px; width: 16px; height: 18px; background: linear-gradient(160deg, #3A362F, #211F1D); }
+        .event-monitor-base { position: absolute; left: 130px; top: 314px; width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(160deg, #3A362F, #211F1D); }
 
         .event-polaroid {
-          position: absolute; top: 167px; width: 28px; height: 34px; border-radius: 3px;
-          background: #FFFFFF; box-shadow: 0 4px 10px rgba(33,31,29,0.28);
-          padding: 2px 2px 6px; box-sizing: border-box;
+          position: absolute; top: 206px; width: 32px; height: 40px; border-radius: 3px;
+          background: #FFFFFF; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+          padding: 2px 2px 7px; box-sizing: border-box; z-index: 1;
         }
         .event-polaroid-photo { width: 100%; height: 100%; border-radius: 1px; background-size: cover; background-position: center 25%; }
-        .event-polaroid-1 { left: 34px; animation: eventFly1 10s ease-in-out infinite; }
-        .event-polaroid-2 { left: 146px; animation: eventFly2 10s ease-in-out infinite; }
-        .event-polaroid-3 { left: 258px; animation: eventFly3 10s ease-in-out infinite; }
+        .event-polaroid-1 { left: 39px; animation: eventFly1 10s ease-in-out infinite; }
+        .event-polaroid-2 { left: 159px; animation: eventFly2 10s ease-in-out infinite; }
+        .event-polaroid-3 { left: 279px; animation: eventFly3 10s ease-in-out infinite; }
+
+        /* The video slideshow the monitor feeds into -- a small player below
+           the stand that cross-fades through the same three photos once
+           they land, with a scrubbing progress bar so it reads as playing
+           rather than just another static frame. */
+        .event-video { position: absolute; left: 20px; top: 336px; width: 310px; height: 54px; border-radius: 10px; border: 2px solid #C97A3D; background: #211F1D; overflow: hidden; }
+        .event-video-slide { position: absolute; inset: 0; background-size: cover; background-position: center 22%; opacity: 0; }
+        .event-video-slide-1 { animation: eventSlide1 10s ease-in-out infinite; }
+        .event-video-slide-2 { animation: eventSlide2 10s ease-in-out infinite; }
+        .event-video-slide-3 { animation: eventSlide3 10s ease-in-out infinite; }
+        .event-video-play {
+          position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+          width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.85);
+          color: #211F1D; font-size: 9px; display: flex; align-items: center; justify-content: center; padding-left: 1.5px;
+        }
+        .event-video-progress { position: absolute; left: 0; bottom: 0; height: 3px; background: #C97A3D; width: 0%; animation: eventProgress 10s ease-in-out infinite; }
 
         @keyframes eventFlash1 {
           0%, 3% { opacity: 0; }
@@ -215,44 +242,49 @@ export default function HomePage() {
           37% { opacity: 0.85; }
           40%, 100% { opacity: 0; }
         }
+        @keyframes eventLedPulse {
+          0%, 100% { opacity: 0.5; } 50% { opacity: 1; }
+        }
         @keyframes eventFly1 {
-          0%, 4% { opacity: 0; transform: translate(0, -94px) scale(0.35) rotate(0deg); }
-          10% { opacity: 1; transform: translate(0, -94px) scale(0.5) rotate(0deg); }
-          28% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-6deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-6deg); }
-          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-6deg); }
+          0%, 4% { opacity: 0; transform: translate(0, -127px) scale(0.35) rotate(0deg); }
+          10% { opacity: 1; transform: translate(0, -127px) scale(0.5) rotate(0deg); }
+          28% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-4deg); }
         }
         @keyframes eventFly2 {
-          0%, 20% { opacity: 0; transform: translate(0, -94px) scale(0.35) rotate(0deg); }
-          26% { opacity: 1; transform: translate(0, -94px) scale(0.5) rotate(0deg); }
-          44% { opacity: 1; transform: translate(0, 0) scale(1) rotate(4deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(4deg); }
-          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(4deg); }
+          0%, 20% { opacity: 0; transform: translate(0, -127px) scale(0.35) rotate(0deg); }
+          26% { opacity: 1; transform: translate(0, -127px) scale(0.5) rotate(0deg); }
+          44% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
+          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
+          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(3deg); }
         }
         @keyframes eventFly3 {
-          0%, 36% { opacity: 0; transform: translate(0, -94px) scale(0.35) rotate(0deg); }
-          42% { opacity: 1; transform: translate(0, -94px) scale(0.5) rotate(0deg); }
-          58% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
-          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          0%, 36% { opacity: 0; transform: translate(0, -127px) scale(0.35) rotate(0deg); }
+          42% { opacity: 1; transform: translate(0, -127px) scale(0.5) rotate(0deg); }
+          58% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-2deg); }
+          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-2deg); }
+          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-2deg); }
         }
-        @keyframes eventFrameGlow {
-          0%, 50% { box-shadow: none; border-color: #C97A3D; }
-          58% { border-color: #C97A3D; box-shadow: 0 0 0 4px rgba(201,122,61,0.14); }
-          88% { box-shadow: 0 0 0 4px rgba(201,122,61,0.14); }
-          96%, 100% { box-shadow: none; }
+        @keyframes eventSlide1 {
+          0%, 58% { opacity: 0; } 61%, 70% { opacity: 1; } 73%, 100% { opacity: 0; }
         }
-        .event-frame-play { opacity: 0; animation: eventPlayFade 10s ease-in-out infinite; }
-        @keyframes eventPlayFade {
-          0%, 54% { opacity: 0; }
-          62%, 90% { opacity: 1; }
-          97%, 100% { opacity: 0; }
+        @keyframes eventSlide2 {
+          0%, 71% { opacity: 0; } 74%, 83% { opacity: 1; } 86%, 100% { opacity: 0; }
+        }
+        @keyframes eventSlide3 {
+          0%, 84% { opacity: 0; } 87%, 96% { opacity: 1; } 99%, 100% { opacity: 0; }
+        }
+        @keyframes eventProgress {
+          0%, 59% { width: 0%; } 98% { width: 100%; } 100% { width: 100%; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .event-flash, .event-frame, .event-polaroid, .event-frame-play { animation: none !important; }
+          .event-flash, .event-polaroid, .event-video-slide, .event-video-progress, .event-monitor-led { animation: none !important; }
           .event-flash { opacity: 0; }
-          .event-polaroid { opacity: 1; transform: translate(0,0) scale(1) rotate(-4deg); }
-          .event-frame-play { opacity: 1; }
+          .event-polaroid { opacity: 1; transform: translate(0,0) scale(1) rotate(-3deg); }
+          .event-video-slide-1 { opacity: 1; }
+          .event-video-progress { width: 45%; }
+          .event-monitor-led { opacity: 1; }
         }
         @media (max-width: 380px) {
           .event-scene { transform: scale(0.86); transform-origin: top center; }
@@ -480,13 +512,13 @@ export default function HomePage() {
 // itself delivers (see the "Real footage, never generated" badge above).
 const EVENT_SCENES = [
   { id: 1, x: 0, emoji: "💍", label: "Wedding", photo: "/images/hero-wedding.jpg" },
-  { id: 2, x: 112, emoji: "🎂", label: "Birthday", photo: "/images/hero-birthday.jpg" },
-  { id: 3, x: 224, emoji: "🎉", label: "Party", photo: "/images/hero-party.jpg" },
+  { id: 2, x: 120, emoji: "🎂", label: "Birthday", photo: "/images/hero-birthday.jpg" },
+  { id: 3, x: 240, emoji: "🎉", label: "Party", photo: "/images/hero-party.jpg" },
 ];
 
 function EventPhotoScene() {
   return (
-    <div className="event-scene" role="img" aria-label="Animated illustration of guests at a wedding, a birthday, and a party each taking a phone photo that becomes a polaroid landing in a filmstrip, which turns into a video">
+    <div className="event-scene" role="img" aria-label="Animated illustration of guests at a wedding, a birthday, and a party each taking a phone photo that falls into a monitor screen as a polaroid, then plays as a video slideshow below it">
       {EVENT_SCENES.map((s) => (
         <div key={s.id} className="event-stage" style={{ left: s.x, backgroundImage: `url(${s.photo})` }}>
           <span className="event-badge" aria-hidden="true">{s.emoji}</span>
@@ -494,13 +526,28 @@ function EventPhotoScene() {
         </div>
       ))}
 
-      <div className="event-frame" aria-hidden="true"><span className="event-frame-play">▶</span></div>
+      <div className="event-monitor-bezel" aria-hidden="true">
+        <div className="event-monitor-screen">
+          <div className="event-monitor-scanlines" />
+        </div>
+        <div className="event-monitor-led" />
+      </div>
+      <div className="event-monitor-neck" aria-hidden="true" />
+      <div className="event-monitor-base" aria-hidden="true" />
 
       {EVENT_SCENES.map((s) => (
         <div key={`polaroid-${s.id}`} className={`event-polaroid event-polaroid-${s.id}`}>
           <div className="event-polaroid-photo" style={{ backgroundImage: `url(${s.photo})` }} />
         </div>
       ))}
+
+      <div className="event-video" aria-hidden="true">
+        {EVENT_SCENES.map((s) => (
+          <div key={`slide-${s.id}`} className={`event-video-slide event-video-slide-${s.id}`} style={{ backgroundImage: `url(${s.photo})` }} />
+        ))}
+        <span className="event-video-play">▶</span>
+        <div className="event-video-progress" />
+      </div>
     </div>
   );
 }

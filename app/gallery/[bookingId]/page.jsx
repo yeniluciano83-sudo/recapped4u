@@ -89,6 +89,25 @@ export default function GalleryDeliveryPage() {
   const booking = data?.booking || {};
   const photos = data?.photos || [];
   const eventName = booking.host_name ? `${booking.host_name}'s ${booking.event_type}` : "Your Recap";
+  // "full" IS the Roast Reel cut whenever a no-roast twin exists -- that
+  // twin only ever gets rendered for roast-enabled bookings (see
+  // finalizeDelivery in scripts/auto-recap.js).
+  const hasNoRoastCut = Boolean(data?.deliverable?.full_video_no_roast_url);
+  const isRoastCut = videoLength === "full" && hasNoRoastCut;
+  const socialUrls = data?.deliverable?.social_video_urls || [];
+  const socialDownloadUrls = data?.deliverable?.social_video_download_urls || [];
+  // "social-N" selects the Nth social cut (Luxe can have several -- see
+  // SOCIAL_CUTS_COUNT in scripts/auto-recap.js -- Signature/Free have at
+  // most 1, so this collapses to a single "Social cut" toggle for them).
+  const socialIndex = videoLength.startsWith("social-") ? parseInt(videoLength.slice(7), 10) : -1;
+  const activeVideoUrl =
+    videoLength === "full" ? data?.deliverable?.full_video_url
+    : videoLength === "no_roast" ? data?.deliverable?.full_video_no_roast_url
+    : socialUrls[socialIndex];
+  const activeVideoDownloadUrl =
+    videoLength === "full" ? data?.deliverable?.full_video_download_url
+    : videoLength === "no_roast" ? data?.deliverable?.full_video_no_roast_download_url
+    : socialDownloadUrls[socialIndex];
   const isExpired = booking.gallery_expires_at && new Date(booking.gallery_expires_at) < new Date();
   const isDownloadOnly = booking.tier === "free" && isExpired;
 
@@ -117,17 +136,25 @@ export default function GalleryDeliveryPage() {
 
         <div style={{ background: "#FFFFFF", borderRadius: "18px", border: "1px solid #E4DED2", overflow: "hidden", marginBottom: "16px" }}>
           <div style={{ aspectRatio: "16/9", background: "linear-gradient(135deg, #FBEEE0, #FAF7F2)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer" }}
-            onClick={() => { const url = videoLength === "full" ? data?.deliverable?.full_video_url : data?.deliverable?.social_video_url; if (url) window.open(url, "_blank"); }}>
+            onClick={() => { if (activeVideoUrl) window.open(activeVideoUrl, "_blank"); }}>
+            {isRoastCut && (
+              <span style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 5, background: "#C97A3D", color: "#211F1D", fontSize: 12, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
+                🔥 Roast Reel cut
+              </span>
+            )}
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Play size={26} color="#211F1D" fill="#211F1D" style={{ marginLeft: "3px" }} />
             </div>
           </div>
-          <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <LengthToggle active={videoLength === "full"} onClick={() => setVideoLength("full")} label="Full cut" />
-              <LengthToggle active={videoLength === "social"} onClick={() => setVideoLength("social")} label="Social cut" />
+          <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <LengthToggle active={videoLength === "full"} onClick={() => setVideoLength("full")} label={hasNoRoastCut ? "Roast Reel cut" : "Full cut"} />
+              {hasNoRoastCut && <LengthToggle active={videoLength === "no_roast"} onClick={() => setVideoLength("no_roast")} label="Without roast" />}
+              {socialUrls.map((_, i) => (
+                <LengthToggle key={i} active={socialIndex === i} onClick={() => setVideoLength(`social-${i}`)} label={socialUrls.length > 1 ? `Social ${i + 1}` : "Social cut"} />
+              ))}
             </div>
-            <a href={videoLength === "full" ? data?.deliverable?.full_video_download_url : data?.deliverable?.social_video_download_url} download style={iconBtnStyle}>
+            <a href={activeVideoDownloadUrl} download style={iconBtnStyle}>
               <Download size={16} /> Download
             </a>
           </div>

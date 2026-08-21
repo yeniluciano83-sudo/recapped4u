@@ -56,6 +56,11 @@ const STYLE_MUSIC = {
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 const TARGET_SOCIAL_SECONDS = 75; // middle of the advertised 60-90s range
 const MAX_SOCIAL_PHOTOS = 15;
+// Luxe gets multiple social cuts, each from a different batch of top
+// photos (cut 1 = must-includes + best remaining, cut 2 = next-best batch,
+// and so on) -- real distinct content per cut, not just re-edits of the
+// same shots. Signature stays at 1, matching what it's always advertised.
+const SOCIAL_CUTS_COUNT = { keepsake: 5 };
 
 // Paid tiers advertise unlimited uploads with no stated gallery cap, so
 // their shortlist is genuinely uncapped -- every photo that clears the
@@ -66,14 +71,35 @@ const MAX_SOCIAL_PHOTOS = 15;
 const SHORTLIST_CAP = { free: 20 };
 const FULL_CUT_TARGET_SECONDS = { free: 75 }; // middle of the advertised 60-90s range
 
-// Host-starred "must include" photos always make the social cut,
-// regardless of their AI quality score -- filled out with the
-// highest-scoring remaining shortlist photos up to MAX_SOCIAL_PHOTOS.
-function buildSocialSelection(analyzed, shortlist) {
-  const mustInclude = analyzed.filter((a) => a.upload.must_include_social).slice(0, MAX_SOCIAL_PHOTOS);
-  const mustIncludeIds = new Set(mustInclude.map((a) => a.upload.id));
-  const fill = shortlist.filter((s) => !mustIncludeIds.has(s.upload.id)).slice(0, MAX_SOCIAL_PHOTOS - mustInclude.length);
-  return [...mustInclude, ...fill];
+// Host-starred "must include" photos always make the FIRST social cut,
+// regardless of their AI quality score. That cut is filled out with the
+// highest-scoring remaining photos up to MAX_SOCIAL_PHOTOS; each additional
+// cut (Luxe only) takes the next-best batch after that, so multiple cuts
+// are genuinely different content rather than re-edits of the same shots.
+// Returns an array of selections (empty selections are omitted -- a small
+// event's photo pool can easily run out before 5 cuts' worth exist).
+function buildSocialSelections(analyzed, count) {
+  const ranked = [...analyzed].sort(
+    (a, b) => (b.analysis.emotional_strength + b.analysis.technical_quality) - (a.analysis.emotional_strength + a.analysis.technical_quality)
+  );
+  const mustInclude = ranked.filter((a) => a.upload.must_include_social).slice(0, MAX_SOCIAL_PHOTOS);
+  const usedIds = new Set(mustInclude.map((a) => a.upload.id));
+  const remaining = ranked.filter((a) => !usedIds.has(a.upload.id));
+
+  const selections = [];
+  const firstFillCount = MAX_SOCIAL_PHOTOS - mustInclude.length;
+  const firstCut = [...mustInclude, ...remaining.slice(0, firstFillCount)];
+  if (firstCut.length > 0) selections.push(firstCut);
+  firstCut.slice(mustInclude.length).forEach((a) => usedIds.add(a.upload.id));
+
+  let cursor = firstFillCount;
+  for (let i = 1; i < count; i++) {
+    const nextCut = remaining.slice(cursor, cursor + MAX_SOCIAL_PHOTOS);
+    if (nextCut.length === 0) break;
+    selections.push(nextCut);
+    cursor += MAX_SOCIAL_PHOTOS;
+  }
+  return selections;
 }
 
 // Classic's gallery stays downloadable for 2 months, Signature's for 4,
@@ -129,7 +155,17 @@ async function deleteFromR2(key) {
 // completely separate process invocation after approval.
 async function listDeliverableFiles(bookingId, prefix) {
   const res = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: `deliverable/${bookingId}/${prefix}` }));
-  return (res.Contents || []).map((o) => o.Key).sort();
+  // A plain string sort puts "photo-10.jpg" before "photo-2.jpg" -- fine
+  // when this only ever listed a single social cut (capped at 15), but now
+  // that it also recovers the full gallery (easily 20+ photos), that would
+  // visibly scramble gallery order. Sort by the trailing number instead.
+  return (res.Contents || [])
+    .map((o) => o.Key)
+    .sort((a, b) => {
+      const numA = parseInt(a.match(/(\d+)\.\w+$/)?.[1] || "0", 10);
+      const numB = parseInt(b.match(/(\d+)\.\w+$/)?.[1] || "0", 10);
+      return numA - numB;
+    });
 }
 
 async function callClaude(messages, maxTokens = 1024) {
@@ -166,6 +202,17 @@ async function buildShortlist(analyzed, maxPhotos = 15) {
     .filter((p) => p.analysis.technical_quality >= 4)
     .sort((a, b) => (b.analysis.emotional_strength + b.analysis.technical_quality) - (a.analysis.emotional_strength + a.analysis.technical_quality))
     .slice(0, maxPhotos);
+}
+
+// The gallery always shows every non-flagged uploaded photo -- unlike the
+// curated video, a low technical_quality score never excludes a photo here.
+// Free is the one tier with a real, advertised cap (20); paid tiers get
+// everything. When a cap does apply, the highest-ranked photos are kept.
+function buildGallerySelection(analyzed, cap) {
+  const ranked = [...analyzed].sort(
+    (a, b) => (b.analysis.emotional_strength + b.analysis.technical_quality) - (a.analysis.emotional_strength + a.analysis.technical_quality)
+  );
+  return cap === Infinity ? ranked : ranked.slice(0, cap);
 }
 
 async function runAutoRecap(bookingId) {
@@ -254,8 +301,13 @@ async function finishAfterRoastApproval(booking) {
     roastLines.push(entry.line);
   }
 
-  const enhancedKeys = roastScript.script.map((entry) => entry.storage_key);
-  const musicPath = STYLE_MUSIC[booking.style];
+  // The gallery covers every uploaded photo, not just the roast script's
+  // curated shortlist -- those were already uploaded to R2 in
+  // runFullPipeline before the roast-approval pause, so recover the full
+  // list from there rather than needing anything still in memory from that
+  // earlier run.
+  const enhancedKeys = await listDeliverableFiles(bookingId, "photo-");
+  const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style];
   const socialMusicPath = STYLE_MUSIC[booking.social_style || booking.style];
   await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath);
 }
@@ -307,33 +359,60 @@ async function runFullPipeline(booking) {
     }
   }
 
-  const shortlist = await buildShortlist(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
-  console.log(`Shortlisted ${shortlist.length} photos for the final cut.`);
+  // Signature/Luxe can choose "social cuts of every photo" instead of a
+  // curated full video (booking.delivery_format) -- in that mode there's no
+  // quality-gated shortlist or full-cut video at all, just as many social
+  // cuts as it takes to cover every non-flagged upload (buildSocialSelections
+  // below, given an uncapped cut count).
+  const useAllPhotoSocialCuts = SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier) && booking.delivery_format === "social_cuts";
 
-  if (shortlist.length === 0) {
+  let videoShortlist = [];
+  if (!useAllPhotoSocialCuts) {
+    videoShortlist = await buildShortlist(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
+    console.log(`Shortlisted ${videoShortlist.length} photos for the final cut.`);
+
+    if (videoShortlist.length === 0) {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId);
+      throw new Error(
+        `No photos met the quality threshold for booking ${bookingId} -- reverted status to "collecting".`
+      );
+    }
+  } else if (analyzed.length === 0) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
     await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId);
-    throw new Error(
-      `No photos met the quality threshold for booking ${bookingId} -- reverted status to "collecting".`
-    );
+    throw new Error(`No usable photos (after moderation) for booking ${bookingId} -- reverted status to "collecting".`);
   }
 
-  console.log("Auto-enhancing shortlisted photos...");
+  // The gallery always shows every non-flagged uploaded photo -- see
+  // buildGallerySelection. This is a superset of videoShortlist (which stays
+  // quality-gated for the actual video), so the video's local files below
+  // reuse these already-enhanced buffers instead of enhancing twice.
+  console.log("Auto-enhancing all uploaded photos for the gallery...");
+  const gallerySelection = buildGallerySelection(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
   const enhancedKeys = [];
-  const localPaths = [];
-  const enhancedByUploadId = new Map(); // reused below for the social cut selection, so must-include photos already in the main shortlist aren't enhanced twice
+  const enhancedByUploadId = new Map();
+  const enhancedKeyByUploadId = new Map();
 
-  for (let i = 0; i < shortlist.length; i++) {
-    const { buffer, upload } = shortlist[i];
+  for (let i = 0; i < gallerySelection.length; i++) {
+    const { buffer, upload } = gallerySelection[i];
     const enhanced = await enhancePhoto(buffer, booking.style);
     const key = `deliverable/${bookingId}/photo-${i + 1}.jpg`;
     await uploadToR2(key, enhanced, "image/jpeg");
     enhancedKeys.push(key);
     enhancedByUploadId.set(upload.id, enhanced);
+    enhancedKeyByUploadId.set(upload.id, key);
+  }
 
-    const localPath = path.join(tmpDir, `photo-${i + 1}.jpg`);
+  const localPaths = [];
+  const videoStorageKeys = [];
+  for (let i = 0; i < videoShortlist.length; i++) {
+    const { upload } = videoShortlist[i];
+    const enhanced = enhancedByUploadId.get(upload.id);
+    const localPath = path.join(tmpDir, `video-photo-${i + 1}.jpg`);
     fs.writeFileSync(localPath, enhanced);
     localPaths.push(localPath);
+    videoStorageKeys.push(enhancedKeyByUploadId.get(upload.id));
   }
 
   // The social cut's photo selection can include host-starred photos that
@@ -342,31 +421,39 @@ async function runFullPipeline(booking) {
   // recovers it by listing rather than needing anything still in memory
   // from this run.
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier)) {
-    const socialSelection = buildSocialSelection(analyzed, shortlist);
-    console.log(`Uploading ${socialSelection.length} photo(s) for the social cut selection...`);
-    for (let i = 0; i < socialSelection.length; i++) {
-      const { buffer, upload } = socialSelection[i];
-      const enhanced = enhancedByUploadId.get(upload.id) || (await enhancePhoto(buffer, booking.style));
-      // "social-photo-", not "social-" -- a plain "social-" prefix also
-      // matches the rendered "social-cut.mp4" output further down (an S3
-      // prefix listing has no concept of "photos only"). Harmless on a
-      // booking's first delivery since that file doesn't exist yet when
-      // this uploads, but on a reprocess it's already sitting in R2 from
-      // the prior run, gets listed alongside the real photos below, and
-      // ffmpeg rejects it with "Option loop not found" when it's fed in
-      // as an image input -- confirmed live reprocessing a real booking.
-      await uploadToR2(`deliverable/${bookingId}/social-photo-${i + 1}.jpg`, enhanced, "image/jpeg");
+    const socialCutsCount = useAllPhotoSocialCuts ? Infinity : (SOCIAL_CUTS_COUNT[booking.tier] || 1);
+    const socialSelections = buildSocialSelections(analyzed, socialCutsCount);
+    console.log(`Uploading photos for ${socialSelections.length} social cut selection(s)...`);
+    for (let cutIndex = 0; cutIndex < socialSelections.length; cutIndex++) {
+      for (let i = 0; i < socialSelections[cutIndex].length; i++) {
+        const { buffer, upload } = socialSelections[cutIndex][i];
+        const enhanced = enhancedByUploadId.get(upload.id) || (await enhancePhoto(buffer, booking.style));
+        // "social-{n}-photo-", not "social-" -- a plain "social-" prefix
+        // also matches the rendered "social-cut-{n}.mp4" outputs further
+        // down (an S3 prefix listing has no concept of "photos only").
+        // Harmless on a booking's first delivery since those files don't
+        // exist yet when this uploads, but on a reprocess they're already
+        // sitting in R2 from the prior run, get listed alongside the real
+        // photos below, and ffmpeg rejects them with "Option loop not
+        // found" when fed in as an image input -- confirmed live
+        // reprocessing a real booking (see the single-cut version of this
+        // same bug that motivated the "-photo-" suffix in the first place).
+        await uploadToR2(`deliverable/${bookingId}/social-${cutIndex + 1}-photo-${i + 1}.jpg`, enhanced, "image/jpeg");
+      }
     }
   }
 
-  if (booking.roast_enabled) {
+  // Roast Reel captions the full video -- nothing to caption in "social cuts
+  // of every photo" mode, so it's skipped there even if roast_enabled is
+  // still set from a tier that includes it by default.
+  if (booking.roast_enabled && !useAllPhotoSocialCuts) {
     console.log("Roast Reel add-on enabled -- generating script for host approval...");
-    const roastPhotos = localPaths.map((p, i) => ({ buffer: fs.readFileSync(p), storageKey: enhancedKeys[i] }));
+    const roastPhotos = localPaths.map((p, i) => ({ buffer: fs.readFileSync(p), storageKey: videoStorageKeys[i] }));
     const script = await generateRoastScript(roastPhotos, {
       eventType: booking.event_type,
       roastLevel: booking.roast_level || "light",
     });
-    const scriptWithKeys = script.map((line, i) => ({ ...line, storage_key: enhancedKeys[i] }));
+    const scriptWithKeys = script.map((line, i) => ({ ...line, storage_key: videoStorageKeys[i] }));
 
     await supabase.from("roast_scripts").insert({ booking_id: bookingId, script: scriptWithKeys, status: "pending" });
     await supabase.from("bookings").update({ status: "awaiting_roast_approval" }).eq("id", bookingId);
@@ -394,39 +481,67 @@ async function runFullPipeline(booking) {
     return;
   }
 
-  const musicPath = STYLE_MUSIC[booking.style];
+  const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style];
   const socialMusicPath = STYLE_MUSIC[booking.social_style || booking.style];
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name, booking.tier, socialMusicPath);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts);
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath) {
-  console.log("Assembling automated slideshow video...");
-  const videoLocalPath = path.join(tmpDir, "recap.mp4");
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false) {
+  let videoKey = null;
+  let noRoastVideoKey = null;
 
-  // Free's highlight video targets a duration (like the social cut) rather
-  // than the other tiers' fixed per-photo pacing that scales with however
-  // many photos made the shortlist. Same duration-solving math as the
-  // social cut; see the comment further down for the formula itself.
-  const fullCutTarget = FULL_CUT_TARGET_SECONDS[tier];
-  const fullCutSlotSeconds = fullCutTarget ? (fullCutTarget + (localPaths.length - 1) * 0.6) / localPaths.length : undefined;
+  // "Social cuts of every photo" delivery format has no full video at all --
+  // see useAllPhotoSocialCuts in runFullPipeline, the only caller that ever
+  // passes skipFullVideo = true.
+  if (!skipFullVideo) {
+    console.log("Assembling automated slideshow video...");
+    const videoLocalPath = path.join(tmpDir, "recap.mp4");
 
-  await assembleSlideshow(localPaths, [], videoLocalPath, musicPath, roastLines, fullCutSlotSeconds);
-  const videoBuffer = fs.readFileSync(videoLocalPath);
-  const videoKey = `deliverable/${bookingId}/full-cut.mp4`;
-  await uploadToR2(videoKey, videoBuffer, "video/mp4");
+    // Free's highlight video targets a duration (like the social cut) rather
+    // than the other tiers' fixed per-photo pacing that scales with however
+    // many photos made the shortlist. Same duration-solving math as the
+    // social cut; see the comment further down for the formula itself.
+    const fullCutTarget = FULL_CUT_TARGET_SECONDS[tier];
+    const fullCutSlotSeconds = fullCutTarget ? (fullCutTarget + (localPaths.length - 1) * 0.6) / localPaths.length : undefined;
 
-  // The social cut's photo selection was already uploaded to R2 in
-  // runFullPipeline (before any roast-approval pause) -- recover it here
+    await assembleSlideshow(localPaths, [], videoLocalPath, musicPath, roastLines, fullCutSlotSeconds);
+    const videoBuffer = fs.readFileSync(videoLocalPath);
+    videoKey = `deliverable/${bookingId}/full-cut.mp4`;
+    await uploadToR2(videoKey, videoBuffer, "video/mp4");
+
+    // Roast Reel bookings previously only ever got the captioned cut -- render
+    // a second, caption-free twin of the exact same shortlist/pacing so hosts
+    // can also share a version without the roast lines. Skipped for non-roast
+    // bookings, where this would just be a duplicate of videoKey.
+    if (roastLines) {
+      console.log("Roast Reel enabled -- also assembling a caption-free version of the same cut...");
+      const noRoastVideoLocalPath = path.join(tmpDir, "recap-no-roast.mp4");
+      await assembleSlideshow(localPaths, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds);
+      const noRoastVideoBuffer = fs.readFileSync(noRoastVideoLocalPath);
+      noRoastVideoKey = `deliverable/${bookingId}/full-cut-no-roast.mp4`;
+      await uploadToR2(noRoastVideoKey, noRoastVideoBuffer, "video/mp4");
+    }
+  } else {
+    console.log("Delivery format is social cuts of every photo -- skipping the full recap video.");
+  }
+
+  // The social cut(s)' photo selections were already uploaded to R2 in
+  // runFullPipeline (before any roast-approval pause) -- recover them here
   // rather than needing anything still in memory from that run. No roast
-  // lines: the social cut never carries Roast Reel captions. Duration is
-  // hit by solving for a per-slot length that lands the whole sequence
-  // near TARGET_SOCIAL_SECONDS, rather than using the full cut's fixed
-  // per-slot pacing.
-  let socialVideoKey = null;
+  // lines: social cuts never carry Roast Reel captions. Duration is hit by
+  // solving for a per-slot length that lands each cut's sequence near
+  // TARGET_SOCIAL_SECONDS, rather than using the full cut's fixed pacing.
+  const socialVideoKeys = [];
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier)) {
-    const socialKeys = await listDeliverableFiles(bookingId, "social-photo-");
-    if (socialKeys.length > 0) {
-      console.log(`Assembling social cut from ${socialKeys.length} photo(s)...`);
+    // skipFullVideo (all-photos social cuts mode) has no fixed cut count --
+    // keep rendering cuts until a prefix comes up empty, rather than
+    // stopping at SOCIAL_CUTS_COUNT[tier].
+    const cutsForTier = skipFullVideo ? Infinity : (SOCIAL_CUTS_COUNT[tier] || 1);
+    for (let cutIndex = 0; cutIndex < cutsForTier; cutIndex++) {
+      const socialKeys = await listDeliverableFiles(bookingId, `social-${cutIndex + 1}-photo-`);
+      if (socialKeys.length === 0) break; // ran out of photos for a further cut -- stop, don't render empty ones
+
+      console.log(`Assembling social cut ${cutIndex + 1} from ${socialKeys.length} photo(s)...`);
       const socialLocalPaths = [];
       for (const key of socialKeys) {
         const buffer = await downloadFromR2(key);
@@ -441,11 +556,12 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       // a small, stable constant, not worth an export for one call site).
       const CROSSFADE_TRANSITION_SECONDS = 0.6;
       const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * CROSSFADE_TRANSITION_SECONDS) / socialLocalPaths.length;
-      const socialVideoLocalPath = path.join(tmpDir, "social-cut.mp4");
+      const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
       await assembleSlideshow(socialLocalPaths, [], socialVideoLocalPath, socialMusicPath, null, slotSeconds);
       const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
-      socialVideoKey = `deliverable/${bookingId}/social-cut.mp4`;
+      const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
+      socialVideoKeys.push(socialVideoKey);
     }
   }
 
@@ -453,7 +569,12 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   await supabase.from("deliverables").insert({
     booking_id: bookingId,
     full_video_key: videoKey,
-    social_video_key: socialVideoKey,
+    full_video_no_roast_key: noRoastVideoKey,
+    // social_video_key (singular) kept in sync with the first cut for
+    // anything still reading it (e.g. poll-and-recap.js's purge step);
+    // social_video_keys is the real, complete list.
+    social_video_key: socialVideoKeys[0] || null,
+    social_video_keys: socialVideoKeys,
     gallery_photo_keys: enhancedKeys,
   });
 
@@ -493,7 +614,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
 
-  console.log(`Done. Booking ${bookingId} marked delivered with ${enhancedKeys.length} photos and a full-cut video.`);
+  console.log(`Done. Booking ${bookingId} marked delivered with ${enhancedKeys.length} photos${skipFullVideo ? "" : ", a full-cut video,"} and ${socialVideoKeys.length} social cut(s).`);
 }
 
 if (require.main === module) {

@@ -25,6 +25,8 @@ create table bookings (
   gallery_expires_at timestamptz, -- delivered_at + per-tier retention (see GALLERY_EXPIRY_MONTHS/DAYS in scripts/auto-recap.js), set on delivery
   roast_enabled boolean not null default false,
   roast_level text check (roast_level in ('light', 'lukewarm', 'hot')),
+  delivery_format text not null default 'recap' check (delivery_format in ('recap', 'social_cuts')), -- Signature/Luxe only: 'social_cuts' skips the curated full video for as many social cuts as it takes to cover every uploaded photo
+  full_video_no_music boolean not null default false, -- skip the style's soundtrack on the full recap video specifically (social cuts keep theirs)
   gallery_template text not null default 'grid' check (gallery_template in ('grid', 'masonry', 'slideshow', 'polaroid')),
   reminder_sent_at timestamptz, -- set when the 24h-post-event upload reminder email is sent
   uploads_closed_at timestamptz, -- set when the host signals guests are done uploading, ahead of the tier's deadline
@@ -72,7 +74,9 @@ create table deliverables (
   id uuid primary key default uuid_generate_v4(),
   booking_id uuid not null references bookings(id) on delete cascade,
   full_video_key text,
-  social_video_key text,
+  full_video_no_roast_key text, -- caption-free twin of full_video_key, only set for Roast Reel bookings
+  social_video_key text, -- kept in sync with social_video_keys[0] for backward compatibility
+  social_video_keys text[], -- Luxe gets multiple cuts; Signature/Free get at most 1
   gallery_photo_keys text[],
   delivered_at timestamptz not null default now()
 );

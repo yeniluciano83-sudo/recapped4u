@@ -11,7 +11,7 @@ const TIERS = [
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for any event type (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "Choose your editing style, plus a separate theme for your social cut", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for any event type", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "5 social cuts instead of 1, each from a different set of your best photos", "Choose your editing style, plus a separate theme for your social cuts", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for any event type", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
   { id: "custom", name: "Custom Package", price: "Contact us", tagline: "Built entirely around your event",
     features: ["Tailored scope, pricing, and timeline", "Choose your editing style (optional)", "For large events, multi-day coverage, or special requests", "We'll follow up by email to work out the details"] },
 ];
@@ -58,11 +58,12 @@ function BookingFormInner() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light" });
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", deliveryFormat: "recap", fullVideoNoMusic: false });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
+  const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()
     : form.eventType;
@@ -81,7 +82,7 @@ function BookingFormInner() {
       // inquiry email; the actual payment happens outside the app once
       // scope and price are worked out directly with the host.
       const endpoint = isCustom ? "/api/custom-inquiry" : "/api/bookings";
-      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled }) });
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, eventType: effectiveEventType, roastEnabled: isRoastEligible && !isSocialCutsFormat && form.roastEnabled }) });
       const data = await res.json();
       if (!res.ok) {
         alert("Submission failed: " + (data.error || "Unknown error"));
@@ -219,7 +220,44 @@ function BookingFormInner() {
             </div>
           )}
 
-          {isRoastEligible && (
+          {isSocialCutEligible && (
+            <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
+              <div style={{ fontWeight: 700, fontSize: "15px" }}>Delivery format</div>
+              <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
+                Choose one -- a curated full recap video plus your social cut(s), or skip the full video for social cuts covering every photo guests upload.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {[
+                  { id: "recap", label: "Full recap video", desc: "A curated highlight video, plus your social cut(s)." },
+                  { id: "social_cuts", label: "Social cuts of every photo", desc: "No full video -- as many social cuts as it takes to cover every photo you get uploaded." },
+                ].map((opt) => (
+                  <button key={opt.id} onClick={() => update("deliveryFormat", opt.id)} aria-pressed={form.deliveryFormat === opt.id}
+                    style={{
+                      textAlign: "left", padding: "12px 14px", borderRadius: "10px", cursor: "pointer",
+                      background: form.deliveryFormat === opt.id ? "#FBEEE0" : "#FAF7F2",
+                      border: form.deliveryFormat === opt.id ? "1.5px solid #C97A3D" : "1px solid #D8CFC0",
+                    }}>
+                    <div style={{ fontWeight: 600, fontSize: "13.5px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      {form.deliveryFormat === opt.id && <Check size={13} color="#C97A3D" strokeWidth={3} />} {opt.label}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#6b655c", marginTop: "2px" }}>{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isSocialCutsFormat && (
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", marginTop: "16px", padding: "14px 16px", borderRadius: "12px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
+              <input type="checkbox" checked={form.fullVideoNoMusic} onChange={(e) => update("fullVideoNoMusic", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "13.5px" }}>No music on the full video</div>
+                <div style={{ fontSize: "12px", color: "#6b655c", marginTop: "2px" }}>Skip the soundtrack on your full recap video{isSocialCutEligible ? " (your social cut keeps its music)" : ""}.</div>
+              </div>
+            </label>
+          )}
+
+          {isRoastEligible && !isSocialCutsFormat && (
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
                 <input type="checkbox" checked={form.roastEnabled} onChange={(e) => update("roastEnabled", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
@@ -263,14 +301,18 @@ function BookingFormInner() {
           {isSocialCutEligible && form.socialStyle && (
             <SummaryRow label="Social cut theme" value={STYLES.find((s) => s.id === form.socialStyle)?.label} />
           )}
-          {isRoastEligible && form.roastEnabled && (
+          {isSocialCutEligible && (
+            <SummaryRow label="Delivery format" value={isSocialCutsFormat ? "Social cuts of every photo" : "Full recap video"} />
+          )}
+          {!isSocialCutsFormat && form.fullVideoNoMusic && <SummaryRow label="Full video music" value="Off" />}
+          {isRoastEligible && !isSocialCutsFormat && form.roastEnabled && (
             <SummaryRow
               label="Roast Reel"
               value={`${ROAST_LEVELS.find((r) => r.id === form.roastLevel)?.label}${ROAST_ADDON_PRICE[form.tier] ? ` (+$${ROAST_ADDON_PRICE[form.tier]})` : " (included)"}`}
             />
           )}
           {!isCustom && (
-            <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
+            <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && !isSocialCutsFormat && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
           )}
           <div style={{ marginTop: "20px", padding: "14px", background: "#FFFFFF", borderRadius: "10px", fontSize: "12px", color: "#6b655c", lineHeight: 1.6 }}>
             {isCustom

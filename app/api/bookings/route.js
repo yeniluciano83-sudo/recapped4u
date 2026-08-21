@@ -22,13 +22,19 @@ const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { hostName, email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel } = body;
+    const { hostName, email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic } = body;
 
     if (!hostName || !email || !eventType || !eventDate || !tier) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const uploadSlug = randomUUID().split("-")[0];
+
+    const effectiveDeliveryFormat = SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) && deliveryFormat === "social_cuts" ? "social_cuts" : "recap";
+    // Roast Reel captions the full video -- there's nothing for it to do
+    // (and nothing to charge for) once "social cuts of every photo" skips
+    // the full video entirely, regardless of what the client sent.
+    const effectiveRoastEnabled = !!roastEnabled && effectiveDeliveryFormat !== "social_cuts";
 
     const { data: booking, error } = await supabase
       .from("bookings")
@@ -44,8 +50,10 @@ export async function POST(req) {
         notes: notes || null,
         upload_slug: uploadSlug,
         status: "booked",
-        roast_enabled: body.roastEnabled || false,
-        roast_level: body.roastEnabled ? body.roastLevel : null,
+        roast_enabled: effectiveRoastEnabled,
+        roast_level: effectiveRoastEnabled ? roastLevel : null,
+        delivery_format: effectiveDeliveryFormat,
+        full_video_no_music: !!fullVideoNoMusic,
       })
       .select()
       .single();
@@ -99,7 +107,7 @@ export async function POST(req) {
       },
     ];
 
-    const roastAddonAmount = body.roastEnabled ? ROAST_ADDON_PRICE[tier] : undefined;
+    const roastAddonAmount = effectiveRoastEnabled ? ROAST_ADDON_PRICE[tier] : undefined;
     if (roastAddonAmount) {
       lineItems.push({
         price_data: {

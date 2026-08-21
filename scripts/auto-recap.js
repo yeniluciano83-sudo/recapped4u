@@ -221,38 +221,6 @@ async function runAutoRecap(bookingId) {
   const { data: booking, error: bookingErr } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
   if (bookingErr || !booking) throw new Error("Booking not found");
 
-  // A booking that already has a roast_scripts row has already been
-  // analyzed and enhanced -- re-running the full pipeline would redo that
-  // (wasted Claude spend) and generate a second, conflicting script. Resume
-  // at final rendering instead. Checking for the row's existence rather
-  // than booking.status === "awaiting_roast_approval" directly matters for
-  // poll-and-recap.js's atomic claim (which flips status to "editing"
-  // before invoking this, to close a race where an overlapping run could
-  // otherwise pick up the same booking twice) -- this way the dispatch is
-  // correct no matter which status the booking is claimed from.
-  const { data: existingRoastScript } = await supabase
-    .from("roast_scripts")
-    .select("id")
-    .eq("booking_id", bookingId)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingRoastScript) {
-    try {
-      return await finishAfterRoastApproval(booking);
-    } catch (err) {
-      // Same reasoning as the runFullPipeline catch below -- without this,
-      // a failure here (e.g. the ffmpeg render itself) left the booking
-      // stuck at "editing" forever, since neither processCollectingBookings
-      // nor resumeApprovedRoastBookings re-query that status. Revert to
-      // awaiting_roast_approval (not collecting) so the next run retries
-      // just the render, not the whole analysis pipeline -- the approved
-      // roast_scripts row is untouched either way.
-      await supabase.from("bookings").update({ status: "awaiting_roast_approval" }).eq("id", bookingId).eq("status", "editing");
-      throw err;
-    }
-  }
-
   try {
     return await runFullPipeline(booking);
   } catch (err) {
@@ -270,47 +238,6 @@ async function runAutoRecap(bookingId) {
   }
 }
 
-async function finishAfterRoastApproval(booking) {
-  const bookingId = booking.id;
-
-  const { data: roastScript, error } = await supabase
-    .from("roast_scripts")
-    .select("*")
-    .eq("booking_id", bookingId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !roastScript) throw new Error("No Roast Reel script found for this booking");
-
-  if (roastScript.status !== "approved") {
-    console.log(`Booking ${bookingId} is still awaiting host approval of its Roast Reel script. Nothing to do yet.`);
-    return;
-  }
-
-  console.log("Roast Reel script approved -- downloading enhanced photos and finishing the video...");
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-roast-"));
-  const localPaths = [];
-  const roastLines = [];
-
-  for (const entry of roastScript.script) {
-    const buffer = await downloadFromR2(entry.storage_key);
-    const localPath = path.join(tmpDir, path.basename(entry.storage_key));
-    fs.writeFileSync(localPath, buffer);
-    localPaths.push(localPath);
-    roastLines.push(entry.line);
-  }
-
-  // The gallery covers every uploaded photo, not just the roast script's
-  // curated shortlist -- those were already uploaded to R2 in
-  // runFullPipeline before the roast-approval pause, so recover the full
-  // list from there rather than needing anything still in memory from that
-  // earlier run.
-  const enhancedKeys = await listDeliverableFiles(bookingId, "photo-");
-  const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style];
-  const socialMusicPath = STYLE_MUSIC[booking.social_style || booking.style];
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath);
-}
 
 async function runFullPipeline(booking) {
   const bookingId = booking.id;
@@ -445,45 +372,24 @@ async function runFullPipeline(booking) {
 
   // Roast Reel captions the full video -- nothing to caption in "social cuts
   // of every photo" mode, so it's skipped there even if roast_enabled is
-  // still set from a tier that includes it by default.
+  // still set from a tier that includes it by default. Every intensity
+  // level's prompt (lib/roast.js) carries a hard rule to roast the moment,
+  // never a person's body/appearance/race, so the script needs no separate
+  // host review before it's used.
+  let roastLines = null;
   if (booking.roast_enabled && !useAllPhotoSocialCuts) {
-    console.log("Roast Reel add-on enabled -- generating script for host approval...");
+    console.log("Roast Reel add-on enabled -- generating script...");
     const roastPhotos = localPaths.map((p, i) => ({ buffer: fs.readFileSync(p), storageKey: videoStorageKeys[i] }));
     const script = await generateRoastScript(roastPhotos, {
       eventType: booking.event_type,
       roastLevel: booking.roast_level || "light",
     });
-    const scriptWithKeys = script.map((line, i) => ({ ...line, storage_key: videoStorageKeys[i] }));
-
-    await supabase.from("roast_scripts").insert({ booking_id: bookingId, script: scriptWithKeys, status: "pending" });
-    await supabase.from("bookings").update({ status: "awaiting_roast_approval" }).eq("id", bookingId);
-
-    // Constructing the Resend client throws synchronously when
-    // RESEND_API_KEY is unset (e.g. local dev), which would otherwise
-    // crash the pipeline here -- after the script and the
-    // awaiting_roast_approval status are already saved. The script itself
-    // is still valid and reviewable without the notification email, so a
-    // send failure should be a warning, not a fatal error.
-    try {
-      const { sendRoastApprovalRequest } = require("../lib/email");
-      await sendRoastApprovalRequest({
-        to: booking.email,
-        hostName: booking.host_name,
-        eventName: `${booking.host_name}'s ${booking.event_type}`,
-        reviewUrl: `${process.env.APP_URL}/roast/${bookingId}`,
-      });
-    } catch (err) {
-      console.error(`Roast approval email failed (booking is still paused for approval): ${err.message}`);
-    }
-
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-    console.log(`Roast script generated for booking ${bookingId}. Paused for host approval at ${process.env.APP_URL}/roast/${bookingId}`);
-    return;
+    roastLines = script.map((line) => line.line);
   }
 
   const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style];
-  const socialMusicPath = STYLE_MUSIC[booking.social_style || booking.style];
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, null, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts);
+  const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style];
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts);
 }
 
 async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false) {

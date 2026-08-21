@@ -23,7 +23,7 @@ export async function GET(req, { params }) {
   return NextResponse.json({ event: booking, uploadCount: count || 0 });
 }
 
-const VALID_STYLES = ["cinematic", "upbeat", "documentary", "retro", "highlight"];
+const VALID_STYLES = ["cinematic", "upbeat", "documentary", "retro", "highlight", "none"];
 
 // Currently just used to let the host pick a separate theme for their
 // social cut (Signature/Luxe) -- distinct from the PATCH on

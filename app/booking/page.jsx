@@ -23,6 +23,11 @@ const STYLES = [
   { id: "retro", label: "Nostalgic / Retro", desc: "Warm film grain, vintage titles, scrapbook feel" },
   { id: "highlight", label: "Highlight Reel", desc: "Bold text call-outs, punchy sports-style energy" },
 ];
+// Social cut theme only ever drives which soundtrack plays under it (see
+// socialMusicPath in scripts/auto-recap.js) -- "none" skips music
+// entirely, distinct from leaving the picker unset (which falls back to
+// matching the main video's style/music).
+const SOCIAL_STYLE_OPTIONS = [...STYLES, { id: "none", label: "No theme (no music)" }];
 
 const EVENT_TYPES = ["Party", "Birthday", "Wedding", "Engagement Party", "Bridal Shower", "Gender Reveal", "Sweet 16 / Quinceañera", "Corporate Event", "Family Reunion", "Class/Friend Reunion", "Housewarming", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Bachelor/Bachelorette Party", "Religious Ceremony", "Fundraiser/Gala", "Vacation", "Holiday Celebration", "Other"];
 
@@ -200,10 +205,10 @@ function BookingFormInner() {
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
               <div style={{ fontWeight: 700, fontSize: "15px" }}>Social cut theme</div>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
-                Optional -- pick a different style for your 60-90 second social cut, or leave it matching your main style above. You can also change this (and star must-include photos) later from your QR share page.
+                Optional -- pick a different style for your 60-90 second social cut, leave it matching your main style above, or skip the theme's music entirely. You can also change this (and star must-include photos) later from your QR share page.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                {STYLES.map((s) => (
+                {SOCIAL_STYLE_OPTIONS.map((s) => (
                   <button key={s.id} onClick={() => update("socialStyle", form.socialStyle === s.id ? "" : s.id)}
                     aria-pressed={form.socialStyle === s.id}
                     style={{
@@ -268,7 +273,7 @@ function BookingFormInner() {
                 </span>
               </label>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "8px 0 0", lineHeight: 1.5 }}>
-                Witty commentary layered over your photos. You approve the full script before anyone sees it.
+                Witty commentary layered over your photos. You'll get both a captioned cut and a caption-free version of the same video.
               </p>
               {form.roastEnabled && (
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
@@ -299,7 +304,7 @@ function BookingFormInner() {
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
           {!isCustom && <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />}
           {isSocialCutEligible && form.socialStyle && (
-            <SummaryRow label="Social cut theme" value={STYLES.find((s) => s.id === form.socialStyle)?.label} />
+            <SummaryRow label="Social cut theme" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === form.socialStyle)?.label} />
           )}
           {isSocialCutEligible && (
             <SummaryRow label="Delivery format" value={isSocialCutsFormat ? "Social cuts of every photo" : "Full recap video"} />

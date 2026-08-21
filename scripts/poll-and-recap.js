@@ -11,12 +11,10 @@
  *   2. Finds bookings still "collecting" past that tier's reminder
  *      threshold (but before the deadline), with no reminder sent yet,
  *      and emails the host a heads-up that processing starts soon.
- *   3. Finds bookings paused at "awaiting_roast_approval" whose script has
- *      since been approved, and resumes them to finish rendering.
- *   4. Permanently deletes raw guest uploads whose purge_at (set to 30 days
+ *   3. Permanently deletes raw guest uploads whose purge_at (set to 30 days
  *      after delivery, see finalizeDelivery in auto-recap.js) has passed --
  *      matching the retention policy already promised in the UI copy.
- *   5. Permanently deletes Free-tier bookings' finished gallery/video (R2
+ *   4. Permanently deletes Free-tier bookings' finished gallery/video (R2
  *      objects + the deliverables row) whose gallery_purge_at (set to 7
  *      days after delivery) has passed -- unlike paid tiers, Free has no
  *      revenue backing indefinite storage.
@@ -135,50 +133,6 @@ async function processCollectingBookings(failures) {
   }
 }
 
-async function resumeApprovedRoastBookings(failures) {
-  const { data: bookings, error } = await supabase.from("bookings").select("id").eq("status", "awaiting_roast_approval");
-  if (error) {
-    console.error("Failed to query awaiting-approval bookings:", error.message);
-    return;
-  }
-
-  for (const booking of bookings || []) {
-    const { data: script } = await supabase
-      .from("roast_scripts")
-      .select("status")
-      .eq("booking_id", booking.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (script?.status === "approved") {
-      // Same atomic-claim reasoning as processCollectingBookings above --
-      // guards against an overlapping run resuming the same approved
-      // booking twice.
-      const { data: claimed } = await supabase
-        .from("bookings")
-        .update({ status: "editing" })
-        .eq("id", booking.id)
-        .eq("status", "awaiting_roast_approval")
-        .select("id")
-        .maybeSingle();
-
-      if (!claimed) {
-        console.log(`\nBooking ${booking.id} was already claimed by another run -- skipping.`);
-        continue;
-      }
-
-      console.log(`\nResuming approved booking ${booking.id}...`);
-      try {
-        runRecap(booking.id);
-      } catch (err) {
-        console.error(`Booking ${booking.id} failed:`, err.message);
-        failures.push({ bookingId: booking.id, error: err.message });
-      }
-    }
-  }
-}
-
 async function purgeExpiredUploads(failures) {
   const { data: expired, error } = await supabase
     .from("uploads")
@@ -243,7 +197,6 @@ async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
   const failures = [];
   await processCollectingBookings(failures);
-  await resumeApprovedRoastBookings(failures);
   await purgeExpiredUploads(failures);
   await purgeExpiredFreeGalleries(failures);
 

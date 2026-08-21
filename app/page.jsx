@@ -62,7 +62,7 @@ const FAQS = [
   { q: "Can we pick which photos make the final cut?", a: "Our automated curation selects the best moments for your main video, but your photo gallery includes every photo your guests upload, not just the ones that made the video. On Signature and Luxe, you can also star must-include photos for your social cut from your QR share page." },
   { q: "What editing styles can I choose from?", a: "Cinematic (slow, emotional, warm color grade), Upbeat (fast cuts, high energy, beat-synced), Documentary (minimal, candid, true to the moment), Nostalgic / Retro (warm film grain, vintage titles, scrapbook feel), and Highlight Reel (bold text call-outs, punchy sports-style energy). On Signature and Luxe, you can also pick a separate style just for your social cut." },
   { q: "What's a social cut?", a: "A short, 60–90 second vertical edit sized for Instagram, TikTok, or Reels. Signature gives you 1 social cut plus your full recap video. Luxe gives you 5 social cuts, each from a different set of your best photos, plus your full recap video. Both tiers also let you swap to a social-cuts-only delivery at booking — no full video, just social cuts, made from every single photo your guests upload. That swap is the only case where every uploaded photo is guaranteed to appear somewhere in your video; the default social cut(s) are still curated down to your best moments, same as the full video. Either way, you can give your social cut its own editing style, separate from your main video, and star must-include photos for it from your QR share page." },
-  { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests. Available for any event type." },
+  { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers) that layers witty, affectionate commentary over your photos. You choose the intensity, and every joke sticks to roasting the moment, never a person's appearance — so you get both a captioned cut and a caption-free version of the same video, ready to go. Available for any event type." },
 ];
 
 export default function HomePage() {
@@ -447,7 +447,7 @@ export default function HomePage() {
       </Section>
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"
-        subtitle="Start for free, or pick the tier that matches how much of the night you want captured.">
+        subtitle="Start for free, or pick the tier that matches how much of the event you want captured.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 20, padding: "6px 4px" }}>
           {TIERS.map((t, idx) => {
             const TierIcon = TIER_ICONS[t.id] || Sparkles;
@@ -495,7 +495,7 @@ export default function HomePage() {
           </div>
           <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 8px" }}>Your recap, but make it savage. Affectionately.</p>
           <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 14px", maxWidth: 520 }}>
-            Witty, affectionate commentary layered over your photos — you pick how far to take it, and you approve the full script before anyone sees it. Available on Signature and Luxe for any event type.
+            Witty, affectionate commentary layered over your photos — you pick how far to take it, and you'll always get a caption-free version of the same video alongside it. Available on Signature and Luxe for any event type.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[

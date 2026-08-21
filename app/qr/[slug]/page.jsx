@@ -12,6 +12,9 @@ const STYLES = [
   { id: "retro", label: "Nostalgic / Retro" },
   { id: "highlight", label: "Highlight Reel" },
 ];
+// "none" skips the social cut's music entirely, distinct from leaving it
+// unset (which falls back to matching the main video's style/music).
+const SOCIAL_STYLE_OPTIONS = [...STYLES, { id: "none", label: "No theme (no music)" }];
 
 export default function QrSharePage() {
   const params = useParams();
@@ -274,11 +277,11 @@ export default function QrSharePage() {
             <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
               <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px" }}>Your social cut</p>
               <p style={{ fontSize: 12.5, color: "#4a4642", margin: "0 0 12px", lineHeight: 1.5 }}>
-                Pick a theme for the short cut (defaults to your main style if you don't choose one), and star any photos that absolutely have to be in it.
+                Pick a theme for the short cut (defaults to your main style if you don't choose one, or skip its music entirely), and star any photos that absolutely have to be in it.
               </p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-                {STYLES.map((s) => (
+                {SOCIAL_STYLE_OPTIONS.map((s) => (
                   <button key={s.id} onClick={() => handleSetSocialStyle(s.id)} disabled={savingStyle}
                     aria-pressed={eventInfo.social_style === s.id}
                     style={{

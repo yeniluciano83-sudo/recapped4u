@@ -61,6 +61,7 @@ const FAQS = [
   { q: "How do we pay?", a: "Payment is collected securely at booking through Stripe. We accept all major credit and debit cards." },
   { q: "Can we pick which photos make the final cut?", a: "Our automated curation selects the best moments for your main video, but your photo gallery includes every photo your guests upload, not just the ones that made the video. On Signature and Luxe, you can also star must-include photos for your social cut from your QR share page." },
   { q: "What editing styles can I choose from?", a: "Cinematic (slow, emotional, warm color grade), Upbeat (fast cuts, high energy, beat-synced), Documentary (minimal, candid, true to the moment), Nostalgic / Retro (warm film grain, vintage titles, scrapbook feel), and Highlight Reel (bold text call-outs, punchy sports-style energy). On Signature and Luxe, you can also pick a separate style just for your social cut." },
+  { q: "What's a social cut?", a: "A short, 60–90 second vertical edit cut alongside your full video and sized for Instagram, TikTok, or Reels. Signature includes one; Luxe includes five, each pulled from a different set of your best photos. You can give it its own editing style, separate from your main video, and star must-include photos for it from your QR share page." },
   { q: "What's the Roast Reel add-on?", a: "An optional specialty add-on (available on Signature and Luxe tiers) that layers witty, affectionate commentary over your photos. You choose the intensity, and you approve the full script before it's shared with guests. Available for any event type." },
 ];
 
@@ -554,10 +555,10 @@ export default function HomePage() {
         <div style={{ position: "relative", maxWidth: 620, paddingLeft: 24, borderLeft: "3px solid #C97A3D" }}>
           <Quote aria-hidden="true" size={72} color="#C97A3D" style={{ position: "absolute", top: -18, left: -8, opacity: 0.12, transform: "scaleX(-1)" }} />
           <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 19, color: "#211F1D", lineHeight: 1.55, marginBottom: 18, position: "relative" }}>
-            Somewhere across your guests' phones is the real story of your event — the candid laugh, the toast, the moment the whole room lit up at once.
+            Living in New York City means never running out of moments worth keeping — a wedding one weekend, a rooftop birthday the next, a block party you wandered into and didn't want to leave. The city hands you memories faster than you can hold onto them.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
-            It's just scattered across many different camera rolls, most of it destined to be seen once and forgotten. Recapped For You gathers it, sorts through it, and hands it back as a film worth watching and a photo gallery worth keeping — no stranger holding a camera all night. Every photo is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cut, graded, and paced automatically.
+            That's exactly why Recapped For You exists. After enough nights where the best moments ended up scattered across forty different camera rolls — most of it never looked at twice — we started building the thing we wished already existed: something that could gather it all, make sense of it, and hand it back looking as good as the night felt. Every photo is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cleaned up, color graded, and cut into a film — the same polish and curation a professional editor would give it, just automatic, and built into everything we deliver.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7 }}>
             Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.

@@ -421,7 +421,7 @@ export default function HomePage() {
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
-        subtitle="From your guests' camera rolls to your inbox — four steps, zero editing skills required.">
+        subtitle="Every guest already has a camera in their pocket. Four simple steps turn what they capture into one story worth watching — you never touch an edit.">
         <div className="how-timeline">
           {[
             { n: "1", icon: Calendar, t: "Book", d: "Pick your package and event date — takes less than 2 minutes." },
@@ -603,35 +603,39 @@ export default function HomePage() {
 
 // Illustrates the actual thing this product does: guests at different kinds
 // of events snap phone photos, and those photos get cut into one polished
-// video. The stage cards and the polaroids that land on the monitor use a
-// deliberately degraded, low-quality version of each photo (photoRaw) --
-// that is what a guest's raw phone shot actually looks like. The video
+// video. The stage card shows the guest holding their phone up
+// (stagePhoto) -- what the polaroid and video show is a DIFFERENT photo,
+// the actual moment that guest is capturing (scenePhotoRaw / scenePhotoHQ),
+// not another shot of the guest themselves -- the same distinction as a
+// photographer versus what's in their frame. Stage cards and polaroids use
+// a deliberately degraded, low-quality version of each photo, since that
+// is what a guest's raw phone shot actually looks like. The video
 // slideshow at the bottom is the only place the sharp, high-quality
-// version (photo) shows up, since that is the finished, polished output
-// -- the whole point being shown, not just described. These stills are
+// version shows up, since that is the finished, polished output -- the
+// whole point being shown, not just described. These stills are
 // AI-generated portraits (not real customer photos, not real people) --
 // picked deliberately generic/anonymous rather than anything that could
 // be mistaken for actual event footage, since real, unedited guest
 // uploads are what the product itself delivers (see the "Real footage,
 // never generated" badge above).
 const EVENT_SCENES = [
-  { id: 1, x: 0, y: 0, emoji: "💍", label: "Wedding", photo: "/images/hero-1.jpg", photoRaw: "/images/hero-1-raw.jpg" },
-  { id: 2, x: 104, y: 0, emoji: "🎂", label: "Birthday", photo: "/images/hero-2.jpg", photoRaw: "/images/hero-2-raw.jpg" },
-  { id: 3, x: 208, y: 0, emoji: "🎉", label: "Party", photo: "/images/hero-3.jpg", photoRaw: "/images/hero-3-raw.jpg" },
-  { id: 4, x: 312, y: 0, emoji: "🎓", label: "Graduation", photo: "/images/hero-4.jpg", photoRaw: "/images/hero-4-raw.jpg" },
-  { id: 5, x: 416, y: 0, emoji: "🎊", label: "Celebration", photo: "/images/hero-5.jpg", photoRaw: "/images/hero-5-raw.jpg" },
-  { id: 6, x: 0, y: 157, emoji: "🏡", label: "Housewarming", photo: "/images/hero-6.jpg", photoRaw: "/images/hero-6-raw.jpg" },
-  { id: 7, x: 104, y: 157, emoji: "💐", label: "Engagement", photo: "/images/hero-7.jpg", photoRaw: "/images/hero-7-raw.jpg" },
-  { id: 8, x: 208, y: 157, emoji: "💼", label: "Corporate event", photo: "/images/hero-8.jpg", photoRaw: "/images/hero-8-raw.jpg" },
-  { id: 9, x: 312, y: 157, emoji: "🍼", label: "Baby shower", photo: "/images/hero-9.jpg", photoRaw: "/images/hero-9-raw.jpg" },
-  { id: 10, x: 416, y: 157, emoji: "🤝", label: "Reunion", photo: "/images/hero-10.jpg", photoRaw: "/images/hero-10-raw.jpg" },
+  { id: 1, x: 0, y: 0, emoji: "💍", label: "Wedding", stagePhoto: "/images/hero-1-raw.jpg", scenePhotoRaw: "/images/scene-1-raw.jpg", scenePhotoHQ: "/images/scene-1.jpg" },
+  { id: 2, x: 104, y: 0, emoji: "🎂", label: "Birthday", stagePhoto: "/images/hero-2-raw.jpg", scenePhotoRaw: "/images/scene-2-raw.jpg", scenePhotoHQ: "/images/scene-2.jpg" },
+  { id: 3, x: 208, y: 0, emoji: "🎉", label: "Party", stagePhoto: "/images/hero-3-raw.jpg", scenePhotoRaw: "/images/scene-3-raw.jpg", scenePhotoHQ: "/images/scene-3.jpg" },
+  { id: 4, x: 312, y: 0, emoji: "🎓", label: "Graduation", stagePhoto: "/images/hero-4-raw.jpg", scenePhotoRaw: "/images/scene-4-raw.jpg", scenePhotoHQ: "/images/scene-4.jpg" },
+  { id: 5, x: 416, y: 0, emoji: "🎊", label: "Celebration", stagePhoto: "/images/hero-5-raw.jpg", scenePhotoRaw: "/images/scene-5-raw.jpg", scenePhotoHQ: "/images/scene-5.jpg" },
+  { id: 6, x: 0, y: 157, emoji: "🏡", label: "Housewarming", stagePhoto: "/images/hero-6-raw.jpg", scenePhotoRaw: "/images/scene-6-raw.jpg", scenePhotoHQ: "/images/scene-6.jpg" },
+  { id: 7, x: 104, y: 157, emoji: "💐", label: "Engagement", stagePhoto: "/images/hero-7-raw.jpg", scenePhotoRaw: "/images/scene-7-raw.jpg", scenePhotoHQ: "/images/scene-7.jpg" },
+  { id: 8, x: 208, y: 157, emoji: "💼", label: "Corporate event", stagePhoto: "/images/hero-8-raw.jpg", scenePhotoRaw: "/images/scene-8-raw.jpg", scenePhotoHQ: "/images/scene-8.jpg" },
+  { id: 9, x: 312, y: 157, emoji: "🍼", label: "Baby shower", stagePhoto: "/images/hero-9-raw.jpg", scenePhotoRaw: "/images/scene-9-raw.jpg", scenePhotoHQ: "/images/scene-9.jpg" },
+  { id: 10, x: 416, y: 157, emoji: "🤝", label: "Reunion", stagePhoto: "/images/hero-10-raw.jpg", scenePhotoRaw: "/images/scene-10-raw.jpg", scenePhotoHQ: "/images/scene-10.jpg" },
 ];
 
 function EventPhotoScene() {
   return (
-    <div className="event-scene" role="img" aria-label="Animated illustration of ten guests at different events each taking a phone photo that falls into a monitor screen as a polaroid, then plays as a polished video slideshow below it">
+    <div className="event-scene" role="img" aria-label="Animated illustration of ten guests at different events each taking a phone photo of the moment in front of them, which falls into a monitor screen as a polaroid, then plays as a polished video slideshow below it">
       {EVENT_SCENES.map((s) => (
-        <div key={s.id} className="event-stage" style={{ left: s.x, top: s.y, backgroundImage: `url(${s.photoRaw})` }}>
+        <div key={s.id} className="event-stage" style={{ left: s.x, top: s.y, backgroundImage: `url(${s.stagePhoto})` }}>
           <span className="event-badge" aria-hidden="true">{s.emoji}</span>
           <div className={`event-flash event-flash-${s.id}`} />
         </div>
@@ -650,13 +654,13 @@ function EventPhotoScene() {
 
       {EVENT_SCENES.map((s) => (
         <div key={`polaroid-${s.id}`} className={`event-polaroid event-polaroid-${s.id}`}>
-          <div className="event-polaroid-photo" style={{ backgroundImage: `url(${s.photoRaw})` }} />
+          <div className="event-polaroid-photo" style={{ backgroundImage: `url(${s.scenePhotoRaw})` }} />
         </div>
       ))}
 
       <div className="event-video" aria-hidden="true">
         {EVENT_SCENES.map((s) => (
-          <div key={`slide-${s.id}`} className={`event-video-slide event-video-slide-${s.id}`} style={{ backgroundImage: `url(${s.photo})` }} />
+          <div key={`slide-${s.id}`} className={`event-video-slide event-video-slide-${s.id}`} style={{ backgroundImage: `url(${s.scenePhotoHQ})` }} />
         ))}
         <span className="event-video-play">▶</span>
         <div className="event-video-progress" />

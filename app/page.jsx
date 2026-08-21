@@ -163,7 +163,7 @@ export default function HomePage() {
           .contact-row { flex-direction: row; }
         }
 
-        .event-scene { position: relative; width: 350px; height: 390px; margin: 40px auto 0; }
+        .event-scene { position: relative; width: 350px; height: 508px; margin: 40px auto 0; }
         .event-stage {
           position: absolute; top: 0; width: 110px; height: 160px; border-radius: 16px;
           background-size: cover; background-position: center 30%; background-color: #E4DED2;
@@ -201,87 +201,115 @@ export default function HomePage() {
         .event-monitor-neck { position: absolute; left: 167px; top: 296px; width: 16px; height: 18px; background: linear-gradient(160deg, #3A362F, #211F1D); }
         .event-monitor-base { position: absolute; left: 130px; top: 314px; width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(160deg, #3A362F, #211F1D); }
 
+        /* Each person drops two photos into the monitor over the course of
+           the loop, not just one -- same three source photos reused for
+           the second landing, since sourcing more images is unnecessary
+           here, but it reads as the guest taking several shots and fills
+           the screen with more than three lonely polaroids. Base position
+           below is the FIRST landing spot; each eventFlyN keyframe animates
+           a translateY down to the second spot for its second half,
+           instead of adding more DOM elements. */
         .event-polaroid {
-          position: absolute; top: 206px; width: 32px; height: 40px; border-radius: 3px;
+          position: absolute; top: 194px; width: 28px; height: 34px; border-radius: 3px;
           background: #FFFFFF; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-          padding: 2px 2px 7px; box-sizing: border-box; z-index: 1;
+          padding: 2px 2px 6px; box-sizing: border-box; z-index: 1;
         }
         .event-polaroid-photo { width: 100%; height: 100%; border-radius: 1px; background-size: cover; background-position: center 25%; }
-        .event-polaroid-1 { left: 39px; animation: eventFly1 10s ease-in-out infinite; }
-        .event-polaroid-2 { left: 159px; animation: eventFly2 10s ease-in-out infinite; }
-        .event-polaroid-3 { left: 279px; animation: eventFly3 10s ease-in-out infinite; }
+        .event-polaroid-1 { left: 41px; animation: eventFly1 10s ease-in-out infinite; }
+        .event-polaroid-2 { left: 161px; animation: eventFly2 10s ease-in-out infinite; }
+        .event-polaroid-3 { left: 281px; animation: eventFly3 10s ease-in-out infinite; }
 
-        /* The video slideshow the monitor feeds into -- a small player below
-           the stand that cross-fades through the same three photos once
-           they land, with a scrubbing progress bar so it reads as playing
-           rather than just another static frame. */
-        .event-video { position: absolute; left: 20px; top: 336px; width: 310px; height: 54px; border-radius: 10px; border: 2px solid #C97A3D; background: #211F1D; overflow: hidden; }
+        /* The video slideshow the monitor feeds into -- a real-sized player
+           below the stand (not a sliver) that cross-fades through the same
+           three photos with a scrubbing progress bar so it reads as
+           playing rather than just another static frame. */
+        .event-video { position: absolute; left: 20px; top: 338px; width: 310px; height: 170px; border-radius: 14px; border: 2px solid #C97A3D; background: #211F1D; overflow: hidden; }
         .event-video-slide { position: absolute; inset: 0; background-size: cover; background-position: center 22%; opacity: 0; }
         .event-video-slide-1 { animation: eventSlide1 10s ease-in-out infinite; }
         .event-video-slide-2 { animation: eventSlide2 10s ease-in-out infinite; }
         .event-video-slide-3 { animation: eventSlide3 10s ease-in-out infinite; }
         .event-video-play {
           position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.85);
-          color: #211F1D; font-size: 9px; display: flex; align-items: center; justify-content: center; padding-left: 1.5px;
+          width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.85);
+          color: #211F1D; font-size: 15px; display: flex; align-items: center; justify-content: center; padding-left: 2.5px;
         }
-        .event-video-progress { position: absolute; left: 0; bottom: 0; height: 3px; background: #C97A3D; width: 0%; animation: eventProgress 10s ease-in-out infinite; }
+        .event-video-progress { position: absolute; left: 0; bottom: 0; height: 4px; background: #C97A3D; width: 0%; animation: eventProgress 10s ease-in-out infinite; }
 
+        /* Two flash pulses per phone now, one for each of that persons two
+           photos -- timed just before the matching eventFlyN pop-out moment. */
         @keyframes eventFlash1 {
           0%, 3% { opacity: 0; }
           5% { opacity: 0.85; }
-          8%, 100% { opacity: 0; }
+          8%, 39% { opacity: 0; }
+          41% { opacity: 0.85; }
+          44%, 100% { opacity: 0; }
         }
         @keyframes eventFlash2 {
-          0%, 19% { opacity: 0; }
-          21% { opacity: 0.85; }
-          24%, 100% { opacity: 0; }
+          0%, 16% { opacity: 0; }
+          18% { opacity: 0.85; }
+          21%, 52% { opacity: 0; }
+          55% { opacity: 0.85; }
+          58%, 100% { opacity: 0; }
         }
         @keyframes eventFlash3 {
-          0%, 35% { opacity: 0; }
-          37% { opacity: 0.85; }
-          40%, 100% { opacity: 0; }
+          0%, 28% { opacity: 0; }
+          30% { opacity: 0.85; }
+          33%, 60% { opacity: 0; }
+          62% { opacity: 0.85; }
+          65%, 100% { opacity: 0; }
         }
         @keyframes eventLedPulse {
           0%, 100% { opacity: 0.5; } 50% { opacity: 1; }
         }
         @keyframes eventFly1 {
-          0%, 4% { opacity: 0; transform: translate(0, -127px) scale(0.35) rotate(0deg); }
-          10% { opacity: 1; transform: translate(0, -127px) scale(0.5) rotate(0deg); }
-          28% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
-          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          0%, 3% { opacity: 0; transform: translate(0, -112px) scale(0.35) rotate(0deg); }
+          7% { opacity: 1; transform: translate(0, -112px) scale(0.5) rotate(0deg); }
+          20% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          36% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-4deg); }
+          40% { opacity: 0; transform: translate(0, -112px) scale(0.35) rotate(0deg); }
+          44% { opacity: 1; transform: translate(0, -112px) scale(0.5) rotate(0deg); }
+          56% { opacity: 1; transform: translate(0, 50px) scale(1) rotate(5deg); }
+          84% { opacity: 1; transform: translate(0, 50px) scale(1) rotate(5deg); }
+          92%, 100% { opacity: 0; transform: translate(0, 50px) scale(1) rotate(5deg); }
         }
         @keyframes eventFly2 {
-          0%, 20% { opacity: 0; transform: translate(0, -127px) scale(0.35) rotate(0deg); }
-          26% { opacity: 1; transform: translate(0, -127px) scale(0.5) rotate(0deg); }
-          44% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
-          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(3deg); }
+          0%, 16% { opacity: 0; transform: translate(0, -112px) scale(0.35) rotate(0deg); }
+          20% { opacity: 1; transform: translate(0, -112px) scale(0.5) rotate(0deg); }
+          33% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
+          49% { opacity: 1; transform: translate(0, 0) scale(1) rotate(3deg); }
+          53% { opacity: 0; transform: translate(0, -112px) scale(0.35) rotate(0deg); }
+          57% { opacity: 1; transform: translate(0, -112px) scale(0.5) rotate(0deg); }
+          69% { opacity: 1; transform: translate(0, 50px) scale(1) rotate(-5deg); }
+          90% { opacity: 1; transform: translate(0, 50px) scale(1) rotate(-5deg); }
+          97%, 100% { opacity: 0; transform: translate(0, 50px) scale(1) rotate(-5deg); }
         }
         @keyframes eventFly3 {
-          0%, 36% { opacity: 0; transform: translate(0, -127px) scale(0.35) rotate(0deg); }
-          42% { opacity: 1; transform: translate(0, -127px) scale(0.5) rotate(0deg); }
-          58% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-2deg); }
-          88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-2deg); }
-          96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-2deg); }
+          0%, 28% { opacity: 0; transform: translate(0, -112px) scale(0.35) rotate(0deg); }
+          32% { opacity: 1; transform: translate(0, -112px) scale(0.5) rotate(0deg); }
+          44% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          56% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
+          60% { opacity: 0; transform: translate(0, -112px) scale(0.35) rotate(0deg); }
+          64% { opacity: 1; transform: translate(0, -112px) scale(0.5) rotate(0deg); }
+          76% { opacity: 1; transform: translate(0, 50px) scale(1) rotate(4deg); }
+          92% { opacity: 1; transform: translate(0, 50px) scale(1) rotate(4deg); }
+          97%, 100% { opacity: 0; transform: translate(0, 50px) scale(1) rotate(4deg); }
         }
         @keyframes eventSlide1 {
-          0%, 58% { opacity: 0; } 61%, 70% { opacity: 1; } 73%, 100% { opacity: 0; }
+          0%, 3% { opacity: 0; } 6%, 28% { opacity: 1; } 31%, 100% { opacity: 0; }
         }
         @keyframes eventSlide2 {
-          0%, 71% { opacity: 0; } 74%, 83% { opacity: 1; } 86%, 100% { opacity: 0; }
+          0%, 31% { opacity: 0; } 34%, 56% { opacity: 1; } 59%, 100% { opacity: 0; }
         }
         @keyframes eventSlide3 {
-          0%, 84% { opacity: 0; } 87%, 96% { opacity: 1; } 99%, 100% { opacity: 0; }
+          0%, 59% { opacity: 0; } 62%, 84% { opacity: 1; } 87%, 100% { opacity: 0; }
         }
         @keyframes eventProgress {
-          0%, 59% { width: 0%; } 98% { width: 100%; } 100% { width: 100%; }
+          0% { width: 0%; } 97% { width: 100%; } 100% { width: 100%; }
         }
         @media (prefers-reduced-motion: reduce) {
           .event-flash, .event-polaroid, .event-video-slide, .event-video-progress, .event-monitor-led { animation: none !important; }
           .event-flash { opacity: 0; }
-          .event-polaroid { opacity: 1; transform: translate(0,0) scale(1) rotate(-3deg); }
+          .event-polaroid { opacity: 1; transform: translate(0,50px) scale(1) rotate(-4deg); }
           .event-video-slide-1 { opacity: 1; }
           .event-video-progress { width: 45%; }
           .event-monitor-led { opacity: 1; }

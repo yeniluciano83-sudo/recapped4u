@@ -166,31 +166,18 @@ export default function HomePage() {
         .event-scene { position: relative; width: 320px; height: 214px; margin: 40px auto 0; }
         .event-stage {
           position: absolute; top: 0; width: 96px; height: 140px; border-radius: 16px;
-          box-shadow: inset 0 0 0 1px rgba(33,31,29,0.06);
+          background-size: cover; background-position: center 30%; background-color: #E4DED2;
+          box-shadow: inset 0 0 0 1px rgba(33,31,29,0.06); overflow: hidden;
         }
         .event-badge {
           position: absolute; left: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%;
           background: #FFFFFF; box-shadow: 0 2px 6px rgba(33,31,29,0.15);
-          display: flex; align-items: center; justify-content: center; font-size: 12px;
+          display: flex; align-items: center; justify-content: center; font-size: 12px; z-index: 1;
         }
-        .event-shadow { position: absolute; left: 31px; top: 132px; width: 34px; height: 7px; border-radius: 50%; background: rgba(33,31,29,0.14); }
-        .event-person-head { position: absolute; left: 35px; top: 32px; width: 26px; height: 26px; border-radius: 50%; background: #322F2A; }
-        .event-person-torso { position: absolute; left: 31px; top: 56px; width: 34px; height: 48px; border-radius: 17px 17px 11px 11px; background: #3A362F; }
-        .event-person-arm {
-          position: absolute; left: 58px; top: 18px; width: 9px; height: 40px; border-radius: 4.5px;
-          background: #3A362F; transform: rotate(35deg); transform-origin: bottom center;
-        }
-        .event-phone {
-          position: absolute; left: 65px; top: 5px; width: 15px; height: 24px; border-radius: 4px;
-          background: linear-gradient(160deg, #3A362F, #211F1D); box-shadow: 0 3px 8px rgba(33,31,29,0.3);
-        }
-        .event-phone-screen {
-          position: absolute; left: 2px; top: 2px; right: 2px; bottom: 4px; border-radius: 2px;
-          background: linear-gradient(160deg, #6b655c, #4a4642);
-        }
-        .event-phone-1 .event-phone-screen { animation: eventFlash1 10s ease-in-out infinite; }
-        .event-phone-2 .event-phone-screen { animation: eventFlash2 10s ease-in-out infinite; }
-        .event-phone-3 .event-phone-screen { animation: eventFlash3 10s ease-in-out infinite; }
+        .event-flash { position: absolute; inset: 0; background: #FFFFFF; opacity: 0; }
+        .event-flash-1 { animation: eventFlash1 10s ease-in-out infinite; }
+        .event-flash-2 { animation: eventFlash2 10s ease-in-out infinite; }
+        .event-flash-3 { animation: eventFlash3 10s ease-in-out infinite; }
 
         .event-frame {
           position: absolute; left: 4px; top: 162px; width: 312px; height: 44px;
@@ -208,43 +195,43 @@ export default function HomePage() {
           background: #FFFFFF; box-shadow: 0 4px 10px rgba(33,31,29,0.28);
           padding: 2px 2px 6px; box-sizing: border-box;
         }
-        .event-polaroid-photo { width: 100%; height: 100%; border-radius: 1px; }
+        .event-polaroid-photo { width: 100%; height: 100%; border-radius: 1px; background-size: cover; background-position: center 25%; }
         .event-polaroid-1 { left: 34px; animation: eventFly1 10s ease-in-out infinite; }
         .event-polaroid-2 { left: 146px; animation: eventFly2 10s ease-in-out infinite; }
         .event-polaroid-3 { left: 258px; animation: eventFly3 10s ease-in-out infinite; }
 
         @keyframes eventFlash1 {
-          0%, 3% { background: linear-gradient(160deg, #6b655c, #4a4642); }
-          5% { background: #FFFFFF; }
-          8%, 100% { background: linear-gradient(160deg, #6b655c, #4a4642); }
+          0%, 3% { opacity: 0; }
+          5% { opacity: 0.85; }
+          8%, 100% { opacity: 0; }
         }
         @keyframes eventFlash2 {
-          0%, 19% { background: linear-gradient(160deg, #6b655c, #4a4642); }
-          21% { background: #FFFFFF; }
-          24%, 100% { background: linear-gradient(160deg, #6b655c, #4a4642); }
+          0%, 19% { opacity: 0; }
+          21% { opacity: 0.85; }
+          24%, 100% { opacity: 0; }
         }
         @keyframes eventFlash3 {
-          0%, 35% { background: linear-gradient(160deg, #6b655c, #4a4642); }
-          37% { background: #FFFFFF; }
-          40%, 100% { background: linear-gradient(160deg, #6b655c, #4a4642); }
+          0%, 35% { opacity: 0; }
+          37% { opacity: 0.85; }
+          40%, 100% { opacity: 0; }
         }
         @keyframes eventFly1 {
-          0%, 4% { opacity: 0; transform: translate(26px, -166px) scale(0.35) rotate(0deg); }
-          10% { opacity: 1; transform: translate(26px, -166px) scale(0.5) rotate(0deg); }
+          0%, 4% { opacity: 0; transform: translate(0, -94px) scale(0.35) rotate(0deg); }
+          10% { opacity: 1; transform: translate(0, -94px) scale(0.5) rotate(0deg); }
           28% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-6deg); }
           88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-6deg); }
           96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-6deg); }
         }
         @keyframes eventFly2 {
-          0%, 20% { opacity: 0; transform: translate(26px, -166px) scale(0.35) rotate(0deg); }
-          26% { opacity: 1; transform: translate(26px, -166px) scale(0.5) rotate(0deg); }
+          0%, 20% { opacity: 0; transform: translate(0, -94px) scale(0.35) rotate(0deg); }
+          26% { opacity: 1; transform: translate(0, -94px) scale(0.5) rotate(0deg); }
           44% { opacity: 1; transform: translate(0, 0) scale(1) rotate(4deg); }
           88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(4deg); }
           96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(4deg); }
         }
         @keyframes eventFly3 {
-          0%, 36% { opacity: 0; transform: translate(26px, -166px) scale(0.35) rotate(0deg); }
-          42% { opacity: 1; transform: translate(26px, -166px) scale(0.5) rotate(0deg); }
+          0%, 36% { opacity: 0; transform: translate(0, -94px) scale(0.35) rotate(0deg); }
+          42% { opacity: 1; transform: translate(0, -94px) scale(0.5) rotate(0deg); }
           58% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
           88% { opacity: 1; transform: translate(0, 0) scale(1) rotate(-3deg); }
           96%, 100% { opacity: 0; transform: translate(0, 0) scale(1) rotate(-3deg); }
@@ -262,7 +249,8 @@ export default function HomePage() {
           97%, 100% { opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
-          .event-phone-screen, .event-frame, .event-polaroid, .event-frame-play { animation: none !important; }
+          .event-flash, .event-frame, .event-polaroid, .event-frame-play { animation: none !important; }
+          .event-flash { opacity: 0; }
           .event-polaroid { opacity: 1; transform: translate(0,0) scale(1) rotate(-4deg); }
           .event-frame-play { opacity: 1; }
         }
@@ -485,30 +473,24 @@ export default function HomePage() {
 
 // Illustrates the actual thing this product does: guests at different kinds
 // of events snap phone photos, and those photos become the polaroid-style
-// clips that get cut into one video. Deliberately flat/illustrated (a
-// silhouette figure, not a photorealistic person) rather than a real or
-// AI-generated photo -- that would contradict the "real footage, never
-// generated" claim sitting right next to it, and no photo/image-generation
-// tool is available to produce one anyway.
+// clips that get cut into one video. These stills are AI-generated stock-style
+// portraits (not real customer photos, not real people) -- picked deliberately
+// generic/anonymous rather than anything that could be mistaken for actual
+// event footage, since real, unedited guest uploads are what the product
+// itself delivers (see the "Real footage, never generated" badge above).
 const EVENT_SCENES = [
-  { id: 1, x: 0, emoji: "💍", label: "Wedding", backdrop: "linear-gradient(160deg, #F3E4D0, #E4C8A0)", photo: "linear-gradient(160deg, #E8873D, #C2611E)" },
-  { id: 2, x: 112, emoji: "🎂", label: "Birthday", backdrop: "linear-gradient(160deg, #FBE0C4, #F0B87A)", photo: "linear-gradient(160deg, #D9684F, #B6432C)" },
-  { id: 3, x: 224, emoji: "🎉", label: "Party", backdrop: "linear-gradient(160deg, #DCEEE9, #B7DED3)", photo: "linear-gradient(160deg, #2FA593, #1B7D6E)" },
+  { id: 1, x: 0, emoji: "💍", label: "Wedding", photo: "/images/hero-wedding.jpg" },
+  { id: 2, x: 112, emoji: "🎂", label: "Birthday", photo: "/images/hero-birthday.jpg" },
+  { id: 3, x: 224, emoji: "🎉", label: "Party", photo: "/images/hero-party.jpg" },
 ];
 
 function EventPhotoScene() {
   return (
     <div className="event-scene" role="img" aria-label="Animated illustration of guests at a wedding, a birthday, and a party each taking a phone photo that becomes a polaroid landing in a filmstrip, which turns into a video">
       {EVENT_SCENES.map((s) => (
-        <div key={s.id} className="event-stage" style={{ left: s.x, backgroundImage: s.backdrop }}>
+        <div key={s.id} className="event-stage" style={{ left: s.x, backgroundImage: `url(${s.photo})` }}>
           <span className="event-badge" aria-hidden="true">{s.emoji}</span>
-          <div className="event-shadow" />
-          <div className="event-person-torso" />
-          <div className="event-person-arm" />
-          <div className="event-person-head" />
-          <div className={`event-phone event-phone-${s.id}`}>
-            <div className="event-phone-screen" />
-          </div>
+          <div className={`event-flash event-flash-${s.id}`} />
         </div>
       ))}
 
@@ -516,7 +498,7 @@ function EventPhotoScene() {
 
       {EVENT_SCENES.map((s) => (
         <div key={`polaroid-${s.id}`} className={`event-polaroid event-polaroid-${s.id}`}>
-          <div className="event-polaroid-photo" style={{ backgroundImage: s.photo }} />
+          <div className="event-polaroid-photo" style={{ backgroundImage: `url(${s.photo})` }} />
         </div>
       ))}
     </div>

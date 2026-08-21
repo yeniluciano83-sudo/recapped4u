@@ -40,7 +40,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="Guest-uploaded content">
-          <p>By uploading a photo or video, a guest confirms they have the right to share it — meaning they either took it themselves or have permission from whoever did, and they're comfortable with the host and other event guests seeing it in the final recap.</p>
+          <p>By uploading a photo, a guest confirms they have the right to share it — meaning they either took it themselves or have permission from whoever did, and they're comfortable with the host and other event guests seeing it in the final recap.</p>
           <p>Uploaded content is used only to build that event's recap video and gallery. The host who booked the event is the one who receives and controls access to the finished result — Recapped For You doesn't publish, sell, or reuse guest content anywhere else.</p>
           <p>Raw uploads are deleted 30 days after final delivery, as described in our <a href="/privacy" style={{ color: ACCENT, fontWeight: 600, textDecoration: "none" }}>Privacy Policy</a>.</p>
         </Section>
@@ -51,11 +51,11 @@ export default function TermsPage() {
 
         <Section title="Acceptable use">
           <p>Don't upload content that's illegal, sexually explicit or contains nudity, infringes someone else's rights, or that you don't have permission to share. We can remove content, reject specific photos, or decline to process a booking that violates this.</p>
-          <p>The host booking the event must be at least 18 years old. If any guest uploads include a photo or video of a minor, the host is responsible for confirming that a parent or guardian has consented to that minor appearing in the event recap.</p>
+          <p>The host booking the event must be at least 18 years old. If any guest uploads include a photo of a minor, the host is responsible for confirming that a parent or guardian has consented to that minor appearing in the event recap.</p>
         </Section>
 
         <Section title="No guarantee of outcome">
-          <p>Our automated process selects and edits from whatever footage guests actually upload — we can't guarantee a specific number of usable photos or clips, since that depends entirely on what guests submit. If very little gets uploaded, the recap will reflect that.</p>
+          <p>Our automated process selects and edits from whatever photos guests actually upload — we can't guarantee a specific number of usable photos, since that depends entirely on what guests submit. If very little gets uploaded, the recap will reflect that.</p>
         </Section>
 
         <Section title="Limitation of liability">

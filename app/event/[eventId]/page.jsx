@@ -65,9 +65,9 @@ export default function EventUploadPage() {
     setUploading(true);
     setUploadError(null);
     // One request per file -- a single request bundling several real
-    // phone photos/videos easily exceeds Vercel's ~4.5MB request body
-    // limit and gets rejected with a 413 before our code even runs,
-    // failing the *entire* batch even though most files were fine.
+    // phone photos easily exceeds Vercel's ~4.5MB request body limit and
+    // gets rejected with a 413 before our code even runs, failing the
+    // *entire* batch even though most files were fine.
     const endpoint = `/api/events/${eventId}/upload`;
     const name = uploaderName || "Guest";
     const stillFailed = [];

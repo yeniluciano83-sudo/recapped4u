@@ -326,7 +326,7 @@ export default function QrSharePage() {
         <p className="print-date">{formatDate(eventInfo.event_date)}</p>
         <img src={qrImageUrl} alt="Guest upload QR code" width={280} height={280} />
         <p className="print-url">{uploadUrl}</p>
-        <p className="print-footer">Scan to add your photos &amp; videos — no app needed</p>
+        <p className="print-footer">Scan to add your photos — no app needed</p>
       </div>
 
       <style>{`

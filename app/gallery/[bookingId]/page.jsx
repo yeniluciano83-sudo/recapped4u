@@ -40,6 +40,14 @@ export default function GalleryDeliveryPage() {
       .then((d) => {
         setData(d);
         setTemplate(d?.booking?.gallery_template || "grid");
+        // videoLength defaults to "full", but a "social cuts of every
+        // photo" delivery (booking.delivery_format === "social_cuts") has
+        // no full video at all -- defaulting to it left the page opening
+        // on a dead, non-functional state. Fall back to the first social
+        // cut whenever there's no full video to default to.
+        if (!d?.deliverable?.full_video_url && d?.deliverable?.social_video_urls?.length) {
+          setVideoLength("social-0");
+        }
       })
       .catch((err) => console.error("Failed to load gallery", err))
       .finally(() => setLoading(false));
@@ -95,6 +103,7 @@ export default function GalleryDeliveryPage() {
   // "full" IS the Roast Reel cut whenever a no-roast twin exists -- that
   // twin only ever gets rendered for roast-enabled bookings (see
   // finalizeDelivery in scripts/auto-recap.js).
+  const hasFullCut = Boolean(data?.deliverable?.full_video_url);
   const hasNoRoastCut = Boolean(data?.deliverable?.full_video_no_roast_url);
   const isRoastCut = videoLength === "full" && hasNoRoastCut;
   const socialUrls = data?.deliverable?.social_video_urls || [];
@@ -152,8 +161,8 @@ export default function GalleryDeliveryPage() {
           </div>
           <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              <LengthToggle active={videoLength === "full"} onClick={() => setVideoLength("full")} label={hasNoRoastCut ? "Roast Reel cut" : "Full cut"} />
-              {hasNoRoastCut && <LengthToggle active={videoLength === "no_roast"} onClick={() => setVideoLength("no_roast")} label="Without roast" />}
+              {hasFullCut && <LengthToggle active={videoLength === "full"} onClick={() => setVideoLength("full")} label={hasNoRoastCut ? "Roast Reel cut" : "Full cut"} />}
+              {hasFullCut && hasNoRoastCut && <LengthToggle active={videoLength === "no_roast"} onClick={() => setVideoLength("no_roast")} label="Without roast" />}
               {socialUrls.map((_, i) => (
                 <LengthToggle key={i} active={socialIndex === i} onClick={() => setVideoLength(`social-${i}`)} label={socialUrls.length > 1 ? `Social ${i + 1}` : "Social cut"} />
               ))}

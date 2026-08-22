@@ -381,8 +381,12 @@ async function runFullPipeline(booking) {
     roastLines = script.map((line) => line.line);
   }
 
-  const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style];
-  const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style];
+  // Style is optional at booking time (see app/booking/page.jsx) -- an
+  // unset style still needs *some* soundtrack rather than silently
+  // shipping a music-less video, so it falls back to documentary's track,
+  // matching enhancePhoto's own documentary default for the color grade.
+  const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.documentary;
+  const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.documentary;
   await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts);
 }
 

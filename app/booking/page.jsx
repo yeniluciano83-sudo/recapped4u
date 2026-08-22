@@ -123,13 +123,14 @@ function BookingFormInner() {
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
-  // Social-cuts-only bookings have no full video, so there's nothing for a
-  // separate "main style" to visually apply to -- the social cut theme IS
-  // the style for the whole booking in that mode (still used for photo
-  // color grading server-side; see enhancePhoto(buffer, booking.style) in
-  // scripts/auto-recap.js). Falling back to it here means picking either
-  // picker satisfies the requirement, instead of forcing hosts to also
-  // click a main style card that visibly has nothing left to describe.
+  // Style is optional everywhere, not just for custom/social-cuts-only --
+  // the backend already defaults gracefully with no style set (documentary
+  // color grade, documentary soundtrack; see enhancePhoto's default param
+  // and the STYLE_MUSIC fallback in scripts/auto-recap.js), so there's
+  // nothing for step 3 to actually require. In social-cuts-only mode,
+  // still prefer a chosen social cut theme over leaving it fully blank,
+  // since that's the only style picker with anything left to visually
+  // apply to in that mode.
   const effectiveStyle = form.style || (isSocialCutsFormat ? form.socialStyle : "");
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()
@@ -138,7 +139,6 @@ function BookingFormInner() {
   const canProceed = () => {
     if (step === 1) return form.hostName && form.email && form.eventType && (form.eventType !== "Other" || form.eventTypeOther.trim()) && form.eventDate;
     if (step === 2) return form.tier;
-    if (step === 3) return isCustom || effectiveStyle; // scope (incl. style) is worked out later for custom
     return true;
   };
 
@@ -247,16 +247,13 @@ function BookingFormInner() {
 
       {step === 3 && (
         <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
-          {isCustom && (
-            <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
-              Optional for a custom package -- pick one if you have a preference, or skip this and we'll work it out together.
-            </p>
-          )}
-          {isSocialCutsFormat && (
-            <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
-              You've chosen social-cuts-only delivery, so there's no full video for this to apply to on its own -- pick one here, or just set a theme on your social cut below and that covers it.
-            </p>
-          )}
+          <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
+            {isCustom
+              ? "Optional for a custom package -- pick one if you have a preference, or skip this and we'll work it out together."
+              : isSocialCutsFormat
+              ? "Optional -- pick one here, or just set a theme on your social cut below, since that's what's actually shown in social-cuts-only delivery. Skip both for a clean, true-to-life default look."
+              : "Optional -- pick one if you have a preference. Skip it for a clean, true-to-life default look."}
+          </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (
               <div key={s.id} style={{ position: "relative" }}>

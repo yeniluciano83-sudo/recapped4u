@@ -118,6 +118,14 @@ function BookingFormInner() {
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
+  // Social-cuts-only bookings have no full video, so there's nothing for a
+  // separate "main style" to visually apply to -- the social cut theme IS
+  // the style for the whole booking in that mode (still used for photo
+  // color grading server-side; see enhancePhoto(buffer, booking.style) in
+  // scripts/auto-recap.js). Falling back to it here means picking either
+  // picker satisfies the requirement, instead of forcing hosts to also
+  // click a main style card that visibly has nothing left to describe.
+  const effectiveStyle = form.style || (isSocialCutsFormat ? form.socialStyle : "");
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()
     : form.eventType;
@@ -125,7 +133,7 @@ function BookingFormInner() {
   const canProceed = () => {
     if (step === 1) return form.hostName && form.email && form.eventType && (form.eventType !== "Other" || form.eventTypeOther.trim()) && form.eventDate;
     if (step === 2) return form.tier;
-    if (step === 3) return isCustom || form.style; // scope (incl. style) is worked out later for custom
+    if (step === 3) return isCustom || effectiveStyle; // scope (incl. style) is worked out later for custom
     return true;
   };
 
@@ -136,7 +144,7 @@ function BookingFormInner() {
       // inquiry email; the actual payment happens outside the app once
       // scope and price are worked out directly with the host.
       const endpoint = isCustom ? "/api/custom-inquiry" : "/api/bookings";
-      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, eventType: effectiveEventType, roastEnabled: isRoastEligible && !isSocialCutsFormat && form.roastEnabled }) });
+      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && !isSocialCutsFormat && form.roastEnabled }) });
       const data = await res.json();
       if (!res.ok) {
         alert("Submission failed: " + (data.error || "Unknown error"));
@@ -237,6 +245,11 @@ function BookingFormInner() {
           {isCustom && (
             <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
               Optional for a custom package -- pick one if you have a preference, or skip this and we'll work it out together.
+            </p>
+          )}
+          {isSocialCutsFormat && (
+            <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
+              You've chosen social-cuts-only delivery, so there's no full video for this to apply to on its own -- pick one here, or just set a theme on your social cut below and that covers it.
             </p>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -357,7 +370,7 @@ function BookingFormInner() {
           <SummaryRow label="Email" value={form.email} />
           <SummaryRow label="Event" value={`${effectiveEventType} — ${form.eventDate}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
-          {!isCustom && <SummaryRow label="Style" value={STYLES.find((s) => s.id === form.style)?.label} />}
+          {!isCustom && <SummaryRow label="Style" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label} />}
           {isSocialCutEligible && form.socialStyle && (
             <SummaryRow label="Social cut theme" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === form.socialStyle)?.label} />
           )}

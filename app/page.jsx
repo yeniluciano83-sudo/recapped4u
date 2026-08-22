@@ -157,8 +157,9 @@ export default function HomePage() {
           opacity: 0.7;
         }
 
-        .price-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
-        .price-card:hover { transform: translateY(-4px) rotate(0deg) !important; box-shadow: 0 14px 30px rgba(33,31,29,0.1); }
+        /* Hover transform/shadow are owned by the TiltCard mousemove handler
+           (a cursor-follow 3D tilt needs per-pixel values a CSS :hover rule
+           cannot express) -- no .price-card:hover rule here on purpose. */
 
         .contact-row { display: flex; flex-direction: column; gap: 12px; }
         @media (min-width: 560px) {
@@ -454,12 +455,12 @@ export default function HomePage() {
           {TIERS.map((t, idx) => {
             const TierIcon = TIER_ICONS[t.id] || Sparkles;
             const tilt = [-1.3, 0.9, 0, -0.7][idx] || 0;
+            const baseTransform = t.highlight ? "scale(1.03)" : `rotate(${tilt}deg)`;
             return (
-            <Link key={t.id} href={`/booking?tier=${t.id}`} className="price-card" style={{
+            <TiltCard key={t.id} href={`/booking?tier=${t.id}`} className="price-card" baseTransform={baseTransform} style={{
               ...cardStyle, position: "relative", display: "block", textDecoration: "none", color: "inherit", cursor: "pointer",
               border: t.highlight ? "1.5px solid #C97A3D" : cardStyle.border,
               boxShadow: t.highlight ? "0 10px 26px rgba(201,122,61,0.22)" : "0 3px 10px rgba(33,31,29,0.05)",
-              transform: t.highlight ? "scale(1.03)" : `rotate(${tilt}deg)`,
             }}>
               {t.highlight ? (
                 <span style={{ position: "absolute", top: -11, left: 16, background: "#C97A3D", color: "#211F1D", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999 }}>
@@ -483,7 +484,7 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-            </Link>
+            </TiltCard>
             );
           })}
         </div>
@@ -663,6 +664,53 @@ function EventPhotoScene() {
         <div className="event-video-progress" />
       </div>
     </div>
+  );
+}
+
+// Cursor-follow 3D tilt for the pricing cards -- rotates on X/Y based on
+// pointer position within the card, snapping back to baseTransform (each
+// card's static scattered-photo rotation, or the highlight card's scale)
+// on mouse leave. Mutates the DOM node directly via a ref instead of React
+// state: a mousemove-driven re-render on every pixel of cursor movement
+// would be needlessly expensive for a purely visual effect nothing else
+// reads. Skipped under prefers-reduced-motion, same as the hero's own
+// animations elsewhere on this page -- a cursor-controlled 3D rotation is
+// exactly the kind of motion that setting exists to opt out of.
+function TiltCard({ href, className, style, baseTransform, children }) {
+  const cardRef = useRef(null);
+  const reducedMotionRef = useRef(false);
+
+  useEffect(() => {
+    reducedMotionRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  const handleMouseMove = (e) => {
+    if (reducedMotionRef.current) return;
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    const rotateY = (px - 0.5) * 14;
+    const rotateX = (0.5 - py) * 14;
+    card.style.transition = "box-shadow 0.25s ease";
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px) scale(1.02)`;
+    card.style.boxShadow = "0 16px 32px rgba(33,31,29,0.15)";
+  };
+
+  const handleMouseLeave = () => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transition = "transform 0.4s ease, box-shadow 0.3s ease";
+    card.style.transform = baseTransform;
+    card.style.boxShadow = style.boxShadow;
+  };
+
+  return (
+    <Link ref={cardRef} href={href} className={className} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}
+      style={{ ...style, transform: baseTransform }}>
+      {children}
+    </Link>
   );
 }
 

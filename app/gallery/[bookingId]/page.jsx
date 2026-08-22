@@ -3,6 +3,9 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check } from "lucide-react";
 
+// Keep in sync with GALLERY_RETENTION in app/booking/page.jsx.
+const RETENTION_LABEL = { free: "7-day", standard: "2-month", premium: "4-month", keepsake: "6-month" };
+
 const TEMPLATES = [
   { id: "grid", label: "Grid", icon: LayoutGrid },
   { id: "masonry", label: "Masonry", icon: Rows },
@@ -109,16 +112,17 @@ export default function GalleryDeliveryPage() {
     : videoLength === "no_roast" ? data?.deliverable?.full_video_no_roast_download_url
     : socialDownloadUrls[socialIndex];
   const isExpired = booking.gallery_expires_at && new Date(booking.gallery_expires_at) < new Date();
-  const isDownloadOnly = booking.tier === "free" && isExpired;
+  const isDownloadOnly = isExpired;
 
-  if (booking.tier === "free" && booking.status === "delivered" && !data.deliverable) {
+  if (booking.status === "delivered" && !data.deliverable) {
     return (
       <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
         <div style={{ textAlign: "center", maxWidth: 380 }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>{eventName}</h1>
           <p style={{ color: "#4a4642", fontSize: "14.5px", lineHeight: 1.6 }}>
-            This gallery's 7-day Free-tier retention window has ended, and the photos and video have been permanently removed. Pick a paid tier next time for a longer downloadable window.
+            This gallery's {RETENTION_LABEL[booking.tier] || ""} retention window has ended, and the photos and video have been permanently removed.
+            {booking.tier === "free" && " Pick a paid tier next time for a longer downloadable window."}
           </p>
         </div>
       </main>
@@ -194,7 +198,7 @@ export default function GalleryDeliveryPage() {
         {isDownloadOnly ? (
           <div style={{ marginBottom: "36px" }}>
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.6 }}>
-              Your 7-day Free-tier window has ended and this gallery is being permanently removed — download anything you'd like to keep right away.
+              Your {RETENTION_LABEL[booking.tier] || ""} window has ended and this gallery is being permanently removed — download anything you'd like to keep right away.
             </p>
             <DownloadOnlyLayout photos={photos} downloadUrls={data?.photo_download_urls || []} />
           </div>
@@ -215,7 +219,7 @@ export default function GalleryDeliveryPage() {
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
               {isDownloadOnly
-                ? "Your 7-day window has ended and this gallery is now being permanently removed."
+                ? `Your ${RETENTION_LABEL[booking.tier] || ""} window has ended and this gallery is now being permanently removed.`
                 : booking.gallery_expires_at
                 ? `This gallery and video stay available until ${formatExpiryDate(booking.gallery_expires_at)}.`
                 : "This gallery and video stay available for a limited time."}{" "}

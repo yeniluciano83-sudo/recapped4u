@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // event_date is a plain date (no time-of-day), so "24 hours before the
 // event" is measured from midnight on that date -- same convention as the
@@ -16,6 +17,11 @@ const RESCHEDULABLE_STATUSES = ["booked", "collecting"];
 
 export async function GET(req, { params }) {
   const { eventId } = params;
+
+  const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const { data: booking, error } = await supabase
     .from("bookings")
@@ -35,6 +41,12 @@ export async function GET(req, { params }) {
 
 export async function POST(req, { params }) {
   const { eventId } = params;
+
+  const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
+
   const { newDate } = await req.json();
 
   if (!newDate || Number.isNaN(new Date(`${newDate}T00:00:00`).getTime())) {

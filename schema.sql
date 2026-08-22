@@ -16,7 +16,7 @@ create table bookings (
   social_style text check (social_style in ('cinematic', 'upbeat', 'documentary', 'retro', 'highlight')), -- optional separate theme for the social cut (Signature/Luxe only); falls back to `style` if unset
   notes text,
   status text not null default 'booked'
-    check (status in ('booked', 'collecting', 'editing', 'awaiting_roast_approval', 'delivered', 'cancelled')),
+    check (status in ('booked', 'pending_confirmation', 'collecting', 'editing', 'awaiting_roast_approval', 'delivered', 'cancelled')),
   stripe_payment_status text default 'unpaid'
     check (stripe_payment_status in ('unpaid', 'paid', 'refunded')),
   stripe_session_id text,
@@ -72,7 +72,7 @@ create table curation_reports (
 -- Final delivered assets (video cuts, gallery link)
 create table deliverables (
   id uuid primary key default uuid_generate_v4(),
-  booking_id uuid not null references bookings(id) on delete cascade,
+  booking_id uuid not null unique references bookings(id) on delete cascade,
   full_video_key text,
   full_video_no_roast_key text, -- caption-free twin of full_video_key, only set for Roast Reel bookings
   social_video_key text, -- kept in sync with social_video_keys[0] for backward compatibility
@@ -82,7 +82,11 @@ create table deliverables (
 );
 
 -- Draft Roast Reel scripts awaiting host review, separate from `deliverables`
--- (the final, already-approved/rendered assets).
+-- (the final, already-approved/rendered assets). Currently unused: the app
+-- never writes to this table or sets a booking to 'awaiting_roast_approval'
+-- -- Roast Reel scripts are generated and rendered directly (see lib/roast.js),
+-- with a prompt-level safety rule as the only guardrail instead of a host
+-- review step. Left in place as scaffolding in case that changes later.
 create table roast_scripts (
   id uuid primary key default uuid_generate_v4(),
   booking_id uuid not null references bookings(id) on delete cascade,

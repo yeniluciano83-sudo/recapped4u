@@ -32,6 +32,16 @@ const { generateRoastScript } = require("../lib/roast");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+// Tracks the active run's temp dir so runAutoRecap's catch can clean it up
+// on ANY thrown error, not just the two spots inside runFullPipeline that
+// already did this manually (leaving every other error path -- a failed
+// enhancePhoto/uploadToR2/generateRoastScript/finalizeDelivery call -- to
+// leak the downloaded/enhanced JPEGs on disk). Safe as a module-level
+// variable only because this script processes one booking per process
+// invocation (see runRecap's execSync call in poll-and-recap.js), never
+// concurrent bookings in the same process.
+let currentTmpDir = null;
+
 // Royalty-free tracks (Pixabay Content License — free for commercial use,
 // no attribution required), one per editing style, matching the mood
 // described for that style on the booking page. Living under public/
@@ -144,9 +154,9 @@ async function deleteFromR2(key) {
 }
 
 // Used to recover the social cut's photo selection a prior run already
-// uploaded, without re-analyzing/re-enhancing it -- it survives a
-// roast-approval pause this way, since finalizeDelivery may run in a
-// completely separate process invocation after approval.
+// uploaded, without re-analyzing/re-enhancing it -- it survives a reprocess
+// this way, since finalizeDelivery may run in a completely separate process
+// invocation (e.g. a manual re-run) from whatever run originally uploaded it.
 async function listDeliverableFiles(bookingId, prefix) {
   const res = await s3.send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: `deliverable/${bookingId}/${prefix}` }));
   // A plain string sort puts "photo-10.jpg" before "photo-2.jpg" -- fine
@@ -228,6 +238,10 @@ async function runAutoRecap(bookingId) {
     // zero-shortlist case above already reverts to "collecting" itself,
     // or the host cancelled the booking while this was running).
     await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId).eq("status", "editing");
+    if (currentTmpDir) {
+      fs.rmSync(currentTmpDir, { recursive: true, force: true });
+      currentTmpDir = null;
+    }
     throw err;
   }
 }
@@ -248,6 +262,7 @@ async function runFullPipeline(booking) {
 
   const analyzed = [];
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-"));
+  currentTmpDir = tmpDir;
 
   // Terms of Service, "Acceptable use": we can reject specific photos/videos
   // for nudity or sexually explicit content. Flagged uploads are removed
@@ -338,9 +353,8 @@ async function runFullPipeline(booking) {
 
   // The social cut's photo selection can include host-starred photos that
   // didn't make the main shortlist -- upload the whole selection under its
-  // own R2 prefix now, so it survives a roast-approval pause: finalizeDelivery
-  // recovers it by listing rather than needing anything still in memory
-  // from this run.
+  // own R2 prefix now, so a reprocess survives it: finalizeDelivery recovers
+  // it by listing rather than needing anything still in memory from this run.
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier)) {
     const socialCutsCount = useAllPhotoSocialCuts ? Infinity : (SOCIAL_CUTS_COUNT[booking.tier] || 1);
     const socialSelections = buildSocialSelections(analyzed, socialCutsCount);
@@ -388,6 +402,7 @@ async function runFullPipeline(booking) {
   const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.documentary;
   const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.documentary;
   await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts);
+  currentTmpDir = null;
 }
 
 async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false) {
@@ -430,8 +445,8 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   }
 
   // The social cut(s)' photo selections were already uploaded to R2 in
-  // runFullPipeline (before any roast-approval pause) -- recover them here
-  // rather than needing anything still in memory from that run. No roast
+  // runFullPipeline -- recover them here rather than needing anything still
+  // in memory from that run. No roast
   // lines: social cuts never carry Roast Reel captions. Duration is hit by
   // solving for a per-slot length that lands each cut's sequence near
   // TARGET_SOCIAL_SECONDS, rather than using the full cut's fixed pacing.
@@ -470,26 +485,35 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   }
 
   console.log("Writing deliverable record...");
-  await supabase.from("deliverables").insert({
-    booking_id: bookingId,
-    full_video_key: videoKey,
-    full_video_no_roast_key: noRoastVideoKey,
-    // social_video_key (singular) kept in sync with the first cut for
-    // anything still reading it (e.g. poll-and-recap.js's purge step);
-    // social_video_keys is the real, complete list.
-    social_video_key: socialVideoKeys[0] || null,
-    social_video_keys: socialVideoKeys,
-    gallery_photo_keys: enhancedKeys,
-  });
+  // Upsert on booking_id, not a blind insert -- a manual reprocess of an
+  // already-delivered booking (this pipeline is explicitly designed to
+  // survive that, see the comments above) would otherwise leave two rows
+  // per booking, since booking_id had no uniqueness guard until the
+  // deliverables_booking_id_key constraint (migration 017).
+  await supabase.from("deliverables").upsert(
+    {
+      booking_id: bookingId,
+      full_video_key: videoKey,
+      full_video_no_roast_key: noRoastVideoKey,
+      // social_video_key (singular) kept in sync with the first cut for
+      // anything still reading it (e.g. poll-and-recap.js's purge step);
+      // social_video_keys is the real, complete list.
+      social_video_key: socialVideoKeys[0] || null,
+      social_video_keys: socialVideoKeys,
+      gallery_photo_keys: enhancedKeys,
+      delivered_at: new Date().toISOString(),
+    },
+    { onConflict: "booking_id" }
+  );
 
   const expiresAt = computeGalleryExpiry(tier);
 
-  // Free's finished gallery/video had no deletion cutoff at all previously --
-  // once delivered it stayed downloadable forever. It's now deleted the same
-  // moment the gallery itself expires (7 days after delivery, see
-  // GALLERY_EXPIRY_DAYS above); see purgeExpiredFreeGalleries() in
+  // Every tier's finished gallery/video is deleted once its own retention
+  // window passes (7 days Free, 2/4/6 months Classic/Signature/Luxe -- see
+  // GALLERY_EXPIRY_DAYS/MONTHS above), matching what the Privacy
+  // Policy/FAQ promise. See purgeExpiredGalleries() in
   // scripts/poll-and-recap.js, which reads this.
-  const galleryPurgeAt = tier === "free" ? expiresAt.toISOString() : null;
+  const galleryPurgeAt = expiresAt.toISOString();
 
   await supabase
     .from("bookings")

@@ -45,16 +45,25 @@ export default function Dashboard() {
   useEffect(() => { load(); }, [load]);
 
   const updateStatus = async (id, newStatus) => {
+    const prevBookings = bookings;
+    const prevSelected = selected;
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
     if (selected?.id === id) setSelected((s) => ({ ...s, status: newStatus }));
     try {
-      await fetch(`/api/bookings/${id}`, {
+      const res = await fetch(`/api/bookings/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (!res.ok) throw new Error(`Request failed with status ${res.status}`);
     } catch (err) {
+      // Without this, a failed save (network blip, expired session) left
+      // the optimistic update on screen with no indication it never
+      // actually persisted -- a reload would silently revert it.
       console.error("Failed to save status change", err);
+      setBookings(prevBookings);
+      setSelected(prevSelected);
+      alert("Failed to save the status change. Please try again.");
     }
   };
 

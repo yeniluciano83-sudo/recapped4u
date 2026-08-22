@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // eventId here is the booking's upload_slug (the short code in the QR/link URL)
 export async function GET(req, { params }) {
   const { eventId } = params;
+
+  const { success } = await checkRateLimit("event-info", req, { requests: 30, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const { data: booking, error } = await supabase
     .from("bookings")
@@ -30,6 +36,12 @@ const VALID_STYLES = ["cinematic", "upbeat", "documentary", "retro", "highlight"
 // /api/bookings/[id], which is the staff dashboard's status-only endpoint.
 export async function PATCH(req, { params }) {
   const { eventId } = params;
+
+  const { success } = await checkRateLimit("event-info", req, { requests: 30, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
+
   const { socialStyle } = await req.json();
 
   if (socialStyle !== null && !VALID_STYLES.includes(socialStyle)) {

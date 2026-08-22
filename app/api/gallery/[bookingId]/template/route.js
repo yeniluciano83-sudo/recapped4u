@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-const VALID_TEMPLATES = ["grid", "masonry", "slideshow", "polaroid", "fullbleed"];
+// Keep in sync with the templates app/gallery/[bookingId]/page.jsx actually
+// renders -- "fullbleed" isn't implemented there, so accepting it here would
+// silently store a value the gallery page can't render anything for.
+const VALID_TEMPLATES = ["grid", "masonry", "slideshow", "polaroid"];
 
 // PATCH /api/gallery/[bookingId]/template  { template: "masonry" }
 export async function PATCH(req, { params }) {

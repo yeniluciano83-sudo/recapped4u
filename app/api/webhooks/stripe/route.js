@@ -22,10 +22,17 @@ export async function POST(req) {
     const bookingId = session.metadata?.booking_id;
 
     if (bookingId) {
+      // Stripe retries this webhook (up to ~3 days) on any non-2xx response
+      // or timeout, and a redelivery must be a no-op. Scoping the update to
+      // .eq("status", "booked") makes it match zero rows -- and .single()
+      // error out -- once a prior delivery already advanced this booking,
+      // so a retry can't resend the confirmation email or regress a
+      // further-along booking (editing/delivered) back to "collecting".
       const { data: booking, error } = await supabase
         .from("bookings")
         .update({ stripe_payment_status: "paid", status: "collecting" })
         .eq("id", bookingId)
+        .eq("status", "booked")
         .select()
         .single();
 

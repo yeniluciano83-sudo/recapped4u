@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // Generates a QR code PNG pointing to this event's guest upload page.
 // Usage: GET /api/qrcode/[slug]  -> returns a PNG image
 // The slug is the booking's upload_slug (the same one used in /event/[slug]).
 export async function GET(req, { params }) {
   const { slug } = params;
+
+  const { success } = await checkRateLimit("qrcode", req, { requests: 60, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   // Confirm the booking actually exists before generating a code for it
   const { data: booking, error } = await supabase

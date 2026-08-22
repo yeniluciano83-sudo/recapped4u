@@ -22,13 +22,22 @@ const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { hostName, email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic } = body;
+    const { email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic } = body;
+    const hostName = (body.hostName || "").trim();
 
+    // A whitespace-only hostName passes a plain truthy check, then breaks
+    // hostName.split(" ")[0] personalization in every email template
+    // ("Hi ,"). Trim before validating so it's rejected here instead.
     if (!hostName || !email || !eventType || !eventDate || !tier) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const uploadSlug = randomUUID().split("-")[0];
+    // The full UUID, not a truncated prefix -- this slug is the only thing
+    // gating every guest-facing event-management route (upload, close
+    // uploads, extend deadline, cancel, reschedule, social style). An
+    // 8-hex-char prefix is only 32 bits, brute-forceable; the full UUID is
+    // 122 bits.
+    const uploadSlug = randomUUID();
 
     const effectiveDeliveryFormat = SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) && deliveryFormat === "social_cuts" ? "social_cuts" : "recap";
     // Roast Reel captions the full video -- there's nothing for it to do
@@ -40,10 +49,13 @@ export async function POST(req) {
       .from("bookings")
       .insert({
         host_name: hostName,
-        email,
+        email: (email || "").trim(),
         event_type: eventType,
         event_date: eventDate,
-        guest_count: guestCount || null,
+        // "" (the form's empty-input default) must become null, but a
+        // legitimately-entered 0 must not -- a plain `guestCount || null`
+        // would coerce that 0 to null too.
+        guest_count: guestCount === "" || guestCount == null ? null : guestCount,
         tier,
         style: style || null,
         social_style: SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) ? socialStyle || null : null,
@@ -71,10 +83,11 @@ export async function POST(req) {
     // owns the email clicks the confirm link. Paid tiers don't need this:
     // Stripe payment is already a real-money barrier before anything's live.
     if (price.amount === 0) {
-      await supabase
+      const { error: pendingError } = await supabase
         .from("bookings")
         .update({ status: "pending_confirmation" })
         .eq("id", booking.id);
+      if (pendingError) console.error("Failed to set booking to pending_confirmation:", pendingError.message);
 
       // Dynamic import, not a top-level one: constructing the Resend client
       // throws synchronously when RESEND_API_KEY is unset, which would

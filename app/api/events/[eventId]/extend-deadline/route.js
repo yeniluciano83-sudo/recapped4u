@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const EXTENSION_HOURS = 48;
 
@@ -9,6 +10,11 @@ const EXTENSION_HOURS = 48;
 // respects the pushed-out deadline on its next run.
 export async function POST(req, { params }) {
   const { eventId } = params;
+
+  const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const { data: booking, error } = await supabase
     .from("bookings")

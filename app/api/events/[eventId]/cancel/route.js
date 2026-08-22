@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -13,6 +14,11 @@ function isRefundEligible(eventDate) {
 
 export async function GET(req, { params }) {
   const { eventId } = params;
+
+  const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const { data: booking, error } = await supabase
     .from("bookings")
@@ -33,6 +39,11 @@ export async function GET(req, { params }) {
 export async function POST(req, { params }) {
   const { eventId } = params;
 
+  const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
+
   const { data: booking, error } = await supabase
     .from("bookings")
     .select("*")
@@ -47,9 +58,12 @@ export async function POST(req, { params }) {
     return NextResponse.json({ success: true, alreadyCancelled: true });
   }
 
-  if (booking.status === "delivered") {
+  // Once the recap pipeline has started (or finished), silently cancelling
+  // out from under it would let a refunded/cancelled booking still get
+  // delivered -- same reasoning as RESCHEDULABLE_STATUSES in reschedule/route.js.
+  if (["editing", "awaiting_roast_approval", "delivered"].includes(booking.status)) {
     return NextResponse.json(
-      { error: "This event has already been delivered and can't be cancelled online — reply to your confirmation email and we'll help." },
+      { error: "This event is already being processed and can't be cancelled online — reply to your confirmation email and we'll help." },
       { status: 400 }
     );
   }

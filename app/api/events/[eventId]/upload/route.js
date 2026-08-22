@@ -1,9 +1,25 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { uploadFile, buildStorageKey } from "@/lib/storage";
+import { uploadFile, buildStorageKey, deleteFile } from "@/lib/storage";
+import { checkRateLimit } from "@/lib/rateLimit";
+
+// Generous enough for real phone photos (even large ones) and real guest
+// counts, while closing off a scripted client pushing unbounded fake
+// uploads at a guessed/leaked event link and running up R2 storage cost.
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+const MAX_UPLOADS_PER_EVENT = 500;
 
 export async function POST(req, { params }) {
   const { eventId } = params;
+
+  // upload_slug is the only credential gating this route -- generous
+  // enough for a real guest uploading many photos back-to-back (one
+  // request per file, see the client), tight enough to blunt a script
+  // hammering a guessed or leaked slug.
+  const { success } = await checkRateLimit("event-upload", req, { requests: 60, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
@@ -47,6 +63,20 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Only photos can be uploaded." }, { status: 400 });
     }
 
+    const oversized = files.find((file) => file.size > MAX_FILE_SIZE_BYTES);
+    if (oversized) {
+      return NextResponse.json({ error: "Photos must be under 25MB each." }, { status: 400 });
+    }
+
+    const { count: existingCount } = await supabase
+      .from("uploads")
+      .select("id", { count: "exact", head: true })
+      .eq("booking_id", booking.id);
+
+    if ((existingCount || 0) + files.length > MAX_UPLOADS_PER_EVENT) {
+      return NextResponse.json({ error: "This event has reached its upload limit. Please reach out to us for help." }, { status: 400 });
+    }
+
     const results = [];
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -64,7 +94,24 @@ export async function POST(req, { params }) {
         .select()
         .single();
 
-      if (!insertError) results.push(uploadRow);
+      if (insertError) {
+        // The file already landed in R2 -- without this, a DB insert
+        // failure orphans it there (invisible to curation and the 30-day
+        // purge job, which both key off the `uploads` row) while the guest
+        // was never told anything went wrong.
+        console.error(`Upload row insert failed for booking ${booking.id}, key ${key}:`, insertError.message);
+        try {
+          await deleteFile(key);
+        } catch (cleanupErr) {
+          console.error(`Failed to clean up orphaned R2 object ${key}:`, cleanupErr.message);
+        }
+      } else {
+        results.push(uploadRow);
+      }
+    }
+
+    if (results.length === 0) {
+      return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 });
     }
 
     // First guest upload moves the event from "booked"/"collecting" if not already there

@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getSignedDownloadUrl } from "@/lib/storage";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // Lists a booking's uploaded photos for the host's must-include picker.
 // Photos only -- must-include is specifically for the social cut's photo
 // selection, not the separate video-clip lane.
 export async function GET(req, { params }) {
   const { eventId } = params;
+
+  const { success } = await checkRateLimit("event-photos", req, { requests: 30, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")

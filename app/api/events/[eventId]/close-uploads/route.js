@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 // Lets a host signal "guests are done uploading" ahead of their tier's
 // upload deadline. Doesn't run the pipeline directly (that needs
@@ -8,6 +9,11 @@ import { supabase } from "@/lib/supabase";
 // and processes it on its next run instead of waiting for the deadline.
 export async function POST(req, { params }) {
   const { eventId } = params;
+
+  const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   const { data: booking, error } = await supabase
     .from("bookings")

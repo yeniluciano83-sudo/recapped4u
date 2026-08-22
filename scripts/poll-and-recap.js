@@ -14,10 +14,11 @@
  *   3. Permanently deletes raw guest uploads whose purge_at (set to 30 days
  *      after delivery, see finalizeDelivery in auto-recap.js) has passed --
  *      matching the retention policy already promised in the UI copy.
- *   4. Permanently deletes Free-tier bookings' finished gallery/video (R2
- *      objects + the deliverables row) whose gallery_purge_at (set to 7
- *      days after delivery) has passed -- unlike paid tiers, Free has no
- *      revenue backing indefinite storage.
+ *   4. Permanently deletes any booking's finished gallery/video (R2 objects
+ *      + the deliverables row) whose gallery_purge_at (set to each tier's
+ *      retention window after delivery -- 7 days Free, 2/4/6 months
+ *      Classic/Signature/Luxe) has passed, matching the retention policy
+ *      promised in the Privacy Policy/FAQ.
  *
  * If any booking's pipeline run fails, it's logged and the run moves on to
  * the next one -- at the end, if ADMIN_ALERT_EMAIL is set, one summary
@@ -111,6 +112,24 @@ async function processCollectingBookings(failures) {
     }
 
     if (schedule.reminderHours !== null && hours >= schedule.reminderHours + extensionHours && !booking.reminder_sent_at) {
+      // Same atomic-claim reasoning as the recap-trigger path above: two
+      // overlapping poll runs could otherwise both see reminder_sent_at as
+      // null and both email the host. Claiming before sending (rather than
+      // after) means a failed send is never retried -- a missed reminder
+      // instead of a duplicate one, the safer failure mode for an email.
+      const { data: claimed } = await supabase
+        .from("bookings")
+        .update({ reminder_sent_at: new Date().toISOString() })
+        .eq("id", booking.id)
+        .is("reminder_sent_at", null)
+        .select("id")
+        .maybeSingle();
+
+      if (!claimed) {
+        console.log(`Reminder for booking ${booking.id} was already claimed by another run -- skipping.`);
+        continue;
+      }
+
       console.log(`Sending upload reminder for booking ${booking.id}...`);
       try {
         // Lazy require: constructing the Resend client throws synchronously
@@ -126,7 +145,6 @@ async function processCollectingBookings(failures) {
           uploadSlug: booking.upload_slug,
           tier: booking.tier,
         });
-        await supabase.from("bookings").update({ reminder_sent_at: new Date().toISOString() }).eq("id", booking.id);
       } catch (err) {
         console.error(`Reminder email failed for booking ${booking.id}: ${err.message}`);
       }
@@ -160,21 +178,20 @@ async function purgeExpiredUploads(failures) {
   }
 }
 
-async function purgeExpiredFreeGalleries(failures) {
+async function purgeExpiredGalleries(failures) {
   const { data: expired, error } = await supabase
     .from("bookings")
     .select("id, gallery_purge_at")
-    .eq("tier", "free")
     .lte("gallery_purge_at", new Date().toISOString())
     .limit(200); // batched -- a single run only needs to make a dent, not clear a backlog in one shot
 
   if (error) {
-    console.error("Failed to query free bookings past their gallery purge date:", error.message);
+    console.error("Failed to query bookings past their gallery purge date:", error.message);
     return;
   }
   if (!expired || expired.length === 0) return;
 
-  console.log(`\nPurging ${expired.length} Free-tier gallery/video past their 30-day retention window...`);
+  console.log(`\nPurging ${expired.length} gallery/video past their retention window...`);
   const { deleteFile } = require("../lib/storage");
   for (const booking of expired) {
     try {
@@ -189,7 +206,7 @@ async function purgeExpiredFreeGalleries(failures) {
       await supabase.from("bookings").update({ gallery_purge_at: null }).eq("id", booking.id);
     } catch (err) {
       console.error(`Failed to purge gallery for booking ${booking.id}:`, err.message);
-      failures.push({ bookingId: booking.id, error: `Free gallery purge failed: ${err.message}` });
+      failures.push({ bookingId: booking.id, error: `Gallery purge failed: ${err.message}` });
     }
   }
 }
@@ -199,7 +216,7 @@ async function main() {
   const failures = [];
   await processCollectingBookings(failures);
   await purgeExpiredUploads(failures);
-  await purgeExpiredFreeGalleries(failures);
+  await purgeExpiredGalleries(failures);
 
   if (failures.length > 0 && process.env.ADMIN_ALERT_EMAIL) {
     console.log(`Sending failure alert for ${failures.length} booking(s) to ${process.env.ADMIN_ALERT_EMAIL}...`);

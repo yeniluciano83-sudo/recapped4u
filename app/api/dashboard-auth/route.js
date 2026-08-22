@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 
 // In-memory per-instance limiter -- not distributed, but this endpoint guards
 // a single shared password with no username, so the real threat is a script
@@ -19,6 +20,18 @@ function isRateLimited(ip) {
   return record.count > MAX_ATTEMPTS;
 }
 
+// Matches the timing-safe pattern already used in lib/confirmToken.js --
+// a plain === leaks how many leading characters matched via response
+// timing. Rate limiting + the fixed delay below already make this
+// impractical to exploit, but there's no reason not to close it too.
+function isCorrectPassword(candidate) {
+  const expected = process.env.DASHBOARD_PASSWORD || "";
+  const candidateBuf = Buffer.from(candidate || "");
+  const expectedBuf = Buffer.from(expected);
+  if (candidateBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(candidateBuf, expectedBuf);
+}
+
 export async function POST(req) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (isRateLimited(ip)) {
@@ -29,7 +42,7 @@ export async function POST(req) {
   // Slow down guessing regardless of outcome -- cheap deterrent against
   // automated brute force that doesn't depend on the in-memory counter above.
   await new Promise((r) => setTimeout(r, 400));
-  if (password === process.env.DASHBOARD_PASSWORD) {
+  if (isCorrectPassword(password)) {
     attempts.delete(ip);
     const res = NextResponse.json({ success: true });
     res.cookies.set("dashboard_auth", process.env.DASHBOARD_PASSWORD, {

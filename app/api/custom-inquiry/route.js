@@ -37,9 +37,14 @@ export async function POST(req) {
 
     if (error) throw error;
 
-    await sendCustomInquiry({ hostName, email, eventType, eventDate, guestCount, style, notes });
+    // Seeds the message thread with the host's original ask, so the
+    // dashboard shows one continuous conversation starting from the
+    // inquiry itself, not just replies that come after it.
+    await supabase.from("custom_inquiry_messages").insert({ inquiry_id: inquiry.id, direction: "inbound", body: notes.trim() });
+
+    await sendCustomInquiry({ inquiryId: inquiry.id, hostName, email, eventType, eventDate, guestCount, style, notes });
     try {
-      await sendCustomInquiryReceived({ to: email, hostName, eventType });
+      await sendCustomInquiryReceived({ inquiryId: inquiry.id, to: email, hostName, eventType });
     } catch (err) {
       // The business-facing notification above already landed -- a failed
       // host ack shouldn't fail the whole request.

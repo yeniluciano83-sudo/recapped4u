@@ -118,12 +118,26 @@ create table custom_inquiries (
   updated_at timestamptz not null default now()
 );
 
+-- A real message thread per custom inquiry, fed by both directions:
+-- outbound rows are written when staff send a message/quote from the
+-- dashboard; inbound rows are written by the Resend inbound webhook
+-- (app/api/webhooks/resend-inbound) when a host (or staff, replying from
+-- their own inbox) replies to the per-inquiry address.
+create table custom_inquiry_messages (
+  id uuid primary key default uuid_generate_v4(),
+  inquiry_id uuid not null references custom_inquiries(id) on delete cascade,
+  direction text not null check (direction in ('outbound', 'inbound')),
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
 -- Helpful index for the dashboard's default sort/filter
 create index bookings_status_idx on bookings(status);
 create index bookings_event_date_idx on bookings(event_date);
 create index uploads_booking_id_idx on uploads(booking_id);
 create index roast_scripts_booking_id_idx on roast_scripts(booking_id);
 create index custom_inquiries_status_idx on custom_inquiries(status);
+create index custom_inquiry_messages_inquiry_id_idx on custom_inquiry_messages(inquiry_id);
 
 -- Row Level Security: lock everything down by default.
 -- The app will use the Supabase service role key on the server side,
@@ -135,3 +149,4 @@ alter table curation_reports enable row level security;
 alter table deliverables enable row level security;
 alter table roast_scripts enable row level security;
 alter table custom_inquiries enable row level security;
+alter table custom_inquiry_messages enable row level security;

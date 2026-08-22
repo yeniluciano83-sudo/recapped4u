@@ -33,7 +33,10 @@ export async function POST(req, { params }) {
         .eq("id", id);
     }
 
+    await supabase.from("custom_inquiry_messages").insert({ inquiry_id: id, direction: "outbound", body: message.trim() });
+
     await sendCustomInquiryReply({
+      inquiryId: id,
       to: inquiry.email,
       hostName: inquiry.host_name,
       eventType: inquiry.event_type,

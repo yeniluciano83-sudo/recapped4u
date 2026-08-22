@@ -41,6 +41,8 @@ function DashboardInner() {
   const [inquiries, setInquiries] = useState([]);
   const [inquiriesLoading, setInquiriesLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
     if (!selected && !selectedInquiry) return;
@@ -78,6 +80,40 @@ function DashboardInner() {
   }, []);
 
   useEffect(() => { load(); loadInquiries(); }, [load, loadInquiries]);
+
+  // Auto-opens the inquiry linked from the "host replied" notification
+  // email (?inquiry=<id>), once the list has actually loaded.
+  useEffect(() => {
+    const wantedId = searchParams.get("inquiry");
+    if (!wantedId || inquiriesLoading) return;
+    const match = inquiries.find((i) => i.id === wantedId);
+    if (match) setSelectedInquiry(match);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inquiriesLoading]);
+
+  const loadMessages = useCallback(async (inquiryId) => {
+    setMessagesLoading(true);
+    try {
+      const res = await fetch(`/api/admin/custom-inquiries/${inquiryId}`);
+      const data = await res.json();
+      setMessages(data.messages || []);
+    } catch (err) {
+      console.error("Failed to load inquiry messages", err);
+      setMessages([]);
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedInquiry) { setMessages([]); return; }
+    loadMessages(selectedInquiry.id);
+    // Polls while the panel is open so a reply that lands via the inbound
+    // webhook while staff are actively looking at this inquiry shows up
+    // without needing to close and reopen the panel.
+    const interval = setInterval(() => loadMessages(selectedInquiry.id), 15000);
+    return () => clearInterval(interval);
+  }, [selectedInquiry?.id, loadMessages]);
 
   const updateStatus = async (id, newStatus) => {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
@@ -287,11 +323,14 @@ function DashboardInner() {
             {selectedInquiry.style && <DetailRow label="Style preference" value={selectedInquiry.style} />}
             {selectedInquiry.notes && <DetailRow label="Notes" value={selectedInquiry.notes} />}
 
+            <MessageThread messages={messages} loading={messagesLoading} />
+
             <InquiryComposer
               inquiry={selectedInquiry}
               onSent={(updated) => {
                 setSelectedInquiry(updated);
                 loadInquiries();
+                loadMessages(selectedInquiry.id);
               }}
             />
 
@@ -304,6 +343,44 @@ function DashboardInner() {
         </div>
       )}
     </main>
+  );
+}
+
+// Both directions in one thread: outbound rows are written the moment
+// staff send something from InquiryComposer below; inbound rows arrive
+// via the Resend inbound webhook (app/api/webhooks/resend-inbound) when
+// the host replies to any of those emails -- see inquiryReplyAddress in
+// lib/email.js for how a reply gets routed back to this specific inquiry.
+function MessageThread({ messages, loading }) {
+  if (loading && messages.length === 0) {
+    return <p style={{ fontSize: "12.5px", color: "#8a857d", margin: "20px 0 0" }}>Loading conversation…</p>;
+  }
+  if (messages.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: "24px" }}>
+      <div style={{ fontSize: "12px", color: "#4a4642", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+        Conversation
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "280px", overflowY: "auto", padding: "2px" }}>
+        {messages.map((m) => (
+          <div key={m.id} style={{ alignSelf: m.direction === "inbound" ? "flex-start" : "flex-end", maxWidth: "85%" }}>
+            <div style={{
+              padding: "9px 12px", borderRadius: "12px", fontSize: "13px", lineHeight: 1.5, whiteSpace: "pre-wrap",
+              background: m.direction === "inbound" ? "#F0EAE0" : "#FBEEE0",
+              border: m.direction === "inbound" ? "1px solid #E4DED2" : "1px solid #C97A3D44",
+              borderBottomLeftRadius: m.direction === "inbound" ? "3px" : "12px",
+              borderBottomRightRadius: m.direction === "inbound" ? "12px" : "3px",
+            }}>
+              {m.body}
+            </div>
+            <div style={{ fontSize: "10.5px", color: "#8a857d", marginTop: "3px", textAlign: m.direction === "inbound" ? "left" : "right" }}>
+              {m.direction === "inbound" ? "Host" : "You"} · {formatDateTime(m.created_at)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -419,6 +496,12 @@ function DetailRow({ label, value }) {
 function formatDate(dateStr) {
   if (!dateStr) return "—";
   try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
+  catch { return dateStr; }
+}
+
+// For message timestamps (full ISO, unlike the bare `event_date` above).
+function formatDateTime(dateStr) {
+  try { return new Date(dateStr).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
   catch { return dateStr; }
 }
 

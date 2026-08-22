@@ -41,8 +41,15 @@ export async function POST(req, { params }) {
 
     const priceFormatted = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(priceCents / 100);
 
+    await supabase.from("custom_inquiry_messages").insert({
+      inquiry_id: id,
+      direction: "outbound",
+      body: `Quote sent: ${priceFormatted}${message ? `\n\n${message}` : ""}`,
+    });
+
     try {
       await sendCustomQuote({
+        inquiryId: id,
         to: inquiry.email,
         hostName: inquiry.host_name,
         eventType: inquiry.event_type,

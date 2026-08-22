@@ -237,7 +237,7 @@ async function runAutoRecap(bookingId) {
     // status change that happened for another reason mid-run (e.g. the
     // zero-shortlist case above already reverts to "collecting" itself,
     // or the host cancelled the booking while this was running).
-    await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId).eq("status", "editing");
+    await supabase.from("bookings").update({ status: "collecting", processing_started_at: null }).eq("id", bookingId).eq("status", "editing");
     if (currentTmpDir) {
       fs.rmSync(currentTmpDir, { recursive: true, force: true });
       currentTmpDir = null;
@@ -250,7 +250,11 @@ async function runAutoRecap(bookingId) {
 async function runFullPipeline(booking) {
   const bookingId = booking.id;
 
-  await supabase.from("bookings").update({ status: "editing" }).eq("id", bookingId);
+  // processing_started_at set here (not just by poll-and-recap.js's claim)
+  // so a manual `node scripts/auto-recap.js <id>` run -- which never goes
+  // through that claim -- is also covered by the stale-editing recovery in
+  // recoverStaleEditingBookings().
+  await supabase.from("bookings").update({ status: "editing", processing_started_at: new Date().toISOString() }).eq("id", bookingId);
 
   const { data: uploads, error: uploadsErr } = await supabase.from("uploads").select("*").eq("booking_id", bookingId);
   if (uploadsErr) throw uploadsErr;
@@ -309,14 +313,14 @@ async function runFullPipeline(booking) {
 
     if (videoShortlist.length === 0) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
-      await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId);
+      await supabase.from("bookings").update({ status: "collecting", processing_started_at: null }).eq("id", bookingId);
       throw new Error(
         `No photos met the quality threshold for booking ${bookingId} -- reverted status to "collecting".`
       );
     }
   } else if (analyzed.length === 0) {
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    await supabase.from("bookings").update({ status: "collecting" }).eq("id", bookingId);
+    await supabase.from("bookings").update({ status: "collecting", processing_started_at: null }).eq("id", bookingId);
     throw new Error(`No usable photos (after moderation) for booking ${bookingId} -- reverted status to "collecting".`);
   }
 
@@ -521,10 +525,25 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   // scripts/poll-and-recap.js, which reads this.
   const galleryPurgeAt = expiresAt.toISOString();
 
-  await supabase
+  // Guarded on status still being "editing": the cancel/reschedule routes
+  // block themselves once a booking reaches "editing", but only check status
+  // at the start of their own request -- a cancellation that lands in the
+  // narrow window between that check and their own update could otherwise
+  // still race past it, and this unconditional update would then deliver
+  // (and email) a booking the host just cancelled and got refunded for.
+  const { data: delivered } = await supabase
     .from("bookings")
     .update({ status: "delivered", delivered_at: new Date().toISOString(), gallery_expires_at: expiresAt.toISOString(), gallery_purge_at: galleryPurgeAt })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .eq("status", "editing")
+    .select("id")
+    .maybeSingle();
+
+  if (!delivered) {
+    console.log(`Booking ${bookingId} is no longer "editing" (cancelled mid-run?) -- skipping delivery email and upload purge scheduling.`);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    return;
+  }
 
   // Raw guest uploads get permanently deleted 30 days from here -- see
   // purgeExpiredUploads() in scripts/poll-and-recap.js, which reads this.

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame, AlertTriangle } from "lucide-react";
 
 const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
 // Two statuses fall outside the linear happy-path flow above -- pipeline
@@ -13,6 +13,15 @@ const TIER_LABEL = { free: "Free", standard: "Classic", premium: "Signature", ke
 const ROAST_LABEL = { light: "Light Roasting", lukewarm: "Lukewarm Roasting", hot: "Hot Roasting" };
 // Keep in sync with GALLERY_EXPIRY_MONTHS in scripts/auto-recap.js.
 const GALLERY_RETENTION = { standard: "2 months", premium: "4 months", keepsake: "6 months" };
+// Keep in sync with STALE_EDITING_HOURS in scripts/poll-and-recap.js -- a
+// booking stuck at "editing" past this long was almost certainly killed
+// mid-run (job timeout, OOM) rather than genuinely still processing, and
+// the scheduler will auto-recover it on its next tick. Surfaced here too so
+// a stuck booking isn't invisible between scheduler runs.
+const STALE_EDITING_HOURS = 1.5;
+function isStale(b) {
+  return b.status === "editing" && b.processing_started_at && Date.now() - new Date(b.processing_started_at).getTime() > STALE_EDITING_HOURS * 3600000;
+}
 
 export default function Dashboard() {
   const [bookings, setBookings] = useState([]);
@@ -121,6 +130,12 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  {isStale(b) && (
+                    <span title={`Stuck at "Editing" for over ${STALE_EDITING_HOURS}h -- likely killed mid-run. The scheduler will auto-recover it on its next tick.`}
+                      style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, padding: "5px 10px", borderRadius: "999px", background: "#FBE9E7", color: "#B3402A", border: "1px solid #B3402A44" }}>
+                      <AlertTriangle size={12} /> Stuck
+                    </span>
+                  )}
                   <span style={{ fontSize: "12px", padding: "5px 10px", borderRadius: "999px", background: "#FAF7F2", color: STATUS_COLOR[b.status], border: `1px solid ${STATUS_COLOR[b.status]}44` }}>{STATUS_LABEL[b.status] || b.status}</span>
                   <ChevronRight size={16} color="#8a857d" />
                 </div>
@@ -159,6 +174,11 @@ export default function Dashboard() {
 
             <div style={{ marginTop: "24px" }}>
               <div style={{ fontSize: "12px", color: "#4a4642", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</div>
+              {isStale(selected) && (
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 12px", borderRadius: "10px", background: "#FBE9E7", border: "1px solid #B3402A44", marginBottom: "10px", fontSize: "13px", color: "#B3402A", fontWeight: 600 }}>
+                  <AlertTriangle size={14} /> Stuck at "Editing" for over {STALE_EDITING_HOURS}h -- the scheduler will auto-recover it on its next run.
+                </div>
+              )}
               {!STATUS_FLOW.includes(selected.status) && (
                 <div style={{ padding: "10px 12px", borderRadius: "10px", background: "#FBEEE0", border: `1px solid ${STATUS_COLOR[selected.status] || "#D8CFC0"}`, marginBottom: "10px", fontSize: "14px", color: STATUS_COLOR[selected.status] || "#211F1D", fontWeight: 600 }}>
                   {STATUS_LABEL[selected.status] || selected.status}

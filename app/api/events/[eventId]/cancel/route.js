@@ -68,6 +68,32 @@ export async function POST(req, { params }) {
     );
   }
 
+  // Claimed (and guarded on status still matching what we just read) BEFORE
+  // any refund is issued below: the pipeline's atomic claim (collecting ->
+  // editing, see poll-and-recap.js) could land in the gap between the
+  // status check above and this update. Locking in the cancellation first
+  // means that race can only ever result in "refused to cancel, no refund
+  // issued" -- never "refund issued, but the cancellation lost the race and
+  // the booking still got processed and delivered."
+  const { data: cancelledRow, error: claimError } = await supabase
+    .from("bookings")
+    .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+    .eq("id", booking.id)
+    .eq("status", booking.status)
+    .select("id")
+    .maybeSingle();
+
+  if (claimError) {
+    return NextResponse.json({ error: "Failed to cancel booking" }, { status: 500 });
+  }
+
+  if (!cancelledRow) {
+    return NextResponse.json(
+      { error: "This event just started processing and can't be cancelled online anymore — reply to your confirmation email and we'll help." },
+      { status: 409 }
+    );
+  }
+
   const refundEligible = isRefundEligible(booking.event_date);
   const isPaid = booking.tier !== "free" && booking.stripe_payment_status === "paid";
 
@@ -83,20 +109,8 @@ export async function POST(req, { params }) {
         style: "currency",
         currency: (refund.currency || "usd").toUpperCase(),
       }).format((refund.amount || 0) / 100);
+      await supabase.from("bookings").update({ stripe_payment_status: "refunded" }).eq("id", booking.id);
     }
-  }
-
-  const { error: updateError } = await supabase
-    .from("bookings")
-    .update({
-      status: "cancelled",
-      cancelled_at: new Date().toISOString(),
-      ...(refunded ? { stripe_payment_status: "refunded" } : {}),
-    })
-    .eq("id", booking.id);
-
-  if (updateError) {
-    return NextResponse.json({ error: "Failed to cancel booking" }, { status: 500 });
   }
 
   try {

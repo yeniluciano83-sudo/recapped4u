@@ -89,7 +89,7 @@ async function processCollectingBookings(failures) {
       // "collecting") means only one run's UPDATE actually matches a row.
       const { data: claimed } = await supabase
         .from("bookings")
-        .update({ status: "editing" })
+        .update({ status: "editing", processing_started_at: new Date().toISOString() })
         .eq("id", booking.id)
         .eq("status", "collecting")
         .select("id")
@@ -148,6 +148,52 @@ async function processCollectingBookings(failures) {
       } catch (err) {
         console.error(`Reminder email failed for booking ${booking.id}: ${err.message}`);
       }
+    }
+  }
+}
+
+// A real run (photo analysis + video encoding for a handful of bookings)
+// finishes in minutes. If a booking is still "editing" after this long, the
+// process that claimed it was killed before reaching runAutoRecap's own
+// catch block (job timeout -- see the 20-minute limit in
+// .github/workflows/recap-scheduler.yml -- OOM, or a crash) and never
+// reverted itself. Left alone, that booking is invisible forever: this
+// query is the only thing that ever looks at status = "editing" again.
+const STALE_EDITING_HOURS = 1.5;
+
+async function recoverStaleEditingBookings(failures) {
+  const staleCutoff = new Date(Date.now() - STALE_EDITING_HOURS * 60 * 60 * 1000).toISOString();
+  const { data: stale, error } = await supabase
+    .from("bookings")
+    .select("id, host_name, processing_started_at")
+    .eq("status", "editing")
+    .lt("processing_started_at", staleCutoff);
+
+  if (error) {
+    console.error("Failed to query stale editing bookings:", error.message);
+    return;
+  }
+  if (!stale || stale.length === 0) return;
+
+  console.log(`\nFound ${stale.length} booking(s) stuck in "editing" for over ${STALE_EDITING_HOURS}h -- recovering...`);
+  for (const booking of stale) {
+    // Guarded the same way as the claim above: only revert if it's still
+    // "editing" right now, so this can't clobber a run that finishes (or
+    // gets cancelled) in the moment between the query above and this update.
+    const { data: recovered } = await supabase
+      .from("bookings")
+      .update({ status: "collecting", processing_started_at: null })
+      .eq("id", booking.id)
+      .eq("status", "editing")
+      .select("id")
+      .maybeSingle();
+
+    if (recovered) {
+      console.log(`Recovered booking ${booking.id} (${booking.host_name}) -- reset to "collecting" for retry.`);
+      failures.push({
+        bookingId: booking.id,
+        error: `Stuck in "editing" for over ${STALE_EDITING_HOURS}h (likely killed by a job timeout mid-run) -- automatically reset to "collecting" and will retry next run.`,
+      });
     }
   }
 }
@@ -214,6 +260,7 @@ async function purgeExpiredGalleries(failures) {
 async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
   const failures = [];
+  await recoverStaleEditingBookings(failures);
   await processCollectingBookings(failures);
   await purgeExpiredUploads(failures);
   await purgeExpiredGalleries(failures);

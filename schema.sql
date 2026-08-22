@@ -31,6 +31,7 @@ create table bookings (
   reminder_sent_at timestamptz, -- set when the 24h-post-event upload reminder email is sent
   uploads_closed_at timestamptz, -- set when the host signals guests are done uploading, ahead of the tier's deadline
   cancelled_at timestamptz, -- set when the host cancels via their self-serve cancellation link
+  processing_started_at timestamptz, -- set when status flips to 'editing'; cleared on revert/delivery. Lets poll-and-recap.js detect a run that was killed mid-pipeline (job timeout, OOM) and never got to revert itself, instead of the booking staying stuck at 'editing' forever.
   created_at timestamptz not null default now()
 );
 

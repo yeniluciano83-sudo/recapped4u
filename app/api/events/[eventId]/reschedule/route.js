@@ -81,13 +81,29 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: "Your new date needs to be at least 24 hours from now." }, { status: 400 });
   }
 
-  const { error: updateError } = await supabase
+  // Guarded on status still matching what we just read: the pipeline's
+  // atomic claim (collecting -> editing, see poll-and-recap.js) could land
+  // in the gap between the RESCHEDULABLE_STATUSES check above and this
+  // update -- without this guard, that race lets event_date change on a
+  // booking that's already mid-processing, desyncing its deadlines from
+  // what the running pipeline already read into memory.
+  const { data: rescheduledRow, error: updateError } = await supabase
     .from("bookings")
     .update({ event_date: newDate })
-    .eq("id", booking.id);
+    .eq("id", booking.id)
+    .eq("status", booking.status)
+    .select("id")
+    .maybeSingle();
 
   if (updateError) {
     return NextResponse.json({ error: "Failed to reschedule booking" }, { status: 500 });
+  }
+
+  if (!rescheduledRow) {
+    return NextResponse.json(
+      { error: "This event just started processing and can't be rescheduled online anymore — reply to your confirmation email and we'll help." },
+      { status: 409 }
+    );
   }
 
   try {

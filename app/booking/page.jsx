@@ -73,7 +73,7 @@ const GALLERY_RETENTION = { standard: "2 months", premium: "4 months", keepsake:
 const ROAST_LEVELS = [
   { id: "light", label: "Light", desc: "Playful, gentle teasing" },
   { id: "lukewarm", label: "Lukewarm", desc: "Sharper, inside-joke energy" },
-  { id: "hot", label: "Hot", desc: "Full send, close friends only" },
+  { id: "hot", label: "Hot", desc: "Full send, thick skin required" },
 ];
 
 export default function BookingForm() {

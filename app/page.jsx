@@ -514,7 +514,7 @@ export default function HomePage() {
             {[
               { label: "Light Roasting", desc: "Playful, gentle teasing" },
               { label: "Lukewarm Roasting", desc: "Sharper, inside-joke energy" },
-              { label: "Hot Roasting", desc: "Full send, close friends only" },
+              { label: "Hot Roasting", desc: "Full send, thick skin required" },
             ].map((r) => (
               <div key={r.label} style={{ background: "#FAF7F2", border: "1px solid #E4DED2", borderRadius: 10, padding: "10px 14px", flex: "1 1 150px" }}>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{r.label}</div>

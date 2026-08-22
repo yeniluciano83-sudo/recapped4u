@@ -20,7 +20,7 @@ const TIERS = [
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours", highlight: true,
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut, or swap to social-cuts-only at booking", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for any event type (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"] },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
-    features: ["Everything in Signature", "5 social cuts instead of 1, each from a different set of your best photos", "Choose your editing style, plus a separate theme for your social cuts", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for any event type", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
+    features: ["Everything in Signature", "5 social cuts instead of 1, each from a different set of your best photos", "Choose your editing style, plus a separate theme for your social cuts", "24-hour priority turnaround", "Complimentary Roast Reel add-on for any event type", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
 ];
 
 const EVENT_TYPES = [
@@ -54,7 +54,7 @@ const TIER_ICONS = { free: Gift, standard: Camera, premium: Star, keepsake: Crow
 const FAQS = [
   { q: "Is this real footage, or generated?", a: "It's all real — every photo is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
   { q: "Will our photos be shared with anyone else?", a: "No. Your photos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
-  { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes 24-hour priority delivery (without the Roast Reel add-on, since that step waits on your approval)." },
+  { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes 24-hour priority delivery, Roast Reel included." },
   { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 2 months on Classic, 4 months on Signature, and 6 months on Luxe. Free's gallery and video are downloadable for 7 days after delivery, after which they're permanently removed. Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy. Your photos and data are never sold to a third party." },
   { q: "Can guests upload without downloading an app?", a: "Yes — guests just scan a QR code or tap a link, no account or app required." },
   { q: "Is there a limit on how many guests can upload?", a: "No hard limit on who can upload — the QR link works for any size gathering, from a small family dinner to a large corporate event. Free's curated gallery only keeps the top 20 photos, though; every paid tier includes every photo your guests upload." },

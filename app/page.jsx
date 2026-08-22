@@ -433,7 +433,7 @@ export default function HomePage() {
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
-        blob={{ color: "#C97A3D", top: -50, right: -40, size: 260 }}
+        blob={{ color: "#C97A3D", top: -50, right: 0, size: 260 }}
         subtitle="Every guest already has a camera in their pocket. Four simple steps turn what they capture into one story worth watching — you never touch an edit.">
         <div className="how-timeline">
           {[
@@ -544,7 +544,7 @@ export default function HomePage() {
       </Section>
 
       <Section id="faq" refs={sectionRefs} title="Frequently Asked Questions" icon={<HelpCircle size={20} color="#C97A3D" />}
-        blob={{ color: "#7A8B76", top: -40, left: -60, size: 240 }}
+        blob={{ color: "#7A8B76", top: -40, left: 0, size: 240 }}
         subtitle="Everything we get asked before someone books — answered upfront.">
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {FAQS.map((f, i) => {
@@ -580,7 +580,7 @@ export default function HomePage() {
         </div>
       </Section>
       <Section id="contact" refs={sectionRefs} title="Get In Touch" icon={<Mail size={20} color="#C97A3D" />} band="white"
-        blob={{ color: "#C97A3D", top: -50, right: -50, size: 240 }}
+        blob={{ color: "#C97A3D", top: -50, right: 0, size: 240 }}
         subtitle="Have a corporate event, or just a question? Reach out.">
         <div className="contact-row">
           <a href="mailto:hello@recappedforyou.com" className="press-btn" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>

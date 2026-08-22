@@ -137,7 +137,7 @@ export default function HomePage() {
         }
         .how-step-line { width: 2px; flex: 1; min-height: 28px; background: #E4DED2; margin: 6px 0; }
         .how-step-content { padding-bottom: 28px; }
-        .how-step-title { font-family: Georgia, serif; font-size: 17px; font-weight: 700; margin: 6px 0 5px; }
+        .how-step-title { font-family: Georgia, serif; font-size: 17px; font-weight: 700; margin: 12px 0 5px; }
         .how-step-desc { font-size: 13.5px; color: #4a4642; line-height: 1.55; max-width: 480px; }
         @media (min-width: 760px) {
           .how-timeline { flex-direction: row; align-items: flex-start; }

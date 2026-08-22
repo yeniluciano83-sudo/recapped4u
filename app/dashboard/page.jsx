@@ -287,9 +287,9 @@ function DashboardInner() {
             {selectedInquiry.style && <DetailRow label="Style preference" value={selectedInquiry.style} />}
             {selectedInquiry.notes && <DetailRow label="Notes" value={selectedInquiry.notes} />}
 
-            <QuoteForm
+            <InquiryComposer
               inquiry={selectedInquiry}
-              onSaved={(updated) => {
+              onSent={(updated) => {
                 setSelectedInquiry(updated);
                 loadInquiries();
               }}
@@ -307,66 +307,105 @@ function DashboardInner() {
   );
 }
 
-function QuoteForm({ inquiry, onSaved }) {
+// One composer for everything sent to a host: a message, plus an optional
+// price attached to that same message. Attaching a price is what actually
+// creates/updates the quote and puts a working accept-&-pay link in the
+// email the host receives -- there's no separate "just a message" vs
+// "just a price" flow to juggle.
+function InquiryComposer({ inquiry, onSent }) {
+  const alreadyQuoted = inquiry.status !== "new";
+  const [includeQuote, setIncludeQuote] = useState(alreadyQuoted && inquiry.status === "quoted");
+  const [message, setMessage] = useState(inquiry.quote_message || "");
+  const [decline, setDecline] = useState(false);
   const [tier, setTier] = useState(inquiry.quoted_tier || "premium");
   const [priceDollars, setPriceDollars] = useState(inquiry.quoted_price_cents != null ? String(inquiry.quoted_price_cents / 100) : "");
-  const [message, setMessage] = useState(inquiry.quote_message || "");
-  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
-  const alreadyQuoted = inquiry.status !== "new";
-  const locked = inquiry.status === "accepted" || inquiry.status === "declined";
+  const [sent, setSent] = useState(false);
 
-  const handleSubmit = async () => {
-    setSaving(true);
+  const quoteDisabled = inquiry.status === "accepted" || inquiry.status === "declined";
+  if (inquiry.status === "accepted") return null;
+
+  const handleSend = async () => {
+    setSending(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/custom-inquiries/${inquiry.id}/quote`, {
+      const res = await fetch(`/api/admin/custom-inquiries/${inquiry.id}/${includeQuote ? "quote" : "reply"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier, priceDollars, message }),
+        body: JSON.stringify(includeQuote ? { tier, priceDollars, message } : { message, decline }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save quote");
-      onSaved(data.inquiry);
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      onSent(data.inquiry);
+      if (!includeQuote) { setMessage(""); setDecline(false); }
+      setSent(true);
+      setTimeout(() => setSent(false), 3000);
     } catch (err) {
       setError(err.message);
     } finally {
-      setSaving(false);
+      setSending(false);
     }
   };
 
   return (
     <div style={{ marginTop: "24px", padding: "16px", background: "#FAF7F2", border: "1px solid #E4DED2", borderRadius: "12px" }}>
-      <div style={{ fontSize: "12px", color: "#4a4642", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
-        {alreadyQuoted ? "Quote" : "Set a quote"}
+      <div style={{ fontSize: "12px", color: "#4a4642", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+        {includeQuote ? (alreadyQuoted ? "Quote" : "Send a quote") : "Message"}
       </div>
+      <p style={{ fontSize: "12px", color: "#8a857d", margin: "0 0 12px", lineHeight: 1.5 }}>
+        {includeQuote ? "Attaching a price sends this message with a working accept-&-pay link." : "Ask a question or let them know before there's a price to discuss."}
+      </p>
 
-      <label style={{ fontSize: "12.5px", color: "#4a4642", display: "block", marginBottom: "5px" }}>Base package (pipeline rules)</label>
-      <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
-        {QUOTABLE_TIERS.map((t) => (
-          <button key={t} disabled={locked} onClick={() => setTier(t)} aria-pressed={tier === t}
-            style={{ flex: 1, padding: "8px 6px", borderRadius: "8px", fontSize: "12.5px", fontWeight: 600, cursor: locked ? "default" : "pointer",
-              background: tier === t ? "#FBEEE0" : "#FFFFFF", border: tier === t ? "1.5px solid #C97A3D" : "1px solid #D8CFC0", color: tier === t ? "#C97A3D" : "#4a4642" }}>
-            {TIER_LABEL[t]}
-          </button>
-        ))}
-      </div>
+      {!quoteDisabled && (
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "14px", fontSize: "12.5px", color: "#4a4642", fontWeight: 600 }}>
+          <input type="checkbox" checked={includeQuote} onChange={(e) => setIncludeQuote(e.target.checked)} style={{ width: "15px", height: "15px", accentColor: "#C97A3D" }} />
+          Attach a price quote
+        </label>
+      )}
 
-      <label htmlFor="quote-price" style={{ fontSize: "12.5px", color: "#4a4642", display: "block", marginBottom: "5px" }}>Price ($)</label>
-      <input id="quote-price" type="number" min="1" step="1" disabled={locked} value={priceDollars} onChange={(e) => setPriceDollars(e.target.value)}
-        placeholder="e.g. 150" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", marginBottom: "12px", boxSizing: "border-box" }} />
+      {includeQuote && (
+        <>
+          <label style={{ fontSize: "12.5px", color: "#4a4642", display: "block", marginBottom: "5px" }}>Base package (pipeline rules)</label>
+          <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
+            {QUOTABLE_TIERS.map((t) => (
+              <button key={t} disabled={quoteDisabled} onClick={() => setTier(t)} aria-pressed={tier === t}
+                style={{ flex: 1, padding: "8px 6px", borderRadius: "8px", fontSize: "12.5px", fontWeight: 600, cursor: quoteDisabled ? "default" : "pointer",
+                  background: tier === t ? "#FBEEE0" : "#FFFFFF", border: tier === t ? "1.5px solid #C97A3D" : "1px solid #D8CFC0", color: tier === t ? "#C97A3D" : "#4a4642" }}>
+                {TIER_LABEL[t]}
+              </button>
+            ))}
+          </div>
 
-      <label htmlFor="quote-message" style={{ fontSize: "12.5px", color: "#4a4642", display: "block", marginBottom: "5px" }}>Message to host (optional)</label>
-      <textarea id="quote-message" disabled={locked} value={message} onChange={(e) => setMessage(e.target.value)} rows={3}
-        placeholder="What's included, why this price…" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "13.5px", marginBottom: "12px", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+          <label htmlFor="quote-price" style={{ fontSize: "12.5px", color: "#4a4642", display: "block", marginBottom: "5px" }}>Price ($)</label>
+          <input id="quote-price" type="number" min="1" step="1" disabled={quoteDisabled} value={priceDollars} onChange={(e) => setPriceDollars(e.target.value)}
+            placeholder="e.g. 150" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", marginBottom: "12px", boxSizing: "border-box" }} />
+        </>
+      )}
+
+      <label htmlFor="composer-message" style={{ fontSize: "12.5px", color: "#4a4642", display: "block", marginBottom: "5px" }}>
+        Message {includeQuote ? "(optional -- what's included, why this price)" : ""}
+      </label>
+      <textarea id="composer-message" disabled={includeQuote && quoteDisabled} value={message} onChange={(e) => setMessage(e.target.value)} rows={3}
+        placeholder={includeQuote ? "What's included, why this price…" : "e.g. Can you tell us more about..."}
+        style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "13.5px", marginBottom: "12px", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+
+      {!includeQuote && !quoteDisabled && (
+        <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", marginBottom: "12px", fontSize: "12.5px", color: "#4a4642" }}>
+          <input type="checkbox" checked={decline} onChange={(e) => setDecline(e.target.checked)} style={{ width: "15px", height: "15px", accentColor: "#C97A3D" }} />
+          This one isn't doable -- mark as declined
+        </label>
+      )}
 
       {error && <p role="alert" style={{ color: "#C97A3D", fontSize: "12.5px", marginBottom: "10px" }}>{error}</p>}
 
-      {!locked && (
-        <button onClick={handleSubmit} disabled={saving || !priceDollars}
-          style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "none", cursor: saving || !priceDollars ? "default" : "pointer",
-            background: !priceDollars ? "#E4DED2" : "#C97A3D", color: !priceDollars ? "#8a857d" : "#211F1D", fontSize: "14px", fontWeight: 700 }}>
-          {saving ? "Sending…" : alreadyQuoted ? "Update & resend quote" : "Send quote"}
+      {!(includeQuote && quoteDisabled) && (
+        <button onClick={handleSend} disabled={sending || (includeQuote ? !priceDollars : !message.trim())}
+          style={{ width: "100%", padding: "12px", borderRadius: "8px", border: includeQuote ? "none" : "1px solid #D8CFC0", cursor: sending ? "default" : "pointer",
+            background: sent ? "#7A8B76" : includeQuote ? (!priceDollars ? "#E4DED2" : "#C97A3D") : "#FFFFFF",
+            color: sent ? "#FFFFFF" : includeQuote ? (!priceDollars ? "#8a857d" : "#211F1D") : "#211F1D",
+            fontSize: "14px", fontWeight: 700 }}>
+          {sending ? "Sending…" : sent ? "Sent ✓" : includeQuote ? (alreadyQuoted ? "Update & resend quote" : "Send quote") : decline ? "Send reply & decline" : "Send reply"}
         </button>
       )}
     </div>

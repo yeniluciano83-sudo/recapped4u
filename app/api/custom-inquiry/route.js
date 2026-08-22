@@ -14,6 +14,12 @@ export async function POST(req) {
     if (!hostName || !email || !eventType || !eventDate) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+    // Custom has no fixed scope to fall back on -- notes is the only
+    // description of what's actually needed, so it's required here even
+    // though the equivalent field is optional for every other tier.
+    if (!notes || !notes.trim()) {
+      return NextResponse.json({ error: "Tell us about your event and what you need." }, { status: 400 });
+    }
 
     const { data: inquiry, error } = await supabase
       .from("custom_inquiries")
@@ -24,7 +30,7 @@ export async function POST(req) {
         event_date: eventDate,
         guest_count: guestCount || null,
         style: style || null,
-        notes: notes || null,
+        notes: notes.trim(),
       })
       .select()
       .single();

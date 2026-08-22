@@ -139,6 +139,10 @@ function BookingFormInner() {
   const canProceed = () => {
     if (step === 1) return form.hostName && form.email && form.eventType && (form.eventType !== "Other" || form.eventTypeOther.trim()) && form.eventDate;
     if (step === 2) return form.tier;
+    // Custom has no fixed scope to fall back on -- the notes field is the
+    // only description of what's actually needed, so unlike every other
+    // tier (style is fully optional there) this one field is required.
+    if (step === 3) return !isCustom || form.notes.trim().length > 0;
     return true;
   };
 
@@ -360,8 +364,9 @@ function BookingFormInner() {
             </div>
           )}
 
-          <Field label="Anything we should know? (optional)">
-            <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical", fontFamily: "inherit" }} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
+          <Field label={isCustom ? "Describe your event & what you need" : "Anything we should know? (optional)"}>
+            <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical", fontFamily: "inherit" }} value={form.notes} onChange={(e) => update("notes", e.target.value)}
+              placeholder={isCustom ? "What's the event, roughly how many guests, and what makes it need a custom package -- multi-day, extra coverage, a specific request..." : undefined} />
           </Field>
         </StepBlock>
       )}

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef } from "react";
+import Link from "next/link";
 import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -449,8 +450,8 @@ export default function HomePage() {
             const TierIcon = TIER_ICONS[t.id] || Sparkles;
             const tilt = [-1.3, 0.9, 0, -0.7][idx] || 0;
             return (
-            <div key={t.id} className="price-card" style={{
-              ...cardStyle, position: "relative",
+            <Link key={t.id} href={`/booking?tier=${t.id}`} className="price-card" style={{
+              ...cardStyle, position: "relative", display: "block", textDecoration: "none", color: "inherit", cursor: "pointer",
               border: t.highlight ? "1.5px solid #C97A3D" : cardStyle.border,
               boxShadow: t.highlight ? "0 10px 26px rgba(201,122,61,0.22)" : "0 3px 10px rgba(33,31,29,0.05)",
               transform: t.highlight ? "scale(1.03)" : `rotate(${tilt}deg)`,
@@ -477,7 +478,7 @@ export default function HomePage() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </Link>
             );
           })}
         </div>

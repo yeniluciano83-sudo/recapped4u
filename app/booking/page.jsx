@@ -89,10 +89,15 @@ export default function BookingForm() {
 function BookingFormInner() {
   const searchParams = useSearchParams();
   const confirmError = searchParams.get("confirm_error") === "1";
+  // Preselects the tier when arriving from a homepage pricing card link
+  // (/booking?tier=premium) -- validated against real tier ids so a
+  // malformed or stale query param can't silently set something invalid.
+  const tierParam = searchParams.get("tier");
+  const initialTier = TIERS.some((t) => t.id === tierParam) ? tierParam : "";
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: "", style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", deliveryFormat: "recap", fullVideoNoMusic: false });
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", deliveryFormat: "recap", fullVideoNoMusic: false });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 

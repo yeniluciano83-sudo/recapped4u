@@ -312,7 +312,7 @@ export default function GalleryDeliveryPage() {
                 : booking.gallery_expires_at
                 ? `This gallery and video stay available until ${formatExpiryDate(booking.gallery_expires_at)}.`
                 : "This gallery and video stay available for a limited time."}{" "}
-              Please download everything you'd like to keep — raw guest uploads have already been removed per our data policy.
+              Please download everything you'd like to keep — raw guest uploads are automatically removed 30 days after delivery.
             </p>
           </div>
         </div>

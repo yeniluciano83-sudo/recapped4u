@@ -95,7 +95,7 @@ export default function HomePage() {
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            <a href="/booking" style={{ backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 13, fontWeight: 700, padding: "9px 16px", borderRadius: 8, textDecoration: "none" }}>
+            <a href="/booking" className="press-btn" style={{ backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 13, fontWeight: 700, padding: "9px 16px", borderRadius: 8, textDecoration: "none", display: "inline-block" }}>
               Book Now
             </a>
             <button className="nav-hamburger" onClick={() => setMobileMenuOpen((o) => !o)}
@@ -155,6 +155,15 @@ export default function HomePage() {
           background-repeat: repeat-x;
           background-position: center;
           opacity: 0.7;
+        }
+
+        /* Shared tactile press feedback for primary buttons/links -- a
+           quick scale-down on click, not just a hover state, so clicking
+           actually feels like pressing something. */
+        .press-btn { transition: transform 0.15s ease; }
+        .press-btn:active { transform: scale(0.96); }
+        @media (prefers-reduced-motion: reduce) {
+          .press-btn:active { transform: none; }
         }
 
         /* Hover transform/shadow are owned by the TiltCard mousemove handler
@@ -402,7 +411,7 @@ export default function HomePage() {
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
           We turn the photos your own guests already took into one polished recap video and gallery.
         </p>
-        <a href="/booking" style={{ display: "inline-flex", alignItems: "center", gap: 8, backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 15, fontWeight: 700, padding: "14px 26px", borderRadius: 10, textDecoration: "none", boxShadow: "0 8px 22px rgba(201,122,61,0.28)" }}>
+        <a href="/booking" className="press-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 15, fontWeight: 700, padding: "14px 26px", borderRadius: 10, textDecoration: "none", boxShadow: "0 8px 22px rgba(201,122,61,0.28)" }}>
           Book Your Event <ChevronRight size={17} />
         </a>
 
@@ -424,6 +433,7 @@ export default function HomePage() {
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
+        blob={{ color: "#C97A3D", top: -50, right: -40, size: 260 }}
         subtitle="Every guest already has a camera in their pocket. Four simple steps turn what they capture into one story worth watching — you never touch an edit.">
         <div className="how-timeline">
           {[
@@ -474,7 +484,7 @@ export default function HomePage() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
                 <span style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</span>
-                <span style={{ color: "#C97A3D", fontWeight: 700 }}>{t.price}</span>
+                <span style={{ color: "#C97A3D", fontWeight: 700 }}><CountUpPrice value={t.price} /></span>
               </div>
               <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 12px" }}>{t.tagline}</p>
               <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 13, color: "#6b655c" }}>
@@ -520,7 +530,7 @@ export default function HomePage() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           {EVENT_TYPES.map((e) =>
             e.label.startsWith("Something Else") ? (
-              <button key={e.label} onClick={() => scrollTo("contact")}
+              <button key={e.label} onClick={() => scrollTo("contact")} className="press-btn"
                 style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#FBEEE0", border: "1px solid #C97A3D", color: "#C97A3D", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, cursor: "pointer", fontWeight: 600, maxWidth: "100%" }}>
                 <span aria-hidden="true">{e.emoji}</span> {e.label}
               </button>
@@ -534,13 +544,14 @@ export default function HomePage() {
       </Section>
 
       <Section id="faq" refs={sectionRefs} title="Frequently Asked Questions" icon={<HelpCircle size={20} color="#C97A3D" />}
+        blob={{ color: "#7A8B76", top: -40, left: -60, size: 240 }}
         subtitle="Everything we get asked before someone books — answered upfront.">
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {FAQS.map((f, i) => {
             const isOpen = openFaq === i;
             return (
             <div key={i} style={{ ...cardStyle, padding: 0, borderLeft: isOpen ? "3px solid #C97A3D" : "1px solid #E4DED2", background: isOpen ? "#FFFDF9" : cardStyle.background, transition: "border-color 0.2s, background 0.2s" }}>
-              <button onClick={() => setOpenFaq(isOpen ? null : i)} aria-expanded={isOpen}
+              <button onClick={() => setOpenFaq(isOpen ? null : i)} aria-expanded={isOpen} className="press-btn"
                 style={{ width: "100%", textAlign: "left", background: "none", border: "none", color: "#211F1D", padding: 18, fontSize: 14.5, fontWeight: 600, cursor: "pointer", display: "flex", gap: 14, alignItems: "center" }}>
                 <span style={{ fontFamily: "Georgia, serif", fontSize: 13, color: isOpen ? "#C97A3D" : "#C9BFA9", flexShrink: 0, minWidth: 22 }}>{String(i + 1).padStart(2, "0")}</span>
                 <span style={{ flex: 1 }}>{f.q}</span>
@@ -569,9 +580,10 @@ export default function HomePage() {
         </div>
       </Section>
       <Section id="contact" refs={sectionRefs} title="Get In Touch" icon={<Mail size={20} color="#C97A3D" />} band="white"
+        blob={{ color: "#C97A3D", top: -50, right: -50, size: 240 }}
         subtitle="Have a corporate event, or just a question? Reach out.">
         <div className="contact-row">
-          <a href="mailto:hello@recappedforyou.com" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
+          <a href="mailto:hello@recappedforyou.com" className="press-btn" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>
               <Mail size={18} color="#FFFFFF" />
             </div>
@@ -580,7 +592,7 @@ export default function HomePage() {
               <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>hello@recappedforyou.com</div>
             </div>
           </a>
-          <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
+          <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" className="press-btn" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #7A8B76, #97A893)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(122,139,118,0.32)" }}>
               <MessageCircle size={18} color="#FFFFFF" />
             </div>
@@ -714,6 +726,46 @@ function TiltCard({ href, className, style, baseTransform, children }) {
   );
 }
 
+// Counts a tier's price up from $0 to its real value the first time it
+// scrolls into view, instead of just appearing. Renders "$0" on both server
+// and initial client paint (identical, no hydration risk) -- the count-up
+// itself only ever runs after mount, inside an effect. Skips straight to
+// the final value under prefers-reduced-motion.
+function CountUpPrice({ value, duration = 800 }) {
+  const target = parseInt(value.replace(/[^0-9]/g, ""), 10) || 0;
+  const [display, setDisplay] = useState(0);
+  const ref = useRef(null);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplay(target);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || startedRef.current) return;
+        startedRef.current = true;
+        const startTime = performance.now();
+        const tick = (now) => {
+          const progress = Math.min((now - startTime) / duration, 1);
+          setDisplay(Math.round(progress * target));
+          if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        observer.disconnect();
+      },
+      { threshold: 0.4 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return <span ref={ref}>${display}</span>;
+}
+
 const BAND_COLORS = { white: "#FFFFFF", tint: "#FBEEE0" };
 
 // Fades + slides a section up into place the first time it scrolls into
@@ -750,26 +802,44 @@ function useScrollReveal() {
   return { ref, visible };
 }
 
-function Section({ id, refs, title, icon, children, subtitle, band }) {
+function Section({ id, refs, title, icon, children, subtitle, band, blob }) {
   const { ref: revealRef, visible } = useScrollReveal();
   const setRefs = (el) => {
     revealRef.current = el;
     refs.current[id] = el;
   };
 
-  const content = (
-    <section ref={setRefs} id={id} style={{
-      maxWidth: 900, margin: "0 auto", padding: "56px 24px", scrollMarginTop: 70,
-      opacity: visible ? 1 : 0,
-      transform: visible ? "translateY(0)" : "translateY(28px)",
-      transition: "opacity 0.7s ease, transform 0.7s ease",
-    }}>
+  const inner = (
+    <>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: subtitle ? 10 : 24 }}>
         {icon}
         <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, margin: 0 }}>{title}</h2>
       </div>
       {subtitle && <p style={{ fontSize: 15, color: "#6b655c", margin: "0 0 28px", maxWidth: 520, lineHeight: 1.5 }}>{subtitle}</p>}
       {children}
+    </>
+  );
+
+  const content = (
+    <section ref={setRefs} id={id} style={{
+      position: "relative", maxWidth: 900, margin: "0 auto", padding: "56px 24px", scrollMarginTop: 70,
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translateY(0)" : "translateY(28px)",
+      transition: "opacity 0.7s ease, transform 0.7s ease",
+    }}>
+      {/* A soft, low-opacity blurred color blob behind the heading -- purely
+          decorative depth, not a hard shape, so it stays out of the way of
+          reading the content. Kept off Pricing (already busy with the card
+          tilt effect) and About (already has its own tint band + quote
+          watermark). */}
+      {blob && (
+        <div aria-hidden="true" style={{
+          position: "absolute", top: blob.top ?? -60, left: blob.left, right: blob.right,
+          width: blob.size ?? 260, height: blob.size ?? 260, borderRadius: "50%",
+          background: blob.color, filter: "blur(70px)", opacity: 0.22, pointerEvents: "none", zIndex: 0,
+        }} />
+      )}
+      {blob ? <div style={{ position: "relative", zIndex: 1 }}>{inner}</div> : inner}
     </section>
   );
 

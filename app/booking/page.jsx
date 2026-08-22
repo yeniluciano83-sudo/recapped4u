@@ -431,7 +431,7 @@ function Field({ label, children }) {
 }
 
 function SummaryRow({ label, value }) {
-  return <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E4DED2", fontSize: "14px" }}><span style={{ color: "#6b655c" }}>{label}</span><span style={{ fontWeight: 500 }}>{value || "—"}</span></div>;
+  return <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", padding: "10px 0", borderBottom: "1px solid #E4DED2", fontSize: "14px" }}><span style={{ color: "#6b655c", flexShrink: 0 }}>{label}</span><span style={{ fontWeight: 500, textAlign: "right", flex: "1 1 auto", minWidth: 0 }}>{value || "—"}</span></div>;
 }
 
 const inputStyle = { width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", boxSizing: "border-box" };

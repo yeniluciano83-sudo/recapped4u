@@ -127,7 +127,7 @@ export default function HomePage() {
         }
 
         .how-timeline { display: flex; flex-direction: column; }
-        .how-step { display: flex; gap: 16px; }
+        .how-step { display: flex; gap: 20px; }
         .how-step-node { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
         .how-step-circle {
           width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
@@ -135,7 +135,7 @@ export default function HomePage() {
           display: flex; align-items: center; justify-content: center;
           box-shadow: 0 4px 14px rgba(201,122,61,0.32);
         }
-        .how-step-line { width: 2px; flex: 1; min-height: 28px; background: #E4DED2; margin: 6px 0; }
+        .how-step-line { width: 2px; flex: 1; min-height: 0; background: #E4DED2; margin: 6px 0; }
         .how-step-content { padding-bottom: 28px; }
         .how-step-title { font-family: Georgia, serif; font-size: 17px; font-weight: 700; margin: 12px 0 5px; }
         .how-step-desc { font-size: 13.5px; color: #4a4642; line-height: 1.55; max-width: 480px; }

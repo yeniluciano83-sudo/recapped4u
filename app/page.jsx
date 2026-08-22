@@ -457,6 +457,19 @@ export default function HomePage() {
             );
           })}
         </div>
+
+        <div style={{ marginTop: 40 }}>
+          <p style={{ fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 6 }}>
+            See the difference
+          </p>
+          <p style={{ fontSize: 13.5, color: "#4a4642", margin: "0 0 16px", maxWidth: 480, lineHeight: 1.5 }}>
+            The same guest photo, before and after our automated editing pass.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+            <BeforeAfterCard label="Before" src="/images/before-after-raw.jpg" />
+            <BeforeAfterCard label="After" src="/images/before-after-enhanced.jpg" />
+          </div>
+        </div>
       </Section>
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"
@@ -764,6 +777,17 @@ function CountUpPrice({ value, duration = 800 }) {
   }, [target, duration]);
 
   return <span ref={ref}>${display}</span>;
+}
+
+function BeforeAfterCard({ label, src }) {
+  return (
+    <div style={{ position: "relative", aspectRatio: "4/3", borderRadius: 14, overflow: "hidden", background: "#E4DED2" }}>
+      <img src={src} alt={`${label} example`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      <span style={{ position: "absolute", top: 10, left: 12, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#FFFFFF", background: "rgba(0,0,0,0.45)", padding: "4px 10px", borderRadius: 999 }}>
+        {label}
+      </span>
+    </div>
+  );
 }
 
 const BAND_COLORS = { white: "#FFFFFF", tint: "#FBEEE0" };

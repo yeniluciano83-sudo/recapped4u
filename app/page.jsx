@@ -563,7 +563,7 @@ export default function HomePage() {
         </div>
       </Section>
       <Section id="contact" refs={sectionRefs} title="Get In Touch" icon={<Mail size={20} color="#C97A3D" />} band="white"
-        subtitle="Corporate events, custom packages, or just have a question — reach out.">
+        subtitle="Corporate events, or just have a question — reach out.">
         <div className="contact-row">
           <a href="mailto:hello@recappedforyou.com" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>

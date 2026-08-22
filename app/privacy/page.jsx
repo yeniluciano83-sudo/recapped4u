@@ -42,7 +42,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="How we use it">
-          <p>To build your recap video and photo gallery, send booking/upload confirmations and reminders, process payment and refunds, and follow up on custom package inquiries. We don't use your photos or contact details for advertising, and we don't sell them.</p>
+          <p>To build your recap video and photo gallery, send booking/upload confirmations and reminders, and process payment and refunds. We don't use your photos or contact details for advertising, and we don't sell them.</p>
         </Section>
 
         <Section title="Who we share it with">
@@ -59,7 +59,6 @@ export default function PrivacyPage() {
         <Section title="How long we keep it">
           <p><strong style={{ color: HEADING }}>Raw guest uploads</strong> (the original photos guests submit) are permanently deleted 30 days after your final recap is delivered — once the curated gallery and video are ready, we don't need the originals anymore.</p>
           <p><strong style={{ color: HEADING }}>Your delivered gallery and video</strong> stay accessible based on your tier: Free's gallery is downloadable for 7 days after delivery, then permanently deleted; Classic for 2 months; Signature for 4 months; Luxe for 6 months.</p>
-          <p><strong style={{ color: HEADING }}>Custom package inquiries</strong> don't create a stored booking record at all — the details you submit are sent directly to us by email to follow up with you.</p>
         </Section>
 
         <Section title="Cookies">

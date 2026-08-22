@@ -46,7 +46,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="Payment and cancellation">
-          <p>Payment is collected at booking through Stripe. Cancelling more than 24 hours before your event gets you a full automatic refund; cancelling within 24 hours isn't eligible for a refund, since guest uploads may already be underway by then. Custom packages are priced and paid for separately, outside this flow, once scope is agreed on directly with us.</p>
+          <p>Payment is collected at booking through Stripe. Cancelling more than 24 hours before your event gets you a full automatic refund; cancelling within 24 hours isn't eligible for a refund, since guest uploads may already be underway by then.</p>
         </Section>
 
         <Section title="Acceptable use">

@@ -41,8 +41,6 @@ const TIERS = [
     features: ["Everything in Classic", "Social cut (60-90 sec) + full cut", "Choose your editing style, plus a separate theme for your social cut", "Star must-include photos for your social cut", "Roast Reel add-on eligible for any event type (+$20)", "1-week upload deadline", "Downloadable gallery for 4 months"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
     features: ["Everything in Signature", "5 social cuts instead of 1, each from a different set of your best photos", "Choose your editing style, plus a separate theme for your social cuts", "24-hour priority turnaround (without Roast Reel)", "Complimentary Roast Reel add-on for any event type", "2-week upload deadline, extendable by 2 more days if needed", "Downloadable gallery for 6 months"] },
-  { id: "custom", name: "Custom Package", price: "Contact us", tagline: "Built entirely around your event",
-    features: ["Tailored scope, pricing, and timeline", "Choose your editing style (optional)", "For large events, multi-day coverage, or special requests", "We'll follow up by email to work out the details"] },
 ];
 
 const STYLES = [
@@ -123,8 +121,8 @@ function BookingFormInner() {
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
-  // Style is optional everywhere, not just for custom/social-cuts-only --
-  // the backend already defaults gracefully with no style set (documentary
+  // Style is optional everywhere, not just social-cuts-only -- the backend
+  // already defaults gracefully with no style set (documentary
   // color grade, documentary soundtrack; see enhancePhoto's default param
   // and the STYLE_MUSIC fallback in scripts/auto-recap.js), so there's
   // nothing for step 3 to actually require. In social-cuts-only mode,
@@ -135,25 +133,16 @@ function BookingFormInner() {
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()
     : form.eventType;
-  const isCustom = form.tier === "custom";
   const canProceed = () => {
     if (step === 1) return form.hostName && form.email && form.eventType && (form.eventType !== "Other" || form.eventTypeOther.trim()) && form.eventDate;
     if (step === 2) return form.tier;
-    // Custom has no fixed scope to fall back on -- the notes field is the
-    // only description of what's actually needed, so unlike every other
-    // tier (style is fully optional there) this one field is required.
-    if (step === 3) return !isCustom || form.notes.trim().length > 0;
     return true;
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      // Custom has no fixed price to check out with -- this just sends an
-      // inquiry email; the actual payment happens outside the app once
-      // scope and price are worked out directly with the host.
-      const endpoint = isCustom ? "/api/custom-inquiry" : "/api/bookings";
-      const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && !isSocialCutsFormat && form.roastEnabled }) });
+      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && !isSocialCutsFormat && form.roastEnabled }) });
       const data = await res.json();
       if (!res.ok) {
         alert("Submission failed: " + (data.error || "Unknown error"));
@@ -177,18 +166,11 @@ function BookingFormInner() {
             <Check size={28} color="#211F1D" strokeWidth={2.5} />
           </div>
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>
-            {form.tier === "custom" ? `Thanks, ${form.hostName.split(" ")[0]}` : `You're booked, ${form.hostName.split(" ")[0]}`}
+            You're booked, {form.hostName.split(" ")[0]}
           </h2>
           <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
-            {form.tier === "custom"
-              ? <>We've got your custom package inquiry and will follow up at <strong style={{ color: "#211F1D" }}>{form.email}</strong> to work out the details.</>
-              : <>We'll email your upload link and QR code to <strong style={{ color: "#211F1D" }}>{form.email}</strong> within 24 hours, ready to share with guests on {form.eventDate}.</>}
+            We'll email your upload link and QR code to <strong style={{ color: "#211F1D" }}>{form.email}</strong> within 24 hours, ready to share with guests on {form.eventDate}.
           </p>
-          {form.tier === "custom" && (
-            <p style={{ color: "#8a857d", fontSize: "12.5px", marginTop: "14px" }}>
-              <span aria-hidden="true">📱</span> Want a faster answer? Message us on WhatsApp (text only): <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>+1 (646) 512-9151</a>
-            </p>
-          )}
         </div>
       </Shell>
     );
@@ -252,9 +234,7 @@ function BookingFormInner() {
       {step === 3 && (
         <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
           <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
-            {isCustom
-              ? "Optional for a custom package -- pick one if you have a preference, or skip this and we'll work it out together."
-              : isSocialCutsFormat
+            {isSocialCutsFormat
               ? "Optional -- pick one here, or just set a theme on your social cut below, since that's what's actually shown in social-cuts-only delivery. Skip both for a clean, true-to-life default look."
               : "Optional -- pick one if you have a preference. Skip it for a clean, true-to-life default look."}
           </p>
@@ -364,20 +344,19 @@ function BookingFormInner() {
             </div>
           )}
 
-          <Field label={isCustom ? "Describe your event & what you need" : "Anything we should know? (optional)"}>
-            <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical", fontFamily: "inherit" }} value={form.notes} onChange={(e) => update("notes", e.target.value)}
-              placeholder={isCustom ? "What's the event, roughly how many guests, and what makes it need a custom package -- multi-day, extra coverage, a specific request..." : undefined} />
+          <Field label="Anything we should know? (optional)">
+            <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical", fontFamily: "inherit" }} value={form.notes} onChange={(e) => update("notes", e.target.value)} />
           </Field>
         </StepBlock>
       )}
 
       {step === 4 && (
-        <StepBlock icon={<Users size={20} color="#C97A3D" />} title={isCustom ? "Review your inquiry" : "Review your booking"}>
+        <StepBlock icon={<Users size={20} color="#C97A3D" />} title="Review your booking">
           <SummaryRow label="Host" value={form.hostName} />
           <SummaryRow label="Email" value={form.email} />
           <SummaryRow label="Event" value={`${effectiveEventType} — ${form.eventDate}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
-          {!isCustom && <SummaryRow label="Style" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label} />}
+          <SummaryRow label="Style" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label} />
           {isSocialCutEligible && form.socialStyle && (
             <SummaryRow label="Social cut theme" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === form.socialStyle)?.label} />
           )}
@@ -391,17 +370,13 @@ function BookingFormInner() {
               value={`${ROAST_LEVELS.find((r) => r.id === form.roastLevel)?.label}${ROAST_ADDON_PRICE[form.tier] ? ` (+$${ROAST_ADDON_PRICE[form.tier]})` : " (included)"}`}
             />
           )}
-          {!isCustom && (
-            <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && !isSocialCutsFormat && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
-          )}
+          <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && !isSocialCutsFormat && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
           <div style={{ marginTop: "20px", padding: "14px", background: "#FFFFFF", borderRadius: "10px", fontSize: "12px", color: "#6b655c", lineHeight: 1.6 }}>
-            {isCustom
-              ? "We'll email you back to work out scope and pricing -- nothing is charged by submitting this inquiry."
-              : `By booking, you'll receive a service agreement by email. ${
-                  form.tier === "free"
-                    ? "Your gallery and video are downloadable for 7 days after delivery, after which they're permanently removed."
-                    : `Your event gallery and video stay accessible for ${GALLERY_RETENTION[form.tier] || "90 days"} after delivery.`
-                } Raw guest uploads are removed 30 days after final delivery. Cancel more than 24 hours before your event for a full refund; cancellations inside 24 hours aren't eligible for a refund.`}
+            By booking, you'll receive a service agreement by email. {
+              form.tier === "free"
+                ? "Your gallery and video are downloadable for 7 days after delivery, after which they're permanently removed."
+                : `Your event gallery and video stay accessible for ${GALLERY_RETENTION[form.tier] || "90 days"} after delivery.`
+            } Raw guest uploads are removed 30 days after final delivery. Cancel more than 24 hours before your event for a full refund; cancellations inside 24 hours aren't eligible for a refund.
           </div>
         </StepBlock>
       )}
@@ -412,7 +387,7 @@ function BookingFormInner() {
           <button onClick={() => canProceed() && setStep(step + 1)} disabled={!canProceed()} style={nextBtn(canProceed())}>Continue <ArrowRight size={16} /></button>
         ) : (
           <button onClick={handleSubmit} disabled={submitting} style={nextBtn(true)}>
-            {submitting ? (isCustom ? "Sending..." : "Booking...") : (isCustom ? "Send inquiry" : "Confirm booking")}
+            {submitting ? "Booking..." : "Confirm booking"}
           </button>
         )}
       </div>

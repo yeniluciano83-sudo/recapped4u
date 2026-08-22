@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote } from "lucide-react";
 
@@ -668,9 +668,54 @@ function EventPhotoScene() {
 
 const BAND_COLORS = { white: "#FFFFFF", tint: "#FBEEE0" };
 
+// Fades + slides a section up into place the first time it scrolls into
+// view, rather than everything just appearing instantly on load -- the
+// hero's own animation is the only dynamic thing on the page otherwise.
+// Reveals once and stays revealed (observer disconnects after triggering),
+// so scrolling back up never re-hides content. Skips the animation
+// entirely under prefers-reduced-motion, same consideration already given
+// to the hero's own CSS animations further up this file.
+function useScrollReveal() {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15, rootMargin: "0px 0px -80px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return { ref, visible };
+}
+
 function Section({ id, refs, title, icon, children, subtitle, band }) {
+  const { ref: revealRef, visible } = useScrollReveal();
+  const setRefs = (el) => {
+    revealRef.current = el;
+    refs.current[id] = el;
+  };
+
   const content = (
-    <section ref={(el) => (refs.current[id] = el)} id={id} style={{ maxWidth: 900, margin: "0 auto", padding: "56px 24px", scrollMarginTop: 70 }}>
+    <section ref={setRefs} id={id} style={{
+      maxWidth: 900, margin: "0 auto", padding: "56px 24px", scrollMarginTop: 70,
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translateY(0)" : "translateY(28px)",
+      transition: "opacity 0.7s ease, transform 0.7s ease",
+    }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: subtitle ? 10 : 24 }}>
         {icon}
         <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, margin: 0 }}>{title}</h2>

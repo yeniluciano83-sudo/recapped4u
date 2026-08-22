@@ -25,6 +25,9 @@ export default function GalleryDeliveryPage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIndices, setSelectedIndices] = useState(new Set());
 
   useEffect(() => {
     if (!lightbox) return;
@@ -70,6 +73,54 @@ export default function GalleryDeliveryPage() {
     } catch (err) {
       console.error("Failed to copy gallery link", err);
     }
+  };
+
+  const triggerStaggeredDownloads = (urls) => {
+    if (urls.length === 0 || downloadingAll) return;
+    setDownloadingAll(true);
+    // Triggering every download in the same tick gets most of them silently
+    // blocked as a popup flood -- staggering by a beat each lets the browser
+    // treat them as separate user-initiated downloads instead.
+    urls.forEach((url, i) => {
+      setTimeout(() => {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        if (i === urls.length - 1) setDownloadingAll(false);
+      }, i * 300);
+    });
+  };
+
+  const handleDownloadAll = () => triggerStaggeredDownloads(data?.photo_download_urls || []);
+
+  const handleDownloadSelected = () => {
+    const urls = data?.photo_download_urls || [];
+    const selectedUrls = Array.from(selectedIndices).sort((a, b) => a - b).map((i) => urls[i]).filter(Boolean);
+    triggerStaggeredDownloads(selectedUrls);
+    setSelectMode(false);
+    setSelectedIndices(new Set());
+  };
+
+  const togglePhotoSelected = (index) => {
+    setSelectedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const handlePhotoClick = (index) => {
+    if (selectMode) togglePhotoSelected(index);
+    else setLightbox(photos[index]);
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIndices(new Set());
   };
 
   const changeTemplate = async (id) => {
@@ -199,6 +250,16 @@ export default function GalleryDeliveryPage() {
                   </button>
                 );
               })}
+              <button onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
+                  fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
+                  border: selectMode ? "1px solid #C97A3D" : "1px solid #E4DED2",
+                  background: selectMode ? "#FBEEE0" : "transparent",
+                  color: selectMode ? "#C97A3D" : "#6b655c",
+                }}>
+                {selectMode ? "Cancel" : "Select photos"}
+              </button>
             </div>
           )}
         </div>
@@ -213,17 +274,36 @@ export default function GalleryDeliveryPage() {
           </div>
         ) : (
           <div style={{ marginBottom: "36px" }}>
-            {template === "grid" && <GridLayout photos={photos} onSelect={setLightbox} />}
-            {template === "masonry" && <MasonryLayout photos={photos} onSelect={setLightbox} />}
-            {template === "slideshow" && <SlideshowLayout photos={photos} index={slideIndex} setIndex={setSlideIndex} />}
-            {template === "polaroid" && <PolaroidLayout photos={photos} onSelect={setLightbox} />}
+            {template === "grid" && <GridLayout photos={photos} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
+            {template === "masonry" && <MasonryLayout photos={photos} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
+            {template === "slideshow" && <SlideshowLayout photos={photos} index={slideIndex} setIndex={setSlideIndex} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
+            {template === "polaroid" && <PolaroidLayout photos={photos} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
           </div>
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <button onClick={handleShare} style={{ width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer" }}>
-            {shareCopied ? <><Check size={16} /> Link copied</> : <><Share2 size={16} /> Share this gallery</>}
-          </button>
+          <div style={{ display: "flex", gap: "10px" }}>
+            {selectMode ? (
+              <>
+                <button onClick={handleDownloadSelected} disabled={downloadingAll || selectedIndices.size === 0}
+                  style={{ flex: 1, padding: "14px", borderRadius: "10px", border: "none", background: downloadingAll || selectedIndices.size === 0 ? "#E4DED2" : "#C97A3D", color: downloadingAll || selectedIndices.size === 0 ? "#8a857d" : "#211F1D", fontSize: "14px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: downloadingAll || selectedIndices.size === 0 ? "default" : "pointer" }}>
+                  <Download size={16} /> {downloadingAll ? "Downloading…" : `Download selected (${selectedIndices.size})`}
+                </button>
+                <button onClick={exitSelectMode} style={{ padding: "14px 18px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={handleShare} style={{ flex: 1, padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer" }}>
+                  {shareCopied ? <><Check size={16} /> Link copied</> : <><Share2 size={16} /> Share this gallery</>}
+                </button>
+                <button onClick={handleDownloadAll} disabled={downloadingAll || photos.length === 0} style={{ flex: 1, padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: downloadingAll || photos.length === 0 ? "default" : "pointer", opacity: downloadingAll || photos.length === 0 ? 0.6 : 1 }}>
+                  <Download size={16} /> {downloadingAll ? "Downloading…" : "Download all"}
+                </button>
+              </>
+            )}
+          </div>
           <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2", display: "flex", gap: "10px" }}>
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
@@ -248,32 +328,47 @@ export default function GalleryDeliveryPage() {
   );
 }
 
-function GridLayout({ photos, onSelect }) {
+// The badge shown on a photo when selectMode is on -- a filled check when
+// selected, an empty ring otherwise, matching the "must include" star badge
+// pattern already used on the QR share page's photo picker.
+function SelectBadge({ selected }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
-      {photos.map((url, i) => (
-        <button key={i} onClick={() => onSelect(url)} style={{ aspectRatio: "1", borderRadius: "8px", border: "none", cursor: "pointer", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }} />
-      ))}
+    <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: selected ? "#C97A3D" : "rgba(255,255,255,0.85)", border: selected ? "none" : "1.5px solid #D8CFC0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {selected && <Check size={13} color="#211F1D" strokeWidth={3} />}
     </div>
   );
 }
 
-function MasonryLayout({ photos, onSelect }) {
+function GridLayout({ photos, selectMode, selected, onSelect }) {
   return (
-    <div style={{ columnCount: 3, columnGap: "8px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
       {photos.map((url, i) => (
-        <button key={i} onClick={() => onSelect(url)}
-          style={{ display: "block", width: "100%", marginBottom: "8px", borderRadius: "8px", border: "none", cursor: "pointer", breakInside: "avoid", padding: 0, background: "none" }}>
-          <img src={url} alt="" style={{ width: "100%", borderRadius: "8px", display: "block" }} />
+        <button key={i} onClick={() => onSelect(i)} style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }}>
+          {selectMode && <SelectBadge selected={selected?.has(i)} />}
         </button>
       ))}
     </div>
   );
 }
 
-function SlideshowLayout({ photos, index, setIndex }) {
+function MasonryLayout({ photos, selectMode, selected, onSelect }) {
+  return (
+    <div style={{ columnCount: 3, columnGap: "8px" }}>
+      {photos.map((url, i) => (
+        <button key={i} onClick={() => onSelect(i)}
+          style={{ position: "relative", display: "block", width: "100%", marginBottom: "8px", borderRadius: "8px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", breakInside: "avoid", padding: 0, background: "none" }}>
+          <img src={url} alt="" style={{ width: "100%", borderRadius: "6px", display: "block" }} />
+          {selectMode && <SelectBadge selected={selected?.has(i)} />}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SlideshowLayout({ photos, index, setIndex, selectMode, selected, onSelect }) {
   if (photos.length === 0) return null;
-  const current = photos[Math.min(index, photos.length - 1)];
+  const clampedIndex = Math.min(index, photos.length - 1);
+  const current = photos[clampedIndex];
   return (
     <div>
       <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
@@ -282,6 +377,12 @@ function SlideshowLayout({ photos, index, setIndex }) {
           style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>‹</button>
         <button onClick={() => setIndex((i) => (i + 1) % photos.length)}
           style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>›</button>
+        {selectMode && (
+          <button onClick={() => onSelect(clampedIndex)} aria-pressed={selected?.has(clampedIndex)}
+            style={{ position: "absolute", top: 10, right: 10, width: 32, height: 32, borderRadius: "50%", background: selected?.has(clampedIndex) ? "#C97A3D" : "rgba(255,255,255,0.9)", border: selected?.has(clampedIndex) ? "none" : "1.5px solid #D8CFC0", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+            {selected?.has(clampedIndex) && <Check size={16} color="#211F1D" strokeWidth={3} />}
+          </button>
+        )}
       </div>
       <p style={{ textAlign: "center", fontSize: "12.5px", color: "#6b655c", marginTop: "10px" }}>{index + 1} / {photos.length}</p>
     </div>
@@ -302,14 +403,15 @@ function DownloadOnlyLayout({ photos, downloadUrls }) {
   );
 }
 
-function PolaroidLayout({ photos, onSelect }) {
+function PolaroidLayout({ photos, selectMode, selected, onSelect }) {
   const rotations = [-3, 2, -1.5, 3, -2, 1.5];
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", justifyContent: "center", padding: "10px 0" }}>
       {photos.map((url, i) => (
-        <button key={i} onClick={() => onSelect(url)}
-          style={{ background: "#FFFFFF", padding: "10px 10px 24px", borderRadius: "4px", border: "none", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.15)", width: "150px" }}>
+        <button key={i} onClick={() => onSelect(i)}
+          style={{ position: "relative", background: "#FFFFFF", padding: "10px 10px 24px", borderRadius: "4px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.15)", width: "150px" }}>
           <img src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block" }} />
+          {selectMode && <SelectBadge selected={selected?.has(i)} />}
         </button>
       ))}
     </div>

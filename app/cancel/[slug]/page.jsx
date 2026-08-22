@@ -91,6 +91,17 @@ export default function CancelBookingPage() {
     );
   }
 
+  if (["editing", "awaiting_roast_approval"].includes(booking?.status)) {
+    return (
+      <PageShell>
+        <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
+        <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
+          This event's recap is already being put together and can't be cancelled online — reply to your confirmation email and we'll help.
+        </p>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell>
       <h1 style={{ fontFamily: "Georgia, serif", fontSize: "24px", margin: "0 0 8px" }}>

@@ -490,7 +490,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   // survive that, see the comments above) would otherwise leave two rows
   // per booking, since booking_id had no uniqueness guard until the
   // deliverables_booking_id_key constraint (migration 017).
-  await supabase.from("deliverables").upsert(
+  const { error: deliverableError } = await supabase.from("deliverables").upsert(
     {
       booking_id: bookingId,
       full_video_key: videoKey,
@@ -505,6 +505,12 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     },
     { onConflict: "booking_id" }
   );
+  // Without this, a failed upsert still falls through to marking the
+  // booking "delivered" below with no actual deliverable row -- the
+  // gallery page would then show "this gallery's window has ended and
+  // everything's been removed" for a booking that was never delivered
+  // at all.
+  if (deliverableError) throw deliverableError;
 
   const expiresAt = computeGalleryExpiry(tier);
 

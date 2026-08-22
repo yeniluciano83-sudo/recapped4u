@@ -377,10 +377,15 @@ export default function HomePage() {
           .event-monitor-led { opacity: 1; }
         }
         @media (max-width: 620px) {
-          .event-scene { transform: scale(0.76); transform-origin: top center; }
+          /* transform: scale() shrinks how the element RENDERS but not the
+             752px of vertical space it still RESERVES in the flex layout --
+             without the matching negative margin, everything after this
+             scene (How It Works, etc.) sat behind a large blank gap equal
+             to the unused reserved space below the now-smaller visual. */
+          .event-scene { transform: scale(0.76); transform-origin: top center; margin-bottom: -180px; }
         }
         @media (max-width: 460px) {
-          .event-scene { transform: scale(0.66); transform-origin: top center; }
+          .event-scene { transform: scale(0.66); transform-origin: top center; margin-bottom: -256px; }
         }
 
       `}</style>

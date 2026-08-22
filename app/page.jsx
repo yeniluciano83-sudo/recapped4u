@@ -14,7 +14,7 @@ const NAV_ITEMS = [
 
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
-    features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "Guests have 24hrs after the event to upload", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Downloadable gallery for 7 days"] },
+    features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "24-hour upload window after your event", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Downloadable gallery for 7 days"] },
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "Every uploaded photo in your gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours", highlight: true,
@@ -555,7 +555,7 @@ export default function HomePage() {
             Living in New York City means never running out of moments worth keeping — a wedding one weekend, a rooftop birthday the next, a block party you wandered into and didn't want to leave. The city hands you memories faster than you can hold onto them.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
-            That's exactly why Recapped For You exists. After enough events — daytime brunches, all-night celebrations, everything between — where the best moments ended up scattered across everyone's camera rolls — most of it never looked at twice — we set out to build something that could gather it all, make sense of it, and hand it back looking as good as it felt being there: a photo gallery, social cuts, and one polished film worth watching. Every photo is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cleaned up, color graded, and cut into a film — the same polish and curation a professional editor would give it, built into everything we deliver.
+            That's exactly why Recapped For You exists. After enough events — daytime brunches, all-night celebrations, everything in between — we kept seeing the same thing: the best moments ended up scattered across everyone's camera rolls, and most of it never got looked at twice. So we set out to build something that could gather it all, make sense of it, and hand it back looking as good as it felt being there — a photo gallery, social cuts, and one polished film worth watching. Every photo is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cleaned up, color graded, and cut into a film — the same polish and curation a professional editor would give it, built into everything we deliver.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7 }}>
             Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.
@@ -563,7 +563,7 @@ export default function HomePage() {
         </div>
       </Section>
       <Section id="contact" refs={sectionRefs} title="Get In Touch" icon={<Mail size={20} color="#C97A3D" />} band="white"
-        subtitle="Corporate events, or just have a question — reach out.">
+        subtitle="Have a corporate event, or just a question? Reach out.">
         <div className="contact-row">
           <a href="mailto:hello@recappedforyou.com" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>

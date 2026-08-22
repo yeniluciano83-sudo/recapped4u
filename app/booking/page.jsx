@@ -34,7 +34,7 @@ function StylePreviewButton({ styleId, playingId, onToggle }) {
 
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
-    features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "Guests have 24hrs after the event to upload", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Downloadable gallery for 7 days"] },
+    features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "24-hour upload window after your event", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Downloadable gallery for 7 days"] },
   { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Unlimited photo uploads", "Shareable + printable QR code & link", "48-hour upload window after your event", "Every uploaded photo in your gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded"] },
   { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
@@ -235,8 +235,8 @@ function BookingFormInner() {
         <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
           <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
             {isSocialCutsFormat
-              ? "Optional -- pick one here, or just set a theme on your social cut below, since that's what's actually shown in social-cuts-only delivery. Skip both for a clean, true-to-life default look."
-              : "Optional -- pick one if you have a preference. Skip it for a clean, true-to-life default look."}
+              ? "Optional — pick one here, or just set a theme on your social cut below, since that's what's actually shown in social-cuts-only delivery. Skip both for a clean, true-to-life default look."
+              : "Optional — pick one if you have a preference. Skip it for a clean, true-to-life default look."}
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (
@@ -256,7 +256,7 @@ function BookingFormInner() {
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
               <div style={{ fontWeight: 700, fontSize: "15px" }}>Social cut theme</div>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
-                Optional -- pick a different style for your 60-90 second social cut, leave it matching your main style above, or skip the theme's music entirely. You can also change this (and star must-include photos) later from your QR share page.
+                Optional — pick a different style for your 60-90 second social cut, leave it matching your main style above, or skip the theme's music entirely. You can also change this (and star must-include photos) later from your QR share page.
               </p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {SOCIAL_STYLE_OPTIONS.map((s) => (
@@ -283,12 +283,12 @@ function BookingFormInner() {
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
               <div style={{ fontWeight: 700, fontSize: "15px" }}>Delivery format</div>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
-                Choose one -- a curated full recap video plus your social cut(s), or skip the full video for social cuts covering every photo guests upload.
+                Choose one — a curated full recap video plus your social cut(s), or skip the full video for social cuts covering every photo guests upload.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {[
                   { id: "recap", label: "Full recap video", desc: "A curated highlight video, plus your social cut(s)." },
-                  { id: "social_cuts", label: "Social cuts of every photo", desc: "No full video -- as many social cuts as it takes to cover every photo you get uploaded." },
+                  { id: "social_cuts", label: "Social cuts of every photo", desc: "No full video — as many social cuts as it takes to cover every photo you get uploaded." },
                 ].map((opt) => (
                   <button key={opt.id} onClick={() => update("deliveryFormat", opt.id)} aria-pressed={form.deliveryFormat === opt.id}
                     style={{
@@ -372,7 +372,7 @@ function BookingFormInner() {
           )}
           <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && !isSocialCutsFormat && form.roastEnabled ? (ROAST_ADDON_PRICE[form.tier] || 0) : 0)}`} />
           <div style={{ marginTop: "20px", padding: "14px", background: "#FFFFFF", borderRadius: "10px", fontSize: "12px", color: "#6b655c", lineHeight: 1.6 }}>
-            By booking, you'll receive a service agreement by email. {
+            By booking, you're agreeing to our terms of service, and you'll get a confirmation email right away with your QR code and upload link. {
               form.tier === "free"
                 ? "Your gallery and video are downloadable for 7 days after delivery, after which they're permanently removed."
                 : `Your event gallery and video stay accessible for ${GALLERY_RETENTION[form.tier] || "90 days"} after delivery.`

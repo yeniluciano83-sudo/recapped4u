@@ -118,7 +118,7 @@ export default function GalleryDeliveryPage() {
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>{eventName}</h1>
           <p style={{ color: "#4a4642", fontSize: "14.5px", lineHeight: 1.6 }}>
-            This gallery's 7-day Free-tier retention window has ended, and the photos and video have been permanently removed. Upgrade next time for a longer downloadable window.
+            This gallery's 7-day Free-tier retention window has ended, and the photos and video have been permanently removed. Pick a paid tier next time for a longer downloadable window.
           </p>
         </div>
       </main>

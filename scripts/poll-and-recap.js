@@ -124,6 +124,7 @@ async function processCollectingBookings(failures) {
           eventDate: booking.event_date,
           uploadUrl: `${process.env.APP_URL}/event/${booking.upload_slug}`,
           uploadSlug: booking.upload_slug,
+          tier: booking.tier,
         });
         await supabase.from("bookings").update({ reminder_sent_at: new Date().toISOString() }).eq("id", booking.id);
       } catch (err) {

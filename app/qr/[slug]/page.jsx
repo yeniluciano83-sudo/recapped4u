@@ -188,7 +188,7 @@ export default function QrSharePage() {
   };
 
   const handleExtendDeadline = async () => {
-    if (!window.confirm("This pushes your upload deadline out by 2 days, once. Continue?")) {
+    if (!window.confirm("This pushes your upload deadline out by 2 days. You can only do this once. Continue?")) {
       return;
     }
     setExtendingDeadline(true);

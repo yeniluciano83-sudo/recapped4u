@@ -459,16 +459,10 @@ export default function HomePage() {
         </div>
 
         <div style={{ marginTop: 40 }}>
-          <p style={{ fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 6 }}>
+          <p style={{ fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 16 }}>
             See the difference
           </p>
-          <p style={{ fontSize: 13.5, color: "#4a4642", margin: "0 0 16px", maxWidth: 480, lineHeight: 1.5 }}>
-            The same guest photo, before and after our automated editing pass.
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
-            <BeforeAfterCard label="Before" src="/images/before-after-raw.jpg" />
-            <BeforeAfterCard label="After" src="/images/before-after-enhanced.jpg" />
-          </div>
+          <BeforeAfterCarousel pairs={BEFORE_AFTER_PAIRS} />
         </div>
       </Section>
 
@@ -779,6 +773,18 @@ function CountUpPrice({ value, duration = 800 }) {
   return <span ref={ref}>${display}</span>;
 }
 
+// Five different event types on purpose -- one single example would read as
+// a lucky cherry-picked shot; cycling through several (different settings,
+// different people) is what actually makes the "we do this for every event"
+// claim credible.
+const BEFORE_AFTER_PAIRS = [
+  { key: "garden", label: "garden party", raw: "/images/before-after-garden-raw.jpg", enhanced: "/images/before-after-garden-enhanced.jpg" },
+  { key: "birthday", label: "birthday party", raw: "/images/before-after-birthday-raw.jpg", enhanced: "/images/before-after-birthday-enhanced.jpg" },
+  { key: "wedding", label: "wedding", raw: "/images/before-after-wedding-raw.jpg", enhanced: "/images/before-after-wedding-enhanced.jpg" },
+  { key: "graduation", label: "graduation", raw: "/images/before-after-graduation-raw.jpg", enhanced: "/images/before-after-graduation-enhanced.jpg" },
+  { key: "reunion", label: "family reunion", raw: "/images/before-after-reunion-raw.jpg", enhanced: "/images/before-after-reunion-enhanced.jpg" },
+];
+
 function BeforeAfterCard({ label, src }) {
   return (
     <div style={{ position: "relative", aspectRatio: "4/3", borderRadius: 14, overflow: "hidden", background: "#E4DED2" }}>
@@ -786,6 +792,37 @@ function BeforeAfterCard({ label, src }) {
       <span style={{ position: "absolute", top: 10, left: 12, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#FFFFFF", background: "rgba(0,0,0,0.45)", padding: "4px 10px", borderRadius: 999 }}>
         {label}
       </span>
+    </div>
+  );
+}
+
+function BeforeAfterCarousel({ pairs }) {
+  const [index, setIndex] = useState(0);
+  const pair = pairs[index];
+  const prev = () => setIndex((i) => (i - 1 + pairs.length) % pairs.length);
+  const next = () => setIndex((i) => (i + 1) % pairs.length);
+  const arrowBtnStyle = { display: "flex", alignItems: "center", justifyContent: "center", width: 34, height: 34, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", cursor: "pointer", flexShrink: 0 };
+
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
+        <BeforeAfterCard label="Before" src={pair.raw} />
+        <BeforeAfterCard label="After" src={pair.enhanced} />
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 16 }}>
+        <button onClick={prev} aria-label="Previous example" style={arrowBtnStyle}>
+          <ChevronRight size={16} style={{ transform: "rotate(180deg)" }} />
+        </button>
+        <div style={{ display: "flex", gap: 7 }}>
+          {pairs.map((p, i) => (
+            <button key={p.key} onClick={() => setIndex(i)} aria-label={`Show the ${p.label} example`} aria-current={i === index}
+              style={{ width: 7, height: 7, padding: 0, borderRadius: "50%", border: "none", cursor: "pointer", background: i === index ? "#C97A3D" : "#D8CFC0" }} />
+          ))}
+        </div>
+        <button onClick={next} aria-label="Next example" style={arrowBtnStyle}>
+          <ChevronRight size={16} />
+        </button>
+      </div>
     </div>
   );
 }

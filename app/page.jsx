@@ -410,7 +410,7 @@ export default function HomePage() {
           Your event, recapped.
         </h1>
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
-          You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery — ready to relive and share.
+          You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 28 }}>
           {[

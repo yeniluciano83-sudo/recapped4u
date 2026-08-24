@@ -191,6 +191,17 @@ export default function GalleryDeliveryPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+      <style>{`
+        /* 3 columns reads fine on desktop's 760px-max content column, but on
+           a phone-width viewport it squeezes each photo down to ~110px --
+           too small to make out. Drop to 2 below 480px. */
+        .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+        .gallery-masonry { column-count: 3; }
+        @media (max-width: 480px) {
+          .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+          .gallery-masonry { column-count: 2; }
+        }
+      `}</style>
       <div {...(lightbox ? { inert: "" } : {})} style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
@@ -341,7 +352,7 @@ function SelectBadge({ selected }) {
 
 function GridLayout({ photos, selectMode, selected, onSelect }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+    <div className="gallery-grid" style={{ display: "grid", gap: "8px" }}>
       {photos.map((url, i) => (
         <button key={i} onClick={() => onSelect(i)} style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }}>
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
@@ -353,7 +364,7 @@ function GridLayout({ photos, selectMode, selected, onSelect }) {
 
 function MasonryLayout({ photos, selectMode, selected, onSelect }) {
   return (
-    <div style={{ columnCount: 3, columnGap: "8px" }}>
+    <div className="gallery-masonry" style={{ columnGap: "8px" }}>
       {photos.map((url, i) => (
         <button key={i} onClick={() => onSelect(i)}
           style={{ position: "relative", display: "block", width: "100%", marginBottom: "8px", borderRadius: "8px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", breakInside: "avoid", padding: 0, background: "none" }}>
@@ -391,7 +402,7 @@ function SlideshowLayout({ photos, index, setIndex, selectMode, selected, onSele
 
 function DownloadOnlyLayout({ photos, downloadUrls }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+    <div className="gallery-grid" style={{ display: "grid", gap: "8px" }}>
       {photos.map((url, i) => (
         <a key={i} href={downloadUrls[i] || url} download style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center", textDecoration: "none" }}>
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "6px", background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>

@@ -431,7 +431,7 @@ export default function HomePage() {
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
         blob={{ color: "#C97A3D", top: -50, right: 0, size: 260 }}
-        subtitle="Every guest already has a camera in their pocket. Four simple steps turn what they capture into one story worth watching — you never touch an edit.">
+        subtitle="Every guest already has a camera in their pocket. Four simple steps turn what they capture into one story worth watching.">
         <div className="how-timeline">
           {[
             { n: "1", icon: Calendar, t: "Book", d: "Pick your package and event date — takes less than 2 minutes." },

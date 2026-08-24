@@ -376,7 +376,9 @@ function BookingFormInner() {
               form.tier === "free"
                 ? "Your gallery and video are downloadable for 7 days after delivery, after which they're permanently removed."
                 : `Your event gallery and video stay accessible for ${GALLERY_RETENTION[form.tier] || "90 days"} after delivery.`
-            } Raw guest uploads are removed 30 days after final delivery. Cancel more than 24 hours before your event for a full refund; cancellations inside 24 hours aren't eligible for a refund.
+            } Raw guest uploads are removed 30 days after final delivery.{
+              form.tier !== "free" && " Cancel more than 24 hours before your event for a full refund; cancellations inside 24 hours aren't eligible for a refund."
+            }
           </div>
         </StepBlock>
       )}

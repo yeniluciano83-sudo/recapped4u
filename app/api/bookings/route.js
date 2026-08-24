@@ -13,9 +13,19 @@ const TIER_PRICES = {
   keepsake: { amount: 9500, label: "Luxe Package" },
 };
 
-// Signature charges extra for Roast Reel; Luxe includes it at no
-// additional charge (no entry here).
-const ROAST_ADDON_PRICE = { premium: 2000 };
+// Every tier gets Roast Reel now. Free/Classic are capped at Light --
+// complimentary on Free, a $20 add-on on Classic (its only option).
+// Signature's Light is also complimentary; only stepping up to
+// Lukewarm/Hot costs $20 there. Luxe is complimentary at every intensity.
+// Kept in sync with roastAddonPrice in app/booking/page.jsx (dollars
+// there, cents here for Stripe).
+const ROAST_FULL_LEVELS_TIERS = ["premium", "keepsake"];
+function roastAddonPriceCents(tier, level) {
+  if (tier === "keepsake") return 0;
+  if (tier === "premium") return level === "light" ? 0 : 2000;
+  if (tier === "standard") return 2000;
+  return 0; // free tier
+}
 
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 
@@ -44,6 +54,12 @@ export async function POST(req) {
     // (and nothing to charge for) once "social cuts of every photo" skips
     // the full video entirely, regardless of what the client sent.
     const effectiveRoastEnabled = !!roastEnabled && effectiveDeliveryFormat !== "social_cuts";
+    // Free/Classic only ever get Light -- clamp server-side rather than
+    // trust whatever level the client sent (the UI already restricts this,
+    // but this is the actual source of truth for what gets charged below).
+    const effectiveRoastLevel = effectiveRoastEnabled
+      ? (ROAST_FULL_LEVELS_TIERS.includes(tier) ? (roastLevel || "light") : "light")
+      : null;
 
     const { data: booking, error } = await supabase
       .from("bookings")
@@ -63,7 +79,7 @@ export async function POST(req) {
         upload_slug: uploadSlug,
         status: "booked",
         roast_enabled: effectiveRoastEnabled,
-        roast_level: effectiveRoastEnabled ? roastLevel : null,
+        roast_level: effectiveRoastLevel,
         delivery_format: effectiveDeliveryFormat,
         full_video_no_music: !!fullVideoNoMusic,
       })
@@ -120,7 +136,7 @@ export async function POST(req) {
       },
     ];
 
-    const roastAddonAmount = effectiveRoastEnabled ? ROAST_ADDON_PRICE[tier] : undefined;
+    const roastAddonAmount = effectiveRoastEnabled ? roastAddonPriceCents(tier, effectiveRoastLevel) : undefined;
     if (roastAddonAmount) {
       lineItems.push({
         price_data: {

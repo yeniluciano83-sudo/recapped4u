@@ -60,11 +60,11 @@ const STYLE_MUSIC = {
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 const TARGET_SOCIAL_SECONDS = 75; // middle of the advertised 60-90s range
 const MAX_SOCIAL_PHOTOS = 15;
-// Luxe gets multiple social cuts, each from a different batch of top
+// Both tiers get multiple social cuts, each from a different batch of top
 // photos (cut 1 = must-includes + best remaining, cut 2 = next-best batch,
 // and so on) -- real distinct content per cut, not just re-edits of the
-// same shots. Signature stays at 1, matching what it's always advertised.
-const SOCIAL_CUTS_COUNT = { keepsake: 5 };
+// same shots.
+const SOCIAL_CUTS_COUNT = { premium: 5, keepsake: 10 };
 
 // Paid tiers advertise unlimited uploads with no stated gallery cap, so
 // their shortlist is genuinely uncapped -- every photo that clears the

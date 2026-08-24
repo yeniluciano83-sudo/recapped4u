@@ -429,7 +429,7 @@ export default function HomePage() {
         subtitle="Every guest already has a camera in their pocket. Four simple steps turn what they capture into one story worth watching.">
         <div className="how-timeline">
           {[
-            { n: "1", icon: Calendar, t: "Book", d: "Pick your package and event date — takes less than 2 minutes." },
+            { n: "1", icon: Calendar, t: "Book", d: "Tell us about your event, pick your editing style — takes less than 2 minutes." },
             { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Share your QR code digitally or print it on cards. Guests add photos with zero apps and zero fuss, and you can toss in your own from the same page." },
             { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, hundreds of photos become one story. We find the moments worth keeping — the real laugh, not the posed one — then cut, grade, and pace them together automatically, start to finish." },
             { n: "4", icon: PartyPopper, t: "It lands in your inbox", d: "A polished video and photo gallery, ready to relive, share, and keep." },

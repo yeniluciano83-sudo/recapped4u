@@ -39,14 +39,26 @@ export async function GET(req, { params }) {
   // Older deliverable rows predate social_video_keys and only have the
   // singular field -- fall back to it so their gallery still shows a cut.
   const socialKeys = deliverable.social_video_keys?.length ? deliverable.social_video_keys : [deliverable.social_video_key].filter(Boolean);
+  // Only populated when Roast Reel was on for this booking, one entry per
+  // cut (see the comment above socialVideoNoRoastKeys in
+  // scripts/auto-recap.js) -- older/non-roast deliverable rows just have
+  // this as null, which the .map() calls below already handle as [].
+  const socialNoRoastKeys = deliverable.social_video_no_roast_keys || [];
 
-  const [fullVideoUrl, noRoastVideoUrl, fullVideoDownloadUrl, noRoastVideoDownloadUrl, socialVideoUrls, socialVideoDownloadUrls, photoUrls, photoDownloadUrls] = await Promise.all([
+  const [
+    fullVideoUrl, noRoastVideoUrl, fullVideoDownloadUrl, noRoastVideoDownloadUrl,
+    socialVideoUrls, socialVideoDownloadUrls,
+    socialVideoNoRoastUrls, socialVideoNoRoastDownloadUrls,
+    photoUrls, photoDownloadUrls,
+  ] = await Promise.all([
     deliverable.full_video_key ? getSignedDownloadUrl(deliverable.full_video_key, 86400) : null,
     deliverable.full_video_no_roast_key ? getSignedDownloadUrl(deliverable.full_video_no_roast_key, 86400) : null,
     deliverable.full_video_key ? getSignedDownloadUrl(deliverable.full_video_key, 86400, `${eventSlug}-recap-full.mp4`) : null,
     deliverable.full_video_no_roast_key ? getSignedDownloadUrl(deliverable.full_video_no_roast_key, 86400, `${eventSlug}-recap-full-no-roast.mp4`) : null,
     Promise.all(socialKeys.map((k) => getSignedDownloadUrl(k, 86400))),
     Promise.all(socialKeys.map((k, i) => getSignedDownloadUrl(k, 86400, `${eventSlug}-recap-social-${i + 1}.mp4`))),
+    Promise.all(socialNoRoastKeys.map((k) => getSignedDownloadUrl(k, 86400))),
+    Promise.all(socialNoRoastKeys.map((k, i) => getSignedDownloadUrl(k, 86400, `${eventSlug}-recap-social-${i + 1}-no-roast.mp4`))),
     Promise.all(photoKeys.map((k) => getSignedDownloadUrl(k, 86400))),
     Promise.all(photoKeys.map((k, i) => getSignedDownloadUrl(k, 86400, `${eventSlug}-photo-${i + 1}.jpg`))),
   ]);
@@ -60,6 +72,8 @@ export async function GET(req, { params }) {
       full_video_no_roast_download_url: noRoastVideoDownloadUrl,
       social_video_urls: socialVideoUrls,
       social_video_download_urls: socialVideoDownloadUrls,
+      social_video_no_roast_urls: socialVideoNoRoastUrls,
+      social_video_no_roast_download_urls: socialVideoNoRoastDownloadUrls,
     },
     photos: photoUrls,
     photo_download_urls: photoDownloadUrls,

@@ -156,20 +156,28 @@ export default function GalleryDeliveryPage() {
   // finalizeDelivery in scripts/auto-recap.js).
   const hasFullCut = Boolean(data?.deliverable?.full_video_url);
   const hasNoRoastCut = Boolean(data?.deliverable?.full_video_no_roast_url);
-  const isRoastCut = videoLength === "full" && hasNoRoastCut;
   const socialUrls = data?.deliverable?.social_video_urls || [];
   const socialDownloadUrls = data?.deliverable?.social_video_download_urls || [];
+  const socialNoRoastUrls = data?.deliverable?.social_video_no_roast_urls || [];
+  const socialNoRoastDownloadUrls = data?.deliverable?.social_video_no_roast_download_urls || [];
   // "social-N" selects the Nth social cut (Luxe can have several -- see
   // SOCIAL_CUTS_COUNT in scripts/auto-recap.js -- Signature/Free have at
   // most 1, so this collapses to a single "Social cut" toggle for them).
+  // A roasted cut's "without roast" twin is "social-N-no_roast" -- parseInt
+  // stops at the first non-digit character, so the trailing suffix doesn't
+  // break the index extraction below.
   const socialIndex = videoLength.startsWith("social-") ? parseInt(videoLength.slice(7), 10) : -1;
+  const isSocialNoRoast = socialIndex >= 0 && videoLength.endsWith("-no_roast");
+  const isRoastCut = (videoLength === "full" && hasNoRoastCut) || (socialIndex >= 0 && !isSocialNoRoast && Boolean(socialNoRoastUrls[socialIndex]));
   const activeVideoUrl =
     videoLength === "full" ? data?.deliverable?.full_video_url
     : videoLength === "no_roast" ? data?.deliverable?.full_video_no_roast_url
+    : isSocialNoRoast ? socialNoRoastUrls[socialIndex]
     : socialUrls[socialIndex];
   const activeVideoDownloadUrl =
     videoLength === "full" ? data?.deliverable?.full_video_download_url
     : videoLength === "no_roast" ? data?.deliverable?.full_video_no_roast_download_url
+    : isSocialNoRoast ? socialNoRoastDownloadUrls[socialIndex]
     : socialDownloadUrls[socialIndex];
   const isExpired = booking.gallery_expires_at && new Date(booking.gallery_expires_at) < new Date();
   const isDownloadOnly = isExpired;
@@ -226,7 +234,12 @@ export default function GalleryDeliveryPage() {
               {hasFullCut && <LengthToggle active={videoLength === "full"} onClick={() => setVideoLength("full")} label={hasNoRoastCut ? "Roast Reel cut" : "Full cut"} />}
               {hasFullCut && hasNoRoastCut && <LengthToggle active={videoLength === "no_roast"} onClick={() => setVideoLength("no_roast")} label="Without roast" />}
               {socialUrls.map((_, i) => (
-                <LengthToggle key={i} active={socialIndex === i} onClick={() => setVideoLength(`social-${i}`)} label={socialUrls.length > 1 ? `Social ${i + 1}` : "Social cut"} />
+                <React.Fragment key={i}>
+                  <LengthToggle active={socialIndex === i && !isSocialNoRoast} onClick={() => setVideoLength(`social-${i}`)} label={socialUrls.length > 1 ? `Social ${i + 1}` : "Social cut"} />
+                  {Boolean(socialNoRoastUrls[i]) && (
+                    <LengthToggle active={socialIndex === i && isSocialNoRoast} onClick={() => setVideoLength(`social-${i}-no_roast`)} label={socialUrls.length > 1 ? `Social ${i + 1} w/o roast` : "Without roast"} />
+                  )}
+                </React.Fragment>
               ))}
             </div>
             <a href={activeVideoDownloadUrl} download style={iconBtnStyle}>

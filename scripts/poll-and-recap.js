@@ -261,9 +261,9 @@ async function purgeExpiredGalleries(failures) {
   const { deleteFile } = require("../lib/storage");
   for (const booking of expired) {
     try {
-      const { data: deliverables } = await supabase.from("deliverables").select("id, full_video_key, full_video_no_roast_key, social_video_key, social_video_keys, gallery_photo_keys").eq("booking_id", booking.id);
+      const { data: deliverables } = await supabase.from("deliverables").select("id, full_video_key, full_video_no_roast_key, social_video_key, social_video_keys, social_video_no_roast_keys, gallery_photo_keys").eq("booking_id", booking.id);
       for (const deliverable of deliverables || []) {
-        const keys = [deliverable.full_video_key, deliverable.full_video_no_roast_key, deliverable.social_video_key, ...(deliverable.social_video_keys || []), ...(deliverable.gallery_photo_keys || [])].filter(Boolean);
+        const keys = [deliverable.full_video_key, deliverable.full_video_no_roast_key, deliverable.social_video_key, ...(deliverable.social_video_keys || []), ...(deliverable.social_video_no_roast_keys || []), ...(deliverable.gallery_photo_keys || [])].filter(Boolean);
         for (const key of keys) {
           await deleteFile(key);
         }

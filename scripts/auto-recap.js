@@ -455,17 +455,21 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   // in memory from that run. If Roast Reel is enabled, each cut gets its
   // own roast script generated from its own photo selection (cuts don't
   // share a selection with each other or with the full video, so the
-  // full-video script above can't just be reused/sliced). Unlike the full
-  // video, social cuts get only the captioned version -- no caption-free
-  // twin -- since Luxe alone can run up to 10 cuts, and rendering two of
-  // each would double an already-expensive render for a feature that's
-  // secondary to the cut itself. Duration is hit by solving for a per-slot
-  // length that lands each cut's sequence near TARGET_SOCIAL_SECONDS,
-  // rather than using the full cut's fixed pacing -- note that a
-  // roast-captioned slot still overrides this to ROAST_SLOT_SECONDS
-  // (lib/video-assemble.js), same trade-off the full video already makes,
-  // so a heavily-roasted cut can run past the advertised 60-90s.
+  // full-video script above can't just be reused/sliced), plus a
+  // caption-free twin of that same cut, same as full_video_no_roast_key
+  // already does for the full video. roast_enabled is a single
+  // booking-level flag, not per-cut, so socialVideoNoRoastKeys always ends
+  // up either fully populated (one entry per cut) or left empty -- never
+  // partially populated -- which is what lets the gallery route zip it
+  // against socialVideoKeys by index without needing to know which cuts
+  // have one. Duration is hit by solving for a per-slot length that lands
+  // each cut's sequence near TARGET_SOCIAL_SECONDS, rather than using the
+  // full cut's fixed pacing -- note that a roast-captioned slot still
+  // overrides this to ROAST_SLOT_SECONDS (lib/video-assemble.js), same
+  // trade-off the full video already makes, so a heavily-roasted cut can
+  // run past the advertised 60-90s.
   const socialVideoKeys = [];
+  const socialVideoNoRoastKeys = [];
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier)) {
     // skipFullVideo (all-photos social cuts mode) has no fixed cut count --
     // keep rendering cuts until a prefix comes up empty, rather than
@@ -507,6 +511,16 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
       socialVideoKeys.push(socialVideoKey);
+
+      if (cutRoastLines) {
+        console.log(`Roast Reel enabled -- also assembling a caption-free version of social cut ${cutIndex + 1}...`);
+        const noRoastLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-no-roast.mp4`);
+        await assembleSlideshow(socialLocalPaths, [], noRoastLocalPath, socialMusicPath, null, slotSeconds);
+        const noRoastBuffer = fs.readFileSync(noRoastLocalPath);
+        const noRoastKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast.mp4`;
+        await uploadToR2(noRoastKey, noRoastBuffer, "video/mp4");
+        socialVideoNoRoastKeys.push(noRoastKey);
+      }
     }
   }
 
@@ -526,6 +540,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       // social_video_keys is the real, complete list.
       social_video_key: socialVideoKeys[0] || null,
       social_video_keys: socialVideoKeys,
+      social_video_no_roast_keys: socialVideoNoRoastKeys,
       gallery_photo_keys: enhancedKeys,
       delivered_at: new Date().toISOString(),
     },

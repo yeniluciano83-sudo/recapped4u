@@ -412,13 +412,8 @@ export default function HomePage() {
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
           You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery — ready to relive and share.
         </p>
-        <a href="/booking" className="press-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 15, fontWeight: 700, padding: "14px 26px", borderRadius: 10, textDecoration: "none", boxShadow: "0 8px 22px rgba(201,122,61,0.28)" }}>
-          Book Your Event <ChevronRight size={17} />
-        </a>
-
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 28 }}>
           {[
-            { icon: Check, label: "Real footage, never generated" },
             { icon: QrCode, label: "No app for guests" },
             { icon: Mail, label: "Delivered straight to your inbox" },
           ].map((p) => (

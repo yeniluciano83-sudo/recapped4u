@@ -7,9 +7,14 @@ export const dynamic = "force-dynamic";
 export async function GET(req, { params }) {
   const { bookingId } = params;
 
+  // Public, unauthenticated route (this is the link hosts share with guests)
+  // -- select only the fields the gallery view actually renders, not "*".
+  // upload_slug in particular must never end up here: it's the sole
+  // credential gating cancel/reschedule/close-uploads/extend-deadline, and
+  // this response would otherwise hand it to anyone with the gallery link.
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
-    .select("*")
+    .select("id, host_name, event_type, event_date, status, tier, style, delivery_format, gallery_template, gallery_expires_at")
     .eq("id", bookingId)
     .single();
 

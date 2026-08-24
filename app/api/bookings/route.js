@@ -47,10 +47,10 @@ export async function POST(req) {
     const uploadSlug = randomUUID();
 
     const effectiveDeliveryFormat = SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) && deliveryFormat === "social_cuts" ? "social_cuts" : "recap";
-    // Roast Reel captions the full video -- there's nothing for it to do
-    // (and nothing to charge for) once "social cuts of every photo" skips
-    // the full video entirely, regardless of what the client sent.
-    const effectiveRoastEnabled = !!roastEnabled && effectiveDeliveryFormat !== "social_cuts";
+    // Roast Reel works on "social cuts of every photo" bookings too --
+    // scripts/auto-recap.js generates a separate roast script per social
+    // cut in that mode, since there's no full video there to caption.
+    const effectiveRoastEnabled = !!roastEnabled;
     // Free/Classic only ever get Light -- clamp server-side rather than
     // trust whatever level the client sent (the UI already restricts this,
     // but this is the actual source of truth for what gets charged below).

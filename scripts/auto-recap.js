@@ -382,15 +382,17 @@ async function runFullPipeline(booking) {
     }
   }
 
-  // Roast Reel captions the full video -- nothing to caption in "social cuts
-  // of every photo" mode, so it's skipped there even if roast_enabled is
-  // still set from a tier that includes it by default. Every intensity
-  // level's prompt (lib/roast.js) carries a hard rule to roast the moment,
-  // never a person's body/appearance/race, so the script needs no separate
-  // host review before it's used.
+  // Roast Reel captions the full video -- there's no full video to caption
+  // in "social cuts of every photo" mode, so this (the full-video script)
+  // is skipped there even if roast_enabled is set. Social cuts get their
+  // own roast script generated separately, per cut, inside finalizeDelivery
+  // -- see the comment there. Every intensity level's prompt (lib/roast.js)
+  // carries a hard rule to roast the moment, never a person's body/
+  // appearance/race, so the script needs no separate host review before
+  // it's used.
   let roastLines = null;
   if (booking.roast_enabled && !useAllPhotoSocialCuts) {
-    console.log("Roast Reel add-on enabled -- generating script...");
+    console.log("Roast Reel add-on enabled -- generating full-video script...");
     const roastPhotos = localPaths.map((p, i) => ({ buffer: fs.readFileSync(p), storageKey: videoStorageKeys[i] }));
     const script = await generateRoastScript(roastPhotos, {
       eventType: booking.event_type,
@@ -405,11 +407,11 @@ async function runFullPipeline(booking) {
   // matching enhancePhoto's own documentary default for the color grade.
   const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.documentary;
   const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.documentary;
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type);
   currentTmpDir = null;
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false) {
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "") {
   let videoKey = null;
   let noRoastVideoKey = null;
 
@@ -450,10 +452,19 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 
   // The social cut(s)' photo selections were already uploaded to R2 in
   // runFullPipeline -- recover them here rather than needing anything still
-  // in memory from that run. No roast
-  // lines: social cuts never carry Roast Reel captions. Duration is hit by
-  // solving for a per-slot length that lands each cut's sequence near
-  // TARGET_SOCIAL_SECONDS, rather than using the full cut's fixed pacing.
+  // in memory from that run. If Roast Reel is enabled, each cut gets its
+  // own roast script generated from its own photo selection (cuts don't
+  // share a selection with each other or with the full video, so the
+  // full-video script above can't just be reused/sliced). Unlike the full
+  // video, social cuts get only the captioned version -- no caption-free
+  // twin -- since Luxe alone can run up to 10 cuts, and rendering two of
+  // each would double an already-expensive render for a feature that's
+  // secondary to the cut itself. Duration is hit by solving for a per-slot
+  // length that lands each cut's sequence near TARGET_SOCIAL_SECONDS,
+  // rather than using the full cut's fixed pacing -- note that a
+  // roast-captioned slot still overrides this to ROAST_SLOT_SECONDS
+  // (lib/video-assemble.js), same trade-off the full video already makes,
+  // so a heavily-roasted cut can run past the advertised 60-90s.
   const socialVideoKeys = [];
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier)) {
     // skipFullVideo (all-photos social cuts mode) has no fixed cut count --
@@ -466,12 +477,23 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 
       console.log(`Assembling social cut ${cutIndex + 1} from ${socialKeys.length} photo(s)...`);
       const socialLocalPaths = [];
+      const socialBuffers = [];
       for (const key of socialKeys) {
         const buffer = await downloadFromR2(key);
         const localPath = path.join(tmpDir, path.basename(key));
         fs.writeFileSync(localPath, buffer);
         socialLocalPaths.push(localPath);
+        socialBuffers.push(buffer);
       }
+
+      let cutRoastLines = null;
+      if (roastEnabled) {
+        console.log(`Roast Reel add-on enabled -- generating script for social cut ${cutIndex + 1}...`);
+        const roastPhotos = socialBuffers.map((buffer, i) => ({ buffer, storageKey: socialKeys[i] }));
+        const script = await generateRoastScript(roastPhotos, { eventType, roastLevel: roastLevel || "light" });
+        cutRoastLines = script.map((line) => line.line);
+      }
+
       // Solve for the per-slot duration that lands the whole crossfaded
       // sequence at TARGET_SOCIAL_SECONDS: total = n*d - (n-1)*transition,
       // so d = (target + (n-1)*transition) / n. 0.6 here must match
@@ -480,7 +502,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       const CROSSFADE_TRANSITION_SECONDS = 0.6;
       const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * CROSSFADE_TRANSITION_SECONDS) / socialLocalPaths.length;
       const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
-      await assembleSlideshow(socialLocalPaths, [], socialVideoLocalPath, socialMusicPath, null, slotSeconds);
+      await assembleSlideshow(socialLocalPaths, [], socialVideoLocalPath, socialMusicPath, cutRoastLines, slotSeconds);
       const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");

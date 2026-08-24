@@ -152,7 +152,7 @@ function BookingFormInner() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && !isSocialCutsFormat && form.roastEnabled, roastLevel: effectiveRoastLevel }) });
+      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled, roastLevel: effectiveRoastLevel }) });
       const data = await res.json();
       if (!res.ok) {
         alert("Submission failed: " + (data.error || "Unknown error"));
@@ -327,7 +327,7 @@ function BookingFormInner() {
             </label>
           )}
 
-          {isRoastEligible && !isSocialCutsFormat && (
+          {isRoastEligible && (
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
               <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
                 <input type="checkbox" checked={form.roastEnabled} onChange={(e) => update("roastEnabled", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
@@ -338,7 +338,9 @@ function BookingFormInner() {
                 </span>
               </label>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "8px 0 0", lineHeight: 1.5 }}>
-                Witty commentary layered over your photos. You'll get both a captioned cut and a caption-free version of the same video.
+                {isSocialCutsFormat
+                  ? "Witty commentary layered over your social cuts."
+                  : "Witty commentary layered over your photos. You'll get both a captioned cut and a caption-free version of the same video."}
               </p>
               {form.roastEnabled && (isRoastFullLevelEligible ? (
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
@@ -379,13 +381,13 @@ function BookingFormInner() {
             <SummaryRow label="Delivery format" value={isSocialCutsFormat ? "Social cuts of every photo" : "Full recap video"} />
           )}
           {!isSocialCutsFormat && form.fullVideoNoMusic && <SummaryRow label="Full video music" value="Off" />}
-          {isRoastEligible && !isSocialCutsFormat && form.roastEnabled && (
+          {isRoastEligible && form.roastEnabled && (
             <SummaryRow
               label="Roast Reel"
               value={`${ROAST_LEVELS.find((r) => r.id === effectiveRoastLevel)?.label}${roastAddonPrice(form.tier, effectiveRoastLevel) ? ` (+$${roastAddonPrice(form.tier, effectiveRoastLevel)})` : " (included)"}`}
             />
           )}
-          <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && !isSocialCutsFormat && form.roastEnabled ? roastAddonPrice(form.tier, effectiveRoastLevel) : 0)}`} />
+          <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && form.roastEnabled ? roastAddonPrice(form.tier, effectiveRoastLevel) : 0)}`} />
           <div style={{ marginTop: "20px", padding: "14px", background: "#FFFFFF", borderRadius: "10px", fontSize: "12px", color: "#6b655c", lineHeight: 1.6 }}>
             By booking, you're agreeing to our terms of service, and you'll get a confirmation email right away with your QR code and upload link. {
               form.tier === "free"

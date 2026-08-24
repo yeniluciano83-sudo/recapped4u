@@ -238,6 +238,34 @@ function BookingFormInner() {
               ? "Optional — pick one here, or just set a theme on your social cut below, since that's what's actually shown in social-cuts-only delivery. Skip both for a clean, true-to-life default look."
               : "Optional — pick one if you have a preference. Skip it for a clean, true-to-life default look."}
           </p>
+
+          {isSocialCutEligible && (
+            <div style={{ marginBottom: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
+              <div style={{ fontWeight: 700, fontSize: "15px" }}>Delivery format</div>
+              <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
+                Choose one — a curated full recap video plus your social cut(s), or skip the full video for social cuts covering every photo guests upload.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {[
+                  { id: "recap", label: "Full recap video", desc: "A curated highlight video, plus your social cut(s)." },
+                  { id: "social_cuts", label: "Social cuts of every photo", desc: "No full video — as many social cuts as it takes to cover every photo you get uploaded." },
+                ].map((opt) => (
+                  <button key={opt.id} onClick={() => update("deliveryFormat", opt.id)} aria-pressed={form.deliveryFormat === opt.id}
+                    style={{
+                      textAlign: "left", padding: "12px 14px", borderRadius: "10px", cursor: "pointer",
+                      background: form.deliveryFormat === opt.id ? "#FBEEE0" : "#FAF7F2",
+                      border: form.deliveryFormat === opt.id ? "1.5px solid #C97A3D" : "1px solid #D8CFC0",
+                    }}>
+                    <div style={{ fontWeight: 600, fontSize: "13.5px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      {form.deliveryFormat === opt.id && <Check size={13} color="#C97A3D" strokeWidth={3} />} {opt.label}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#6b655c", marginTop: "2px" }}>{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (
               <div key={s.id} style={{ position: "relative" }}>
@@ -274,33 +302,6 @@ function BookingFormInner() {
                     </button>
                     <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isSocialCutEligible && (
-            <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
-              <div style={{ fontWeight: 700, fontSize: "15px" }}>Delivery format</div>
-              <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
-                Choose one — a curated full recap video plus your social cut(s), or skip the full video for social cuts covering every photo guests upload.
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {[
-                  { id: "recap", label: "Full recap video", desc: "A curated highlight video, plus your social cut(s)." },
-                  { id: "social_cuts", label: "Social cuts of every photo", desc: "No full video — as many social cuts as it takes to cover every photo you get uploaded." },
-                ].map((opt) => (
-                  <button key={opt.id} onClick={() => update("deliveryFormat", opt.id)} aria-pressed={form.deliveryFormat === opt.id}
-                    style={{
-                      textAlign: "left", padding: "12px 14px", borderRadius: "10px", cursor: "pointer",
-                      background: form.deliveryFormat === opt.id ? "#FBEEE0" : "#FAF7F2",
-                      border: form.deliveryFormat === opt.id ? "1.5px solid #C97A3D" : "1px solid #D8CFC0",
-                    }}>
-                    <div style={{ fontWeight: 600, fontSize: "13.5px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      {form.deliveryFormat === opt.id && <Check size={13} color="#C97A3D" strokeWidth={3} />} {opt.label}
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#6b655c", marginTop: "2px" }}>{opt.desc}</div>
-                  </button>
                 ))}
               </div>
             </div>

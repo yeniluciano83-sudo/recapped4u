@@ -171,6 +171,33 @@ export default function HomePage() {
            (a cursor-follow 3D tilt needs per-pixel values a CSS :hover rule
            cannot express) -- no .price-card:hover rule here on purpose. */
 
+        /* Very slight idle sway on the pricing cards, as if pinned at the
+           top (matching the little tape/pin mark already drawn there) and
+           catching a breeze. Lives on a wrapper div, not .price-card
+           itself, so it never fights over the transform property with
+           the imperative hover-tilt TiltCard sets on mousemove -- the two
+           compose visually as nested elements instead of competing for
+           the same property.
+           NOTE: keep this style block free of apostrophes, ampersands, and
+           angle brackets. React HTML-escapes those characters on the
+           server, but style is an HTML5 raw-text element that the browser
+           never decodes entities inside, so an escaped character here
+           causes a real client and server hydration text mismatch. */
+        .price-card-breeze { transform-origin: 50% 0%; animation-name: price-card-breeze; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-duration: 7s; }
+        /* Staggered via nth-child (not inline styles) so every card is
+           already mid-sway on load instead of starting in lockstep. */
+        .price-card-breeze:nth-child(1) { animation-delay: 0s; }
+        .price-card-breeze:nth-child(2) { animation-delay: -1.3s; animation-duration: 7.6s; }
+        .price-card-breeze:nth-child(3) { animation-delay: -2.6s; animation-duration: 8.2s; }
+        .price-card-breeze:nth-child(4) { animation-delay: -3.9s; animation-duration: 8.8s; }
+        @keyframes price-card-breeze {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(0.5deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .price-card-breeze { animation: none; }
+        }
+
         .contact-row { display: flex; flex-direction: column; gap: 12px; }
         @media (min-width: 560px) {
           .contact-row { flex-direction: row; }
@@ -463,8 +490,9 @@ export default function HomePage() {
             const tilt = [-1.3, 0.9, 0, -0.7][idx] || 0;
             const baseTransform = t.highlight ? "scale(1.03)" : `rotate(${tilt}deg)`;
             return (
-            <TiltCard key={t.id} href={`/booking?tier=${t.id}`} className="price-card" baseTransform={baseTransform} style={{
-              ...cardStyle, position: "relative", display: "block", textDecoration: "none", color: "inherit", cursor: "pointer",
+            <div key={t.id} className="price-card-breeze">
+            <TiltCard href={`/booking?tier=${t.id}`} className="price-card" baseTransform={baseTransform} style={{
+              ...cardStyle, height: "100%", position: "relative", display: "block", textDecoration: "none", color: "inherit", cursor: "pointer",
               border: t.highlight ? "1.5px solid #C97A3D" : cardStyle.border,
               boxShadow: t.highlight ? "0 10px 26px rgba(201,122,61,0.22)" : "0 3px 10px rgba(33,31,29,0.05)",
             }}>
@@ -491,6 +519,7 @@ export default function HomePage() {
                 ))}
               </ul>
             </TiltCard>
+            </div>
             );
           })}
         </div>

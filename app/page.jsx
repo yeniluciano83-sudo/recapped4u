@@ -406,10 +406,10 @@ export default function HomePage() {
           Event recap videos & photo galleries
         </p>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 18px" }}>
-          Your event, recapped — no photographer needed.
+          From your camera roll to a full production.
         </h1>
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
-          We turn the photos your own guests already took into one polished recap video and gallery.
+          You and your guests upload the photos. We polish every shot and turn them into a full recap video, ready-to-post social cuts, and a photo gallery — no photographer required.
         </p>
         <a href="/booking" className="press-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 15, fontWeight: 700, padding: "14px 26px", borderRadius: 10, textDecoration: "none", boxShadow: "0 8px 22px rgba(201,122,61,0.28)" }}>
           Book Your Event <ChevronRight size={17} />

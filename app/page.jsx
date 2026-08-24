@@ -431,7 +431,7 @@ export default function HomePage() {
           {[
             { n: "1", icon: Calendar, t: "Book", d: "Tell us about your event, pick your editing style — takes less than 2 minutes." },
             { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Share your QR code digitally or print it on cards. Guests add photos with zero apps and zero fuss, and you can toss in your own from the same page." },
-            { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, the photos become one or multiple short stories. We keep the good stuff and skip the rest — then cut, grade, and pace it all together automatically, start to finish." },
+            { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, we polish every photo for your gallery, then curate the best of them into your full video and social cuts — cut, graded, and paced automatically, start to finish." },
             { n: "4", icon: PartyPopper, t: "It lands in your inbox", d: "A polished video and photo gallery, ready to relive, share, and keep." },
           ].map((s, i, arr) => {
             const Icon = s.icon;

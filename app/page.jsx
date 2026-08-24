@@ -52,7 +52,7 @@ const EVENT_TYPES = [
 const TIER_ICONS = { free: Gift, standard: Camera, premium: Star, keepsake: Crown };
 
 const FAQS = [
-  { q: "What exactly do we get?", a: "A full recap video, a photo gallery of every shot your guests upload, and — on Signature and Luxe — ready-to-post social cuts sized for Instagram, TikTok, or Reels. Every photo is polished (color graded, cleaned up) before it goes into any of them. No photographer to hire, no app for guests to download." },
+  { q: "What exactly do we get?", a: "A full recap video, a photo gallery of every shot your guests upload, and — on Signature and Luxe — ready-to-post social cuts sized for Instagram, TikTok, or Reels. Every photo is polished (color graded, cleaned up) before it goes into any of them, all built from photos you and your guests already have on your phones." },
   { q: "Is this real footage, or generated?", a: "It's all real — every photo is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
   { q: "Will our photos be shared with anyone else?", a: "No. Your photos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
   { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes 24-hour priority delivery, Roast Reel included." },
@@ -407,10 +407,10 @@ export default function HomePage() {
           Event recap videos & photo galleries
         </p>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 18px" }}>
-          From your camera roll to a full production.
+          Phone photos in. A full production out.
         </h1>
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
-          You and your guests upload the photos. We polish every shot and turn them into a full recap video, ready-to-post social cuts, and a photo gallery — no photographer required.
+          You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery — ready to relive and share.
         </p>
         <a href="/booking" className="press-btn" style={{ display: "inline-flex", alignItems: "center", gap: 8, backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 15, fontWeight: 700, padding: "14px 26px", borderRadius: 10, textDecoration: "none", boxShadow: "0 8px 22px rgba(201,122,61,0.28)" }}>
           Book Your Event <ChevronRight size={17} />
@@ -573,7 +573,7 @@ export default function HomePage() {
             Living in New York City means never running out of moments worth keeping — a wedding one weekend, a rooftop birthday the next, a block party you wandered into and didn't want to leave. The city hands you memories faster than you can hold onto them.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
-            That's exactly why Recapped For You exists. After enough events — daytime brunches, all-night celebrations, everything in between — we kept seeing the same thing: the best moments ended up scattered across the host's camera roll and every guest's phone, and most of it never got looked at twice. So we set out to build something that could gather it all, polish it, and hand it back looking as good as it felt being there — no photographer required. Just a full recap video, ready-to-post social cuts, and a photo gallery, all cut from photos you and your guests already took. Every photo is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cleaned up, color graded, and cut into a film — the same polish and curation a professional editor would give it, built into everything we deliver.
+            That's exactly why Recapped For You exists. After enough events — daytime brunches, all-night celebrations, everything in between — we kept seeing the same thing: the best moments ended up scattered across the host's camera roll and every guest's phone, and most of it never got looked at twice. So we set out to build something that could gather it all, polish it, and hand it back looking as good as it felt being there — a full recap video, ready-to-post social cuts, and a photo gallery, all cut from photos you and your guests already took. Every photo is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cleaned up, color graded, and cut into a film — the same polish and curation a professional editor would give it, built into everything we deliver.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7 }}>
             Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.

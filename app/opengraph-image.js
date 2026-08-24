@@ -34,7 +34,7 @@ export default async function Image() {
           <div style={{ width: 44, height: 44, borderRadius: 8, border: "6px solid #FAF7F2" }} />
         </div>
         <div style={{ fontSize: 64, fontWeight: 700, color: "#211F1D", marginBottom: 16 }}>Recapped For You</div>
-        <div style={{ fontSize: 30, color: "#4a4642" }}>Your event, recapped — no photographer needed.</div>
+        <div style={{ fontSize: 30, color: "#4a4642" }}>Phone photos in. A full production out.</div>
       </div>
     ),
     { ...size }

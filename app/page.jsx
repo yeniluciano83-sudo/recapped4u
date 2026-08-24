@@ -183,16 +183,16 @@ export default function HomePage() {
            server, but style is an HTML5 raw-text element that the browser
            never decodes entities inside, so an escaped character here
            causes a real client and server hydration text mismatch. */
-        .price-card-breeze { transform-origin: 50% 0%; animation-name: price-card-breeze; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-duration: 7s; }
+        .price-card-breeze { transform-origin: 50% 0%; animation-name: price-card-breeze; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-duration: 4s; }
         /* Staggered via nth-child (not inline styles) so every card is
            already mid-sway on load instead of starting in lockstep. */
         .price-card-breeze:nth-child(1) { animation-delay: 0s; }
-        .price-card-breeze:nth-child(2) { animation-delay: -1.3s; animation-duration: 7.6s; }
-        .price-card-breeze:nth-child(3) { animation-delay: -2.6s; animation-duration: 8.2s; }
-        .price-card-breeze:nth-child(4) { animation-delay: -3.9s; animation-duration: 8.8s; }
+        .price-card-breeze:nth-child(2) { animation-delay: -0.8s; animation-duration: 4.4s; }
+        .price-card-breeze:nth-child(3) { animation-delay: -1.6s; animation-duration: 4.8s; }
+        .price-card-breeze:nth-child(4) { animation-delay: -2.4s; animation-duration: 5.2s; }
         @keyframes price-card-breeze {
-          0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(0.5deg); }
+          0%, 100% { transform: rotate(-1deg); }
+          50% { transform: rotate(1.6deg); }
         }
         @media (prefers-reduced-motion: reduce) {
           .price-card-breeze { animation: none; }

@@ -7,7 +7,12 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // counts, while closing off a scripted client pushing unbounded fake
 // uploads at a guessed/leaked event link and running up R2 storage cost.
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-const MAX_UPLOADS_PER_EVENT = 500;
+// Classic's pricing copy caps it below Signature/Luxe; anything not listed
+// here (Free) falls back to the same 500-photo anti-abuse ceiling those two
+// tiers use -- Free's real cap is its 20-photo curated gallery downstream,
+// not this raw-upload count.
+const MAX_UPLOADS_PER_EVENT = { standard: 350 };
+const DEFAULT_MAX_UPLOADS_PER_EVENT = 500;
 
 export async function POST(req, { params }) {
   const { eventId } = params;
@@ -23,7 +28,7 @@ export async function POST(req, { params }) {
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
-    .select("id, uploads_closed_at, status")
+    .select("id, tier, uploads_closed_at, status")
     .eq("upload_slug", eventId)
     .single();
 
@@ -73,7 +78,8 @@ export async function POST(req, { params }) {
       .select("id", { count: "exact", head: true })
       .eq("booking_id", booking.id);
 
-    if ((existingCount || 0) + files.length > MAX_UPLOADS_PER_EVENT) {
+    const uploadLimit = MAX_UPLOADS_PER_EVENT[booking.tier] ?? DEFAULT_MAX_UPLOADS_PER_EVENT;
+    if ((existingCount || 0) + files.length > uploadLimit) {
       return NextResponse.json({ error: "This event has reached its upload limit. Please reach out to us for help." }, { status: 400 });
     }
 

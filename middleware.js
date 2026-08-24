@@ -1,5 +1,25 @@
 import { NextResponse } from "next/server";
 
+// Next.js middleware runs on the Edge runtime, which has no `node:crypto` --
+// so this can't reuse crypto.timingSafeEqual like lib/confirmToken.js and
+// the dashboard-auth route do. Same technique, just built on TextEncoder
+// (Edge/Web-standard) instead: XOR every byte and OR the results together,
+// so the loop takes the same number of steps regardless of where (or
+// whether) a mismatch occurs, rather than a plain === that can short-circuit
+// at the first differing character. Same length-check precedent as those
+// other two call sites -- a differing length returns immediately, since
+// leaking "the lengths didn't match" isn't the leak this guards against.
+function timingSafeEqualString(a, b) {
+  const aBytes = new TextEncoder().encode(a);
+  const bBytes = new TextEncoder().encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let diff = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    diff |= aBytes[i] ^ bBytes[i];
+  }
+  return diff === 0;
+}
+
 export function middleware(req) {
   // Public booking creation must stay open to unauthenticated customers.
   if (req.nextUrl.pathname === "/api/bookings" && req.method === "POST") {
@@ -14,9 +34,11 @@ export function middleware(req) {
     return NextResponse.next();
   }
 
+  const cookieValue = req.cookies.get("dashboard_auth")?.value;
   const isAuthed =
     !!process.env.DASHBOARD_PASSWORD &&
-    req.cookies.get("dashboard_auth")?.value === process.env.DASHBOARD_PASSWORD;
+    !!cookieValue &&
+    timingSafeEqualString(cookieValue, process.env.DASHBOARD_PASSWORD);
   if (!isAuthed) {
     if (req.nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

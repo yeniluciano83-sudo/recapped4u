@@ -492,7 +492,7 @@ export default function HomePage() {
             return (
             <div key={t.id} className="price-card-breeze">
             <TiltCard href={`/booking?tier=${t.id}`} className="price-card" baseTransform={baseTransform} style={{
-              ...cardStyle, height: "100%", position: "relative", display: "block", textDecoration: "none", color: "inherit", cursor: "pointer",
+              ...cardStyle, height: "100%", position: "relative", display: "block", textDecoration: "none", color: "inherit", cursor: "pointer", transformOrigin: "50% 0%",
               border: t.highlight ? "1.5px solid #C97A3D" : cardStyle.border,
               boxShadow: t.highlight ? "0 10px 26px rgba(201,122,61,0.22)" : "0 3px 10px rgba(33,31,29,0.05)",
             }}>

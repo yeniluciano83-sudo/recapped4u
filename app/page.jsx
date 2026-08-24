@@ -414,7 +414,7 @@ export default function HomePage() {
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 28 }}>
           {[
-            { icon: QrCode, label: "No app for guests" },
+            { icon: QrCode, label: "No app for host and guests" },
             { icon: Mail, label: "Delivered straight to your inbox" },
           ].map((p) => (
             <span key={p.label} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: 999, padding: "7px 14px", fontSize: 12.5, color: "#4a4642", fontWeight: 500 }}>

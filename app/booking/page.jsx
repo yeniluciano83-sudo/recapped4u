@@ -248,7 +248,7 @@ function BookingFormInner() {
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {[
                   { id: "recap", label: "Full recap video", desc: "A curated highlight video, plus your social cut(s)." },
-                  { id: "social_cuts", label: "Social cuts of every photo", desc: "No full video — as many social cuts as it takes to cover every photo you get uploaded." },
+                  { id: "social_cuts", label: "Social cuts of every photo", desc: "No full video — as many social cuts as it takes to cover every photo that gets uploaded." },
                 ].map((opt) => (
                   <button key={opt.id} onClick={() => update("deliveryFormat", opt.id)} aria-pressed={form.deliveryFormat === opt.id}
                     style={{

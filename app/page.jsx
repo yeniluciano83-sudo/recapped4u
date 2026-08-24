@@ -427,10 +427,6 @@ export default function HomePage() {
             </span>
           ))}
         </div>
-
-        <div style={{ display: "flex", justifyContent: "center", overflowX: "hidden" }}>
-          <EventPhotoScene />
-        </div>
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
@@ -459,6 +455,10 @@ export default function HomePage() {
           })}
         </div>
       </Section>
+
+      <div style={{ display: "flex", justifyContent: "center", overflowX: "hidden" }}>
+        <EventPhotoScene />
+      </div>
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"
         subtitle="Start for free, or pick the tier that matches how much of the event you want captured.">

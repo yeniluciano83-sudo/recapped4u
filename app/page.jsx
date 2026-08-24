@@ -596,10 +596,10 @@ export default function HomePage() {
           <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 19, color: "#211F1D", lineHeight: 1.55, marginBottom: 18, position: "relative" }}>
             Living in New York City means never running out of moments worth keeping — a wedding one weekend, a rooftop birthday the next, a block party you wandered into and didn't want to leave. The city hands you memories faster than you can hold onto them.
           </p>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
+          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 19, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
             That's exactly why Recapped For You exists — to gather what you and your guests captured, curate the best of it, and hand it back as a polished recap video, social cuts, and photo gallery.
           </p>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14.5, color: "#4a4642", lineHeight: 1.7 }}>
+          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 19, color: "#4a4642", lineHeight: 1.7 }}>
             Roast Reel is the one part of this that's personal to us — we love nothing more than watching someone read their own roast and crack up. Putting a smile on people's faces is the whole point.
           </p>
         </div>

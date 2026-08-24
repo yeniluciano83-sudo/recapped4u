@@ -166,10 +166,10 @@ function BookingFormInner() {
             <Check size={28} color="#211F1D" strokeWidth={2.5} />
           </div>
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>
-            You're booked, {form.hostName.split(" ")[0]}
+            One more step, {form.hostName.split(" ")[0]}
           </h2>
           <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
-            We'll email your upload link and QR code to <strong style={{ color: "#211F1D" }}>{form.email}</strong> within 24 hours, ready to share with guests on {form.eventDate}.
+            We've sent a confirmation link to <strong style={{ color: "#211F1D" }}>{form.email}</strong> — click it to activate your guest upload link and QR code, ready to share with guests on {form.eventDate}.
           </p>
         </div>
       </Shell>

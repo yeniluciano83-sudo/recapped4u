@@ -597,10 +597,7 @@ export default function HomePage() {
             Living in New York City means never running out of moments worth keeping — a wedding one weekend, a rooftop birthday the next, a block party you wandered into and didn't want to leave. The city hands you memories faster than you can hold onto them.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
-            That's exactly why Recapped For You exists. After enough events — daytime brunches, all-night celebrations, everything in between — we kept seeing the same thing: the best moments ended up scattered across the host's camera roll and every guest's phone, and most of it never got looked at twice. So we set out to build something that could gather it all, polish it, and hand it back looking as good as it felt being there — a full recap video, ready-to-post social cuts, and a photo gallery, all cut from photos you and your guests already took. Every photo is scored the moment it lands, for focus, light, and the split-second energy that makes a moment worth keeping, then cleaned up, color graded, and cut into a film — the same polish and curation a professional editor would give it, built into everything we deliver.
-          </p>
-          <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
-            Taste isn't a mood or a deadline here — it's built into the process, so the story you get back is exactly as good on a Tuesday as it is on a Saturday.
+            That's exactly why Recapped For You exists — to gather everything you and your guests captured, score it for focus, light, and the moments worth keeping, then polish and cut it into a full recap video, ready-to-post social cuts, and a photo gallery, with the same care a professional editor would give it.
           </p>
           <p style={{ fontSize: 14.5, color: "#4a4642", lineHeight: 1.7 }}>
             Roast Reel is the one part of this that's personal to me — I love nothing more than watching someone read their own roast and crack up. Putting a smile on people's faces is the whole point.

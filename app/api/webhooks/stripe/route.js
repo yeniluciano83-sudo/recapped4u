@@ -36,9 +36,7 @@ export async function POST(req) {
         .select()
         .single();
 
-      console.log("Webhook update result — error:", error, "booking:", booking);
       if (!error && booking) {
-        console.log("Attempting to send email to:", booking.email);
         const uploadUrl = `${process.env.APP_URL}/event/${booking.upload_slug}`;
         // Read the actual charged amount off the Stripe session rather than
         // re-deriving it from the tier's list price, so the email always
@@ -47,25 +45,28 @@ export async function POST(req) {
           style: "currency",
           currency: (session.currency || "usd").toUpperCase(),
         }).format((session.amount_total || 0) / 100);
-        const emailResult = await sendBookingConfirmation({
-          to: booking.email,
-          hostName: booking.host_name,
-          eventDate: booking.event_date,
-          eventType: booking.event_type,
-          guestCount: booking.guest_count,
-          tier: booking.tier,
-          style: booking.style,
-          amountPaid,
-          roastEnabled: booking.roast_enabled,
-          uploadUrl,
-          uploadSlug: booking.upload_slug,
-        }).catch((err) => {
-          console.error("Confirmation email failed:", err);
-          return null;
-        });
-        console.log("Email send result:", emailResult);
-      } else {
-        console.log("Skipped email — condition failed. error:", error, "booking exists:", !!booking);
+        try {
+          await sendBookingConfirmation({
+            to: booking.email,
+            hostName: booking.host_name,
+            eventDate: booking.event_date,
+            eventType: booking.event_type,
+            guestCount: booking.guest_count,
+            tier: booking.tier,
+            style: booking.style,
+            amountPaid,
+            roastEnabled: booking.roast_enabled,
+            uploadUrl,
+            uploadSlug: booking.upload_slug,
+          });
+        } catch (err) {
+          console.error(`Confirmation email failed for booking ${bookingId}:`, err.message);
+        }
+      } else if (error) {
+        // Expected on a Stripe retry of an already-processed event -- the
+        // .eq("status", "booked") guard above makes those match zero rows,
+        // which .single() reports as an error. Not worth alerting on.
+        console.log(`Webhook for booking ${bookingId}: no matching "booked" row (already processed, or booking missing).`);
       }
     }
   }

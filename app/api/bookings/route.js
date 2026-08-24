@@ -13,18 +13,15 @@ const TIER_PRICES = {
   keepsake: { amount: 9500, label: "Luxe Package" },
 };
 
-// Every tier gets Roast Reel now. Free/Classic are capped at Light --
-// complimentary on Free, a $20 add-on on Classic (its only option).
-// Signature's Light is also complimentary; only stepping up to
-// Lukewarm/Hot costs $20 there. Luxe is complimentary at every intensity.
-// Kept in sync with roastAddonPrice in app/booking/page.jsx (dollars
-// there, cents here for Stripe).
+// Every tier gets Roast Reel now, and Light is complimentary on all of
+// them. Signature is the only tier that ever charges for it -- stepping
+// up to Lukewarm/Hot there is +$20. Luxe is complimentary at every
+// intensity. Kept in sync with roastAddonPrice in app/booking/page.jsx
+// (dollars there, cents here for Stripe).
 const ROAST_FULL_LEVELS_TIERS = ["premium", "keepsake"];
 function roastAddonPriceCents(tier, level) {
-  if (tier === "keepsake") return 0;
   if (tier === "premium") return level === "light" ? 0 : 2000;
-  if (tier === "standard") return 2000;
-  return 0; // free tier
+  return 0;
 }
 
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];

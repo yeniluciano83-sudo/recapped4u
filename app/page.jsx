@@ -407,7 +407,7 @@ export default function HomePage() {
           Event recap videos & photo galleries
         </p>
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 18px" }}>
-          Phone photos in. A full production out.
+          Your event, recapped.
         </h1>
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
           You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery — ready to relive and share.

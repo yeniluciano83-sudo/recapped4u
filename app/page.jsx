@@ -197,6 +197,14 @@ export default function HomePage() {
         @media (prefers-reduced-motion: reduce) {
           .price-card-breeze { animation: none; }
         }
+        /* The sway reads as a nice idle flourish when cards sit side by
+           side in a grid, but once they stack into a single mobile
+           column each card sways independently right above/below its
+           neighbor, which reads as jittery instability rather than a
+           breeze. Hold the cards still below that same collapse point. */
+        @media (max-width: 480px) {
+          .price-card-breeze { animation: none; }
+        }
 
         /* The "pinned to a corkboard" tape mark above each non-highlighted
            pricing card reads fine floating in the gap between cards in a
@@ -223,16 +231,21 @@ export default function HomePage() {
 
         /* Small decorative echo of the guest-upload theme in the hero's
            otherwise-empty space below the trust badges on mobile -- three
-           overlapping polaroid-style crops from the same photo set used in
-           EventPhotoScene further down the page. Desktop already has the
-           full animated scene nearby, so this stays mobile-only. */
+           overlapping raw/polished before-after tiles, from the same photo
+           set (and the same raw vs. HQ asset pair) used in EventPhotoScene
+           further down the page. Desktop already has the full animated
+           scene nearby, so this stays mobile-only. */
         .hero-mobile-photos { display: none; }
         @media (max-width: 620px) {
-          .hero-mobile-photos { display: flex; justify-content: center; align-items: center; margin-top: 36px; }
-          .hero-photo-chip { width: 62px; height: 62px; border-radius: 8px; background-size: cover; background-position: center; box-shadow: 0 6px 16px rgba(33,31,29,0.18); border: 3px solid #FFFFFF; }
+          .hero-mobile-photos { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 36px; }
+          .hero-photo-chip-row { display: flex; justify-content: center; align-items: center; }
+          .hero-photo-chip { display: flex; width: 96px; height: 62px; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 16px rgba(33,31,29,0.18); border: 3px solid #FFFFFF; }
+          .hero-photo-chip-half { width: 50%; height: 100%; background-size: cover; background-position: center; }
+          .hero-photo-chip-half-raw { filter: grayscale(35%) brightness(0.82) contrast(0.92); border-right: 1.5px solid #FFFFFF; }
           .hero-photo-chip-1 { transform: rotate(-8deg) translateY(4px); z-index: 1; }
-          .hero-photo-chip-2 { transform: rotate(4deg) translateY(-6px) scale(1.1); z-index: 2; margin: 0 -10px; }
+          .hero-photo-chip-2 { transform: rotate(4deg) translateY(-6px) scale(1.1); z-index: 2; margin: 0 -14px; }
           .hero-photo-chip-3 { transform: rotate(9deg) translateY(4px); z-index: 1; }
+          .hero-photo-caption { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: #8a857d; font-weight: 600; }
         }
 
         .contact-row { display: flex; flex-direction: column; gap: 12px; }
@@ -486,10 +499,20 @@ export default function HomePage() {
             </span>
           ))}
         </div>
-        <div className="hero-mobile-photos" aria-hidden="true">
-          <div className="hero-photo-chip hero-photo-chip-1" style={{ backgroundImage: "url(/images/scene-2.jpg)" }} />
-          <div className="hero-photo-chip hero-photo-chip-2" style={{ backgroundImage: "url(/images/scene-5.jpg)" }} />
-          <div className="hero-photo-chip hero-photo-chip-3" style={{ backgroundImage: "url(/images/scene-8.jpg)" }} />
+        <div className="hero-mobile-photos">
+          <div className="hero-photo-chip-row" aria-hidden="true">
+            {[
+              { n: 1, id: 2 },
+              { n: 2, id: 5 },
+              { n: 3, id: 8 },
+            ].map((p) => (
+              <div key={p.id} className={`hero-photo-chip hero-photo-chip-${p.n}`}>
+                <div className="hero-photo-chip-half hero-photo-chip-half-raw" style={{ backgroundImage: `url(/images/scene-${p.id}-raw.jpg)` }} />
+                <div className="hero-photo-chip-half" style={{ backgroundImage: `url(/images/scene-${p.id}.jpg)` }} />
+              </div>
+            ))}
+          </div>
+          <span className="hero-photo-caption">Raw uploads → polished automatically</span>
         </div>
       </section>
 

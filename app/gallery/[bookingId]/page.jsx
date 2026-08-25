@@ -200,14 +200,15 @@ export default function GalleryDeliveryPage() {
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <style>{`
-        /* 3 columns reads fine on desktop's 760px-max content column, but on
-           a phone-width viewport it squeezes each photo down to ~110px --
-           too small to make out. Drop to 2 below 480px. */
-        .gallery-grid { grid-template-columns: repeat(3, 1fr); }
-        .gallery-masonry { column-count: 3; }
+        /* Bigger photo tiles across the board -- 2 columns instead of 3 on
+           desktop's 760px-max content column, and a single full-width
+           column on phones instead of 2, since that's where the old
+           smaller tiles were hardest to make out. */
+        .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+        .gallery-masonry { column-count: 2; }
         @media (max-width: 480px) {
-          .gallery-grid { grid-template-columns: repeat(2, 1fr); }
-          .gallery-masonry { column-count: 2; }
+          .gallery-grid { grid-template-columns: repeat(1, 1fr); }
+          .gallery-masonry { column-count: 1; }
         }
       `}</style>
       <div {...(lightbox ? { inert: "" } : {})} style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
@@ -343,9 +344,23 @@ export default function GalleryDeliveryPage() {
       </div>
 
       {lightbox && (
-        <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px" }}>
-          <button onClick={() => setLightbox(null)} aria-label="Close photo" style={{ position: "absolute", top: 20, right: 20, background: "none", border: "none", color: "#FFFFFF", cursor: "pointer" }}><X size={26} /></button>
-          <img src={lightbox} alt="" style={{ width: "min(500px, 90vw)", borderRadius: "14px" }} />
+        <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 50, overflowY: "auto", padding: "24px" }}>
+          {/* Close button is position:fixed (not absolute) so it stays
+              pinned to the viewport corner instead of scrolling away with
+              the enlarged photo when that photo is taller than the
+              screen. */}
+          <button onClick={() => setLightbox(null)} aria-label="Close photo" style={{ position: "fixed", top: 20, right: 20, background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", zIndex: 51 }}><X size={26} /></button>
+          {/* min-height: 100% + centered flex is the standard pattern for
+              a lightbox that centers short content but still lets you
+              scroll to see the full image when it doesn't fit the
+              viewport -- a plain flex-center with no overflow handling
+              (the old version) just clips whatever doesn't fit, with no
+              way to reach the clipped part. Applies to every gallery
+              template (Grid, Masonry, Polaroid, Slideshow) since they all
+              open this same lightbox. */}
+          <div style={{ minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <img src={lightbox} alt="" style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }} />
+          </div>
         </div>
       )}
     </main>
@@ -396,7 +411,7 @@ function SlideshowLayout({ photos, index, setIndex, selectMode, selected, onSele
   return (
     <div>
       <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
-        <img src={current} alt="" style={{ width: "100%", aspectRatio: "4/3", objectFit: "contain", display: "block" }} />
+        <img src={current} alt="" onClick={() => onSelect(clampedIndex)} style={{ width: "100%", aspectRatio: "4/3", objectFit: "contain", display: "block", cursor: "pointer" }} />
         <button onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
           style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>‹</button>
         <button onClick={() => setIndex((i) => (i + 1) % photos.length)}

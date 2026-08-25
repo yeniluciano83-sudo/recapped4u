@@ -197,14 +197,6 @@ export default function HomePage() {
         @media (prefers-reduced-motion: reduce) {
           .price-card-breeze { animation: none; }
         }
-        /* The sway reads as a nice idle flourish when cards sit side by
-           side in a grid, but once they stack into a single mobile
-           column each card sways independently right above/below its
-           neighbor, which reads as jittery instability rather than a
-           breeze. Hold the cards still below that same collapse point. */
-        @media (max-width: 480px) {
-          .price-card-breeze { animation: none; }
-        }
 
         /* The "pinned to a corkboard" tape mark above each non-highlighted
            pricing card reads fine floating in the gap between cards in a
@@ -234,14 +226,25 @@ export default function HomePage() {
            overlapping raw/polished before-after tiles, from the same photo
            set (and the same raw vs. HQ asset pair) used in EventPhotoScene
            further down the page. Desktop already has the full animated
-           scene nearby, so this stays mobile-only. */
+           scene nearby, so this stays mobile-only.
+           The raw/HQ pair for a given scene is the exact same square crop
+           at 240px vs 480px (verified against the actual files), so both
+           layers use identical background-size/position across the FULL
+           tile width and are only told apart by a clip-path inset -- that
+           keeps the seam pixel-continuous instead of each half
+           re-centering its own independently-cropped copy of the photo.
+           No artificial filter on the raw side either: the real
+           resolution/sharpness gap between the two files is the whole
+           point, not a simulated one. */
         .hero-mobile-photos { display: none; }
         @media (max-width: 620px) {
           .hero-mobile-photos { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 36px; }
           .hero-photo-chip-row { display: flex; justify-content: center; align-items: center; }
-          .hero-photo-chip { display: flex; width: 96px; height: 62px; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 16px rgba(33,31,29,0.18); border: 3px solid #FFFFFF; }
-          .hero-photo-chip-half { width: 50%; height: 100%; background-size: cover; background-position: center; }
-          .hero-photo-chip-half-raw { filter: grayscale(35%) brightness(0.82) contrast(0.92); border-right: 1.5px solid #FFFFFF; }
+          .hero-photo-chip { position: relative; width: 96px; height: 62px; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 16px rgba(33,31,29,0.18); border: 3px solid #FFFFFF; }
+          .hero-photo-chip-layer { position: absolute; inset: 0; background-size: cover; background-position: center; }
+          .hero-photo-chip-layer-raw { clip-path: inset(0 50% 0 0); }
+          .hero-photo-chip-layer-edited { clip-path: inset(0 0 0 50%); }
+          .hero-photo-chip-divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 1.5px; background: rgba(255,255,255,0.85); transform: translateX(-50%); }
           .hero-photo-chip-1 { transform: rotate(-8deg) translateY(4px); z-index: 1; }
           .hero-photo-chip-2 { transform: rotate(4deg) translateY(-6px) scale(1.1); z-index: 2; margin: 0 -14px; }
           .hero-photo-chip-3 { transform: rotate(9deg) translateY(4px); z-index: 1; }
@@ -507,8 +510,9 @@ export default function HomePage() {
               { n: 3, id: 8 },
             ].map((p) => (
               <div key={p.id} className={`hero-photo-chip hero-photo-chip-${p.n}`}>
-                <div className="hero-photo-chip-half hero-photo-chip-half-raw" style={{ backgroundImage: `url(/images/scene-${p.id}-raw.jpg)` }} />
-                <div className="hero-photo-chip-half" style={{ backgroundImage: `url(/images/scene-${p.id}.jpg)` }} />
+                <div className="hero-photo-chip-layer hero-photo-chip-layer-raw" style={{ backgroundImage: `url(/images/scene-${p.id}-raw.jpg)` }} />
+                <div className="hero-photo-chip-layer hero-photo-chip-layer-edited" style={{ backgroundImage: `url(/images/scene-${p.id}.jpg)` }} />
+                <div className="hero-photo-chip-divider" />
               </div>
             ))}
           </div>

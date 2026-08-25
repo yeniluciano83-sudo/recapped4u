@@ -222,32 +222,24 @@ export default function HomePage() {
         }
 
         /* Small decorative echo of the guest-upload theme in the hero's
-           otherwise-empty space below the trust badges on mobile -- three
-           overlapping raw/polished before-after tiles, from the same photo
-           set (and the same raw vs. HQ asset pair) used in EventPhotoScene
-           further down the page. Desktop already has the full animated
-           scene nearby, so this stays mobile-only.
-           The raw/HQ pair for a given scene is the exact same square crop
-           at 240px vs 480px (verified against the actual files), so both
-           layers use identical background-size/position across the FULL
-           tile width and are only told apart by a clip-path inset -- that
-           keeps the seam pixel-continuous instead of each half
-           re-centering its own independently-cropped copy of the photo.
-           No artificial filter on the raw side either: the real
-           resolution/sharpness gap between the two files is the whole
-           point, not a simulated one. */
+           otherwise-empty space below the trust badges on mobile -- the
+           same photo shown as two full, separate images (its actual raw
+           upload file and its actual polished HQ file, same photo set as
+           EventPhotoScene further down the page), not a spliced hybrid,
+           so it reads as a real before/after rather than a composite.
+           Desktop already has the full animated scene nearby, so this
+           stays mobile-only. */
         .hero-mobile-photos { display: none; }
         @media (max-width: 620px) {
-          .hero-mobile-photos { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 36px; }
-          .hero-photo-chip-row { display: flex; justify-content: center; align-items: center; }
-          .hero-photo-chip { position: relative; width: 96px; height: 62px; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 16px rgba(33,31,29,0.18); border: 3px solid #FFFFFF; }
-          .hero-photo-chip-layer { position: absolute; inset: 0; background-size: cover; background-position: center; }
-          .hero-photo-chip-layer-raw { clip-path: inset(0 50% 0 0); }
-          .hero-photo-chip-layer-edited { clip-path: inset(0 0 0 50%); }
-          .hero-photo-chip-divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 1.5px; background: rgba(255,255,255,0.85); transform: translateX(-50%); }
-          .hero-photo-chip-1 { transform: rotate(-8deg) translateY(4px); z-index: 1; }
-          .hero-photo-chip-2 { transform: rotate(4deg) translateY(-6px) scale(1.1); z-index: 2; margin: 0 -14px; }
-          .hero-photo-chip-3 { transform: rotate(9deg) translateY(4px); z-index: 1; }
+          .hero-mobile-photos { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 36px; }
+          .hero-photo-pair { display: flex; align-items: center; gap: 12px; }
+          .hero-photo-tile { position: relative; width: 90px; height: 90px; border-radius: 10px; overflow: hidden; box-shadow: 0 6px 16px rgba(33,31,29,0.18); border: 3px solid #FFFFFF; }
+          .hero-photo-tile-1 { transform: rotate(-4deg); }
+          .hero-photo-tile-2 { transform: rotate(3deg); }
+          .hero-photo-img { position: absolute; inset: 0; background-size: cover; background-position: center; }
+          .hero-photo-tag { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; color: #FFFFFF; background: rgba(33,31,29,0.55); padding: 2px 7px; border-radius: 999px; }
+          .hero-photo-tag-polished { background: #C97A3D; }
+          .hero-photo-arrow { font-size: 20px; font-weight: 700; color: #C97A3D; }
           .hero-photo-caption { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: #8a857d; font-weight: 600; }
         }
 
@@ -503,18 +495,16 @@ export default function HomePage() {
           ))}
         </div>
         <div className="hero-mobile-photos">
-          <div className="hero-photo-chip-row" aria-hidden="true">
-            {[
-              { n: 1, id: 2 },
-              { n: 2, id: 5 },
-              { n: 3, id: 8 },
-            ].map((p) => (
-              <div key={p.id} className={`hero-photo-chip hero-photo-chip-${p.n}`}>
-                <div className="hero-photo-chip-layer hero-photo-chip-layer-raw" style={{ backgroundImage: `url(/images/scene-${p.id}-raw.jpg)` }} />
-                <div className="hero-photo-chip-layer hero-photo-chip-layer-edited" style={{ backgroundImage: `url(/images/scene-${p.id}.jpg)` }} />
-                <div className="hero-photo-chip-divider" />
-              </div>
-            ))}
+          <div className="hero-photo-pair" aria-hidden="true">
+            <div className="hero-photo-tile hero-photo-tile-1">
+              <div className="hero-photo-img" style={{ backgroundImage: "url(/images/scene-5-raw.jpg)" }} />
+              <span className="hero-photo-tag">Raw</span>
+            </div>
+            <span className="hero-photo-arrow">→</span>
+            <div className="hero-photo-tile hero-photo-tile-2">
+              <div className="hero-photo-img" style={{ backgroundImage: "url(/images/scene-5.jpg)" }} />
+              <span className="hero-photo-tag hero-photo-tag-polished">Polished</span>
+            </div>
           </div>
           <span className="hero-photo-caption">Raw uploads → polished automatically</span>
         </div>

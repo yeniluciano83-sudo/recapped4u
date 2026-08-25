@@ -178,9 +178,10 @@ export default function HomePage() {
            the imperative hover-tilt TiltCard sets on mousemove -- the two
            compose visually as nested elements instead of competing for
            the same property.
-           NOTE: keep this style block free of apostrophes, ampersands, and
-           angle brackets. React HTML-escapes those characters on the
-           server, but style is an HTML5 raw-text element that the browser
+           NOTE: keep this style block free of apostrophes, ampersands,
+           angle brackets, and double quotes. React HTML-escapes those
+           characters on the server, but style is an HTML5 raw-text
+           element that the browser
            never decodes entities inside, so an escaped character here
            causes a real client and server hydration text mismatch. */
         .price-card-breeze { transform-origin: 50% 0%; animation-name: price-card-breeze; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-duration: 4s; }
@@ -198,7 +199,7 @@ export default function HomePage() {
           .price-card-breeze { animation: none; }
         }
 
-        /* The "pinned to a corkboard" tape mark above each non-highlighted
+        /* The pinned-to-a-corkboard tape mark above each non-highlighted
            pricing card reads fine floating in the gap between cards in a
            multi-column grid, but once the grid collapses to a single
            column (see the auto-fit/minmax breakpoint on the pricing grid
@@ -215,7 +216,7 @@ export default function HomePage() {
            only one pill fits per row -- turning a wrapping tag cloud into
            a plain vertical list. Tightening padding/font here (still well
            above the ~24px touch-target floor) lets short labels like
-           "Weddings" or "Vacations" pair up two-per-row again. */
+           Weddings or Vacations pair up two-per-row again. */
         @media (max-width: 480px) {
           .event-pill-row { gap: 7px; }
           .event-pill { padding: 6px 12px !important; font-size: 12px !important; gap: 5px !important; }
@@ -231,7 +232,7 @@ export default function HomePage() {
            At this tile size the raw file actual resolution deficit
            (240px vs. the polished 480px) barely reads, so the two
            clusters need a styling nudge to look distinct: a flat,
-           slightly cool/underexposed "unedited phone photo" treatment on
+           slightly cool/underexposed, unedited-phone-photo treatment on
            the raw side, and a warmer, punchier grade on the polished
            side -- both plausible outcomes of a real editing pass, not an
            exaggerated gimmick. Desktop already has the full animated
@@ -685,17 +686,8 @@ export default function HomePage() {
       <Section id="contact" refs={sectionRefs} title="Get In Touch" icon={<Mail size={20} color="#C97A3D" />} band="white"
         blob={{ color: "#C97A3D", top: -50, right: 0, size: 240 }}
         subtitle="Have a corporate event, or just a question? Reach out.">
-        <div className="contact-row">
-          <a href="mailto:hello@recappedforyou.com" className="press-btn" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>
-              <Mail size={18} color="#FFFFFF" />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>Email</div>
-              <div style={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>hello@recappedforyou.com</div>
-            </div>
-          </a>
-          <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" className="press-btn" style={{ ...cardStyle, flex: 1, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
+        <div className="contact-row" style={{ justifyContent: "center" }}>
+          <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" className="press-btn" style={{ ...cardStyle, width: "100%", maxWidth: 320, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #7A8B76, #97A893)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(122,139,118,0.32)" }}>
               <MessageCircle size={18} color="#FFFFFF" />
             </div>

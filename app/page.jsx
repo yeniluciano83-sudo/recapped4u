@@ -222,39 +222,6 @@ export default function HomePage() {
           .event-pill { padding: 6px 12px !important; font-size: 12px !important; gap: 5px !important; }
         }
 
-        /* Small decorative echo of the guest-upload theme in the hero
-           otherwise-empty space below the trust badges on mobile -- all
-           three photos from EventPhotoScene set, grouped as an
-           overlapping cluster of their real raw upload files on one side
-           and their real polished HQ files on the other (never a spliced
-           hybrid of the two), so it reads as a genuine before/after
-           across a spread of actual photos rather than one composite.
-           At this tile size the raw file actual resolution deficit
-           (240px vs. the polished 480px) barely reads, so the two
-           clusters need a styling nudge to look distinct: a flat,
-           slightly cool/underexposed, unedited-phone-photo treatment on
-           the raw side, and a warmer, punchier grade on the polished
-           side -- both plausible outcomes of a real editing pass, not an
-           exaggerated gimmick. Desktop already has the full animated
-           scene nearby, so this stays mobile-only. */
-        .hero-mobile-photos { display: none; }
-        @media (max-width: 620px) {
-          .hero-mobile-photos { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 36px; }
-          .hero-photo-comparison { display: flex; align-items: center; justify-content: center; gap: 10px; }
-          .hero-photo-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-          .hero-photo-cluster { display: flex; align-items: center; }
-          .hero-photo-tile { width: 52px; height: 52px; border-radius: 8px; background-size: cover; background-position: center; box-shadow: 0 5px 12px rgba(33,31,29,0.18); border: 2.5px solid #FFFFFF; }
-          .hero-photo-tile-raw { filter: saturate(0.7) contrast(0.88) brightness(0.93) sepia(0.06); }
-          .hero-photo-tile-polished { filter: saturate(1.15) contrast(1.08) brightness(1.02); }
-          .hero-photo-tile-1 { transform: rotate(-8deg) translateY(3px); z-index: 1; }
-          .hero-photo-tile-2 { transform: rotate(4deg) translateY(-4px) scale(1.1); z-index: 2; margin: 0 -12px; }
-          .hero-photo-tile-3 { transform: rotate(9deg) translateY(3px); z-index: 1; }
-          .hero-photo-group-label { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; color: #8a857d; }
-          .hero-photo-group-label-polished { color: #C97A3D; }
-          .hero-photo-arrow { font-size: 18px; font-weight: 700; color: #C97A3D; }
-          .hero-photo-caption { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: #8a857d; font-weight: 600; }
-        }
-
         .contact-row { display: flex; flex-direction: column; gap: 12px; }
         @media (min-width: 560px) {
           .contact-row { flex-direction: row; }
@@ -505,28 +472,6 @@ export default function HomePage() {
               <p.icon size={13} color="#7A8B76" /> {p.label}
             </span>
           ))}
-        </div>
-        <div className="hero-mobile-photos">
-          <div className="hero-photo-comparison" aria-hidden="true">
-            <div className="hero-photo-group">
-              <div className="hero-photo-cluster">
-                <div className="hero-photo-tile hero-photo-tile-raw hero-photo-tile-1" style={{ backgroundImage: "url(/images/scene-2-raw.jpg)" }} />
-                <div className="hero-photo-tile hero-photo-tile-raw hero-photo-tile-2" style={{ backgroundImage: "url(/images/scene-5-raw.jpg)" }} />
-                <div className="hero-photo-tile hero-photo-tile-raw hero-photo-tile-3" style={{ backgroundImage: "url(/images/scene-8-raw.jpg)" }} />
-              </div>
-              <span className="hero-photo-group-label">Raw</span>
-            </div>
-            <span className="hero-photo-arrow">→</span>
-            <div className="hero-photo-group">
-              <div className="hero-photo-cluster">
-                <div className="hero-photo-tile hero-photo-tile-polished hero-photo-tile-1" style={{ backgroundImage: "url(/images/scene-2.jpg)" }} />
-                <div className="hero-photo-tile hero-photo-tile-polished hero-photo-tile-2" style={{ backgroundImage: "url(/images/scene-5.jpg)" }} />
-                <div className="hero-photo-tile hero-photo-tile-polished hero-photo-tile-3" style={{ backgroundImage: "url(/images/scene-8.jpg)" }} />
-              </div>
-              <span className="hero-photo-group-label hero-photo-group-label-polished">Polished</span>
-            </div>
-          </div>
-          <span className="hero-photo-caption">Raw to polished automatically</span>
         </div>
       </section>
 

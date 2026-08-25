@@ -198,6 +198,43 @@ export default function HomePage() {
           .price-card-breeze { animation: none; }
         }
 
+        /* The "pinned to a corkboard" tape mark above each non-highlighted
+           pricing card reads fine floating in the gap between cards in a
+           multi-column grid, but once the grid collapses to a single
+           column (see the auto-fit/minmax breakpoint on the pricing grid
+           below) the cards stack tightly enough that the mark pokes into
+           the seam between two cards and reads as a rendering glitch
+           instead of a decoration. Hide it below that same collapse
+           point. */
+        @media (max-width: 480px) {
+          .price-card-pin { display: none; }
+        }
+
+        /* Event-type pills are sized for a comfortable click target on
+           desktop, but at mobile widths many labels are long enough that
+           only one pill fits per row -- turning a wrapping tag cloud into
+           a plain vertical list. Tightening padding/font here (still well
+           above the ~24px touch-target floor) lets short labels like
+           "Weddings" or "Vacations" pair up two-per-row again. */
+        @media (max-width: 480px) {
+          .event-pill-row { gap: 7px; }
+          .event-pill { padding: 6px 12px !important; font-size: 12px !important; gap: 5px !important; }
+        }
+
+        /* Small decorative echo of the guest-upload theme in the hero's
+           otherwise-empty space below the trust badges on mobile -- three
+           overlapping polaroid-style crops from the same photo set used in
+           EventPhotoScene further down the page. Desktop already has the
+           full animated scene nearby, so this stays mobile-only. */
+        .hero-mobile-photos { display: none; }
+        @media (max-width: 620px) {
+          .hero-mobile-photos { display: flex; justify-content: center; align-items: center; margin-top: 36px; }
+          .hero-photo-chip { width: 62px; height: 62px; border-radius: 8px; background-size: cover; background-position: center; box-shadow: 0 6px 16px rgba(33,31,29,0.18); border: 3px solid #FFFFFF; }
+          .hero-photo-chip-1 { transform: rotate(-8deg) translateY(4px); z-index: 1; }
+          .hero-photo-chip-2 { transform: rotate(4deg) translateY(-6px) scale(1.1); z-index: 2; margin: 0 -10px; }
+          .hero-photo-chip-3 { transform: rotate(9deg) translateY(4px); z-index: 1; }
+        }
+
         .contact-row { display: flex; flex-direction: column; gap: 12px; }
         @media (min-width: 560px) {
           .contact-row { flex-direction: row; }
@@ -449,6 +486,11 @@ export default function HomePage() {
             </span>
           ))}
         </div>
+        <div className="hero-mobile-photos" aria-hidden="true">
+          <div className="hero-photo-chip hero-photo-chip-1" style={{ backgroundImage: "url(/images/scene-2.jpg)" }} />
+          <div className="hero-photo-chip hero-photo-chip-2" style={{ backgroundImage: "url(/images/scene-5.jpg)" }} />
+          <div className="hero-photo-chip hero-photo-chip-3" style={{ backgroundImage: "url(/images/scene-8.jpg)" }} />
+        </div>
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
@@ -501,7 +543,7 @@ export default function HomePage() {
                   Most popular
                 </span>
               ) : (
-                <div aria-hidden="true" style={{ position: "absolute", top: -9, left: "50%", transform: `translateX(-50%) rotate(${-tilt * 2}deg)`, width: 50, height: 16, background: "rgba(122,139,118,0.32)", borderRadius: 2 }} />
+                <div aria-hidden="true" className="price-card-pin" style={{ position: "absolute", top: -9, left: "50%", transform: `translateX(-50%) rotate(${-tilt * 2}deg)`, width: 50, height: 16, background: "rgba(122,139,118,0.32)", borderRadius: 2 }} />
               )}
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "#FBEEE0", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
                 <TierIcon size={16} color="#C97A3D" />
@@ -552,15 +594,15 @@ export default function HomePage() {
 
       <Section id="events" refs={sectionRefs} title="Events We Cover" icon={<Users size={20} color="#C97A3D" />} band="white"
         subtitle="If people are gathered and phones are out, we've probably got it covered.">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {EVENT_TYPES.map((e) =>
+        <div className="event-pill-row" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          {EVENT_TYPES.map((e, idx) =>
             e.label.startsWith("Something Else") ? (
-              <button key={e.label} onClick={() => scrollTo("contact")} className="press-btn"
+              <button key={e.label} onClick={() => scrollTo("contact")} className="press-btn event-pill"
                 style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#FBEEE0", border: "1px solid #C97A3D", color: "#C97A3D", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, cursor: "pointer", fontWeight: 600, maxWidth: "100%" }}>
                 <span aria-hidden="true">{e.emoji}</span> {e.label}
               </button>
             ) : (
-              <span key={e.label} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#FAF7F2", border: "1px solid #E4DED2", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, maxWidth: "100%" }}>
+              <span key={e.label} className="event-pill" style={{ display: "inline-flex", alignItems: "center", gap: 7, background: idx % 2 === 0 ? "#FAF7F2" : "#FBEEE0", border: "1px solid #E4DED2", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, maxWidth: "100%" }}>
                 <span aria-hidden="true">{e.emoji}</span> {e.label}
               </span>
             )

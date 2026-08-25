@@ -339,7 +339,7 @@ function BookingFormInner() {
               </label>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "8px 0 0", lineHeight: 1.5 }}>
                 {isSocialCutsFormat
-                  ? "Witty commentary layered over your social cuts."
+                  ? "Witty commentary layered over your social cuts. Each cut comes with both a captioned and a caption-free version."
                   : "Witty commentary layered over your photos. You'll get both a captioned cut and a caption-free version of the same video."}
               </p>
               {form.roastEnabled && (isRoastFullLevelEligible ? (

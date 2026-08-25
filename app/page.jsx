@@ -64,7 +64,7 @@ const FAQS = [
   { q: "Can we pick which photos make the final cut?", a: "Our automated curation selects the best moments for your main video, but your photo gallery includes every photo your guests upload, not just the ones that made the video. On Signature and Luxe, you can also star must-include photos for your social cut from your QR share page." },
   { q: "What editing styles can I choose from?", a: "Cinematic (slow, emotional, warm color grade), Upbeat (fast cuts, high energy, beat-synced), Documentary (minimal, candid, true to the moment), Nostalgic / Retro (warm film grain, vintage titles, scrapbook feel), and Highlight Reel (bold text call-outs, punchy sports-style energy). On Signature and Luxe, you can also pick a separate style just for your social cut." },
   { q: "What's a social cut?", a: "A short, 60–90 second vertical edit sized for Instagram, TikTok, or Reels. Signature gives you 5 social cuts plus your full recap video. Luxe gives you 10 social cuts, each from a different set of your best photos, plus your full recap video. Both tiers also let you swap to a social-cuts-only delivery at booking — no full video, just social cuts, made from every single photo your guests upload. That swap is the only case where every uploaded photo is guaranteed to appear somewhere in your video; the default social cuts are still curated down to your best moments, same as the full video. Either way, you can give your social cuts their own editing style, separate from your main video, and star must-include photos for them from your QR share page." },
-  { q: "What's the Roast Reel add-on?", a: "A specialty add-on, on every tier now, that layers witty, affectionate commentary over your photos — every joke sticks to roasting the moment, never a person's appearance. On a full recap video, you get both a captioned cut and a caption-free version of the same video; on Signature or Luxe's social-cuts-only delivery, each social cut gets its own captioned roast script (no separate caption-free version there). The Light intensity is complimentary on every tier. Only Signature and Luxe can go past Light to Lukewarm or Hot — complimentary on Luxe, a $20 add-on on Signature. Available for any event type." },
+  { q: "What's the Roast Reel add-on?", a: "A specialty add-on, on every tier now, that layers witty, affectionate commentary over your photos — every joke sticks to roasting the moment, never a person's appearance. Every roasted cut — your full recap video and every social cut alike — comes with both a captioned version and a caption-free version of the same video. The Light intensity is complimentary on every tier. Only Signature and Luxe can go past Light to Lukewarm or Hot — complimentary on Luxe, a $20 add-on on Signature. Available for any event type." },
 ];
 
 export default function HomePage() {
@@ -221,14 +221,14 @@ export default function HomePage() {
           .event-pill { padding: 6px 12px !important; font-size: 12px !important; gap: 5px !important; }
         }
 
-        /* Small decorative echo of the guest-upload theme in the hero's
+        /* Small decorative echo of the guest-upload theme in the hero
            otherwise-empty space below the trust badges on mobile -- all
-           three photos from EventPhotoScene's set, grouped as an
+           three photos from EventPhotoScene set, grouped as an
            overlapping cluster of their real raw upload files on one side
            and their real polished HQ files on the other (never a spliced
            hybrid of the two), so it reads as a genuine before/after
            across a spread of actual photos rather than one composite.
-           At this tile size the raw file's actual resolution deficit
+           At this tile size the raw file actual resolution deficit
            (240px vs. the polished 480px) barely reads, so the two
            clusters need a styling nudge to look distinct: a flat,
            slightly cool/underexposed "unedited phone photo" treatment on
@@ -611,7 +611,7 @@ export default function HomePage() {
           </div>
           <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 8px" }}>Your recap, but make it savage. Affectionately.</p>
           <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 14px", maxWidth: 520 }}>
-            Witty, affectionate commentary layered over your photos — on a full recap video, you also get a caption-free version of the same cut alongside it. Every tier gets Light for free — only Signature and Luxe can turn up the heat to Lukewarm or Hot. Available for any event type.
+            Witty, affectionate commentary layered over your photos — every roasted cut, whether it's your full recap video or a social cut, comes with a caption-free version alongside it. Every tier gets Light for free — only Signature and Luxe can turn up the heat to Lukewarm or Hot. Available for any event type.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[

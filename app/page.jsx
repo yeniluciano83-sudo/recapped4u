@@ -51,21 +51,6 @@ const EVENT_TYPES = [
 // decorative, doesn't touch the actual price/feature data above.
 const TIER_ICONS = { free: Gift, standard: Camera, premium: Star, keepsake: Crown };
 
-// Condensed, glanceable summary of the same tier data in TIERS above --
-// short phrases for the quick-facts strip at the top of each pricing
-// card (Photos / Video / Gallery access), not a replacement for the
-// full feature lists below it. Kept in sync with TIERS manually;
-// there's no single source of truth to derive these short phrases
-// from the longer feature strings.
-const COMPARISON_ROWS = [
-  { label: "Price", free: "$0", standard: "$35", premium: "$75", keepsake: "$95" },
-  { label: "Photos", free: "20 curated", standard: "350", premium: "500", keepsake: "500" },
-  { label: "Video", free: "Highlight reel", standard: "1 recap video", premium: "Recap + 5 cuts", keepsake: "Recap + 10 cuts" },
-  { label: "Roast Reel", free: "Light", standard: "Light", premium: "Light free, +$20 more", keepsake: "All levels free" },
-  { label: "Gallery access", free: "7 days", standard: "2 months", premium: "4 months", keepsake: "6 months" },
-  { label: "Turnaround", free: "Standard", standard: "Standard", premium: "Standard", keepsake: "24-hr priority" },
-];
-
 const FAQS = [
   { q: "What exactly do we get?", a: "A full recap video, a photo gallery of every shot your guests upload, and — on Signature and Luxe — ready-to-post social cuts sized for Instagram, TikTok, or Reels. Every photo is polished (color graded, cleaned up) before it goes into any of them, all built from photos you and your guests already have on your phones." },
   { q: "Is this real footage, or generated?", a: "It's all real — every photo is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
@@ -526,7 +511,6 @@ export default function HomePage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 20, padding: "6px 4px" }}>
           {TIERS.map((t, idx) => {
             const TierIcon = TIER_ICONS[t.id] || Sparkles;
-            const stat = (label) => COMPARISON_ROWS.find((r) => r.label === label)[t.id];
             const tilt = [-1.3, 0.9, 0, -0.7][idx] || 0;
             const baseTransform = t.highlight ? "scale(1.03)" : `rotate(${tilt}deg)`;
             return (
@@ -550,19 +534,7 @@ export default function HomePage() {
                 <span style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</span>
                 <span style={{ color: "#C97A3D", fontWeight: 700 }}><CountUpPrice value={t.price} /></span>
               </div>
-              <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 10px" }}>{t.tagline}</p>
-              {/* Quick-glance facts (same underlying data as the full
-                  checklist below, just the three things people compare
-                  first) so this one card carries both the fast read and
-                  the full detail -- no separate summary table/grid
-                  elsewhere on the page duplicating it. */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "3px 8px", fontSize: 11.5, color: "#7A8B76", fontWeight: 600, margin: "0 0 12px", paddingBottom: 12, borderBottom: "1px solid #E4DED2" }}>
-                <span>{stat("Photos")}</span>
-                <span aria-hidden="true">·</span>
-                <span>{stat("Video")}</span>
-                <span aria-hidden="true">·</span>
-                <span>{stat("Gallery access")}</span>
-              </div>
+              <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 12px" }}>{t.tagline}</p>
               <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 13, color: "#6b655c" }}>
                 {t.features.map((f) => (
                   <li key={f} style={{ display: "flex", gap: 6, marginBottom: 5 }}>
@@ -657,9 +629,8 @@ export default function HomePage() {
         </div>
       </Section>
       <Section id="contact" refs={sectionRefs} title="Get In Touch" icon={<Mail size={20} color="#C97A3D" />} band="white"
-        blob={{ color: "#C97A3D", top: -50, right: 0, size: 240 }}
-        subtitle="Have a corporate event, or just a question? Reach out.">
-        <div className="contact-row" style={{ justifyContent: "center" }}>
+        blob={{ color: "#C97A3D", top: -50, right: 0, size: 240 }}>
+        <div className="contact-row" style={{ justifyContent: "center", marginBottom: 16 }}>
           <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" className="press-btn" style={{ ...cardStyle, width: "100%", maxWidth: 320, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #7A8B76, #97A893)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(122,139,118,0.32)" }}>
               <MessageCircle size={18} color="#FFFFFF" />
@@ -670,6 +641,7 @@ export default function HomePage() {
             </div>
           </a>
         </div>
+        <p style={{ fontSize: 15, color: "#6b655c", margin: 0, maxWidth: 520, lineHeight: 1.5, textAlign: "center" }}>Have a corporate event, or just a question? Reach out.</p>
       </Section>
       </main>
 

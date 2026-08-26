@@ -51,6 +51,20 @@ const EVENT_TYPES = [
 // decorative, doesn't touch the actual price/feature data above.
 const TIER_ICONS = { free: Gift, standard: Camera, premium: Star, keepsake: Crown };
 
+// Condensed, glanceable summary of the same tier data in TIERS above --
+// short phrases for a quick-scan comparison table, not a replacement for
+// the full feature lists on the cards below. Kept in sync with TIERS
+// manually; there's no single source of truth to derive these short
+// phrases from the longer feature strings.
+const COMPARISON_ROWS = [
+  { label: "Price", free: "$0", standard: "$35", premium: "$75", keepsake: "$95" },
+  { label: "Photos", free: "20 curated", standard: "350", premium: "500", keepsake: "500" },
+  { label: "Video", free: "Highlight reel", standard: "1 recap video", premium: "Recap + 5 cuts", keepsake: "Recap + 10 cuts" },
+  { label: "Roast Reel", free: "Light", standard: "Light", premium: "Light free, +$20 more", keepsake: "All levels free" },
+  { label: "Gallery access", free: "7 days", standard: "2 months", premium: "4 months", keepsake: "6 months" },
+  { label: "Turnaround", free: "Standard", standard: "Standard", premium: "Standard", keepsake: "24-hr priority" },
+];
+
 const FAQS = [
   { q: "What exactly do we get?", a: "A full recap video, a photo gallery of every shot your guests upload, and — on Signature and Luxe — ready-to-post social cuts sized for Instagram, TikTok, or Reels. Every photo is polished (color graded, cleaned up) before it goes into any of them, all built from photos you and your guests already have on your phones." },
   { q: "Is this real footage, or generated?", a: "It's all real — every photo is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
@@ -508,6 +522,45 @@ export default function HomePage() {
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"
         subtitle="Start for free, or pick the tier that matches how much of the event you want captured.">
+        {/* Quick-scan comparison table above the full cards -- on mobile
+            especially, four cards each with ~10 checklist lines is a lot
+            of scrolling before you can actually compare tiers. This
+            surfaces the handful of things people decide on (price,
+            photos, video, Roast Reel, retention, turnaround) in one
+            glance; the detailed cards below still have the full list for
+            anyone who wants it. overflowX handles the case where all 5
+            columns don't fit a phone width -- the row-label column stays
+            pinned via position:sticky so you always know what you're
+            comparing while scrolling through the tiers. */}
+        <div style={{ overflowX: "auto", marginBottom: 28, borderRadius: 12, border: "1px solid #E4DED2" }}>
+          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560, fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={{ position: "sticky", left: 0, background: "#FFFFFF", padding: "10px 12px", borderBottom: "1px solid #E4DED2" }} />
+                {TIERS.map((t) => {
+                  const TierIcon = TIER_ICONS[t.id] || Sparkles;
+                  return (
+                    <th key={t.id} style={{ padding: "10px 12px", borderBottom: "1px solid #E4DED2", borderLeft: "1px solid #E4DED2", background: t.highlight ? "#FBEEE0" : "#FFFFFF", textAlign: "left", minWidth: 100 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, color: t.highlight ? "#C97A3D" : "#211F1D" }}>
+                        <TierIcon size={13} color={t.highlight ? "#C97A3D" : "#7A8B76"} /> {t.name}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARISON_ROWS.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row" style={{ position: "sticky", left: 0, background: "#FFFFFF", textAlign: "left", padding: "9px 12px", fontWeight: 600, color: "#4a4642", borderBottom: "1px solid #E4DED2", whiteSpace: "nowrap" }}>{row.label}</th>
+                  {TIERS.map((t) => (
+                    <td key={t.id} style={{ padding: "9px 12px", borderBottom: "1px solid #E4DED2", borderLeft: "1px solid #E4DED2", background: t.highlight ? "#FBEEE0" : "#FFFFFF", color: "#211F1D" }}>{row[t.id]}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 20, padding: "6px 4px" }}>
           {TIERS.map((t, idx) => {
             const TierIcon = TIER_ICONS[t.id] || Sparkles;

@@ -147,6 +147,13 @@ export async function POST(req) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      // Explicit card-only (default would auto-include Link if enabled on
+      // the Stripe account) -- Link's whole pitch is 1-click checkout on
+      // a FUTURE purchase, but every booking here is a one-off event with
+      // no accounts/repeat-checkout flow, so its "save my info" prompt
+      // has nothing to speed up for this product and just adds a
+      // pointless extra step.
+      payment_method_types: ["card"],
       line_items: lineItems,
       customer_email: email,
       success_url: `${process.env.APP_URL}/booking/success?booking_id=${booking.id}`,

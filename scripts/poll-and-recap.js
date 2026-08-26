@@ -101,6 +101,29 @@ async function processCollectingBookings(failures) {
     const effectiveProcessHours = schedule.processHours + extensionHours;
 
     if (hours >= effectiveProcessHours || closedEarly) {
+      // A booking with zero uploads past its deadline can never succeed --
+      // auto-recap.js just throws "No uploads found for this booking" (see
+      // its own guard) every single time it's attempted. Left alone, that
+      // means claiming it, running the pipeline, and failing on an endless
+      // 3-hour cycle forever (confirmed live: one abandoned free-tier
+      // booking generated a "1 booking failed this run" alert daily until
+      // manually cancelled). Checking first turns that into one clear,
+      // actionable line instead of a generic crash the alert email gives
+      // no way to tell apart from a real bug.
+      const { count: uploadCount } = await supabase
+        .from("uploads")
+        .select("id", { count: "exact", head: true })
+        .eq("booking_id", booking.id);
+
+      if (!uploadCount) {
+        console.log(`\nBooking ${booking.id} has 0 uploads and is past its deadline -- skipping (likely abandoned).`);
+        failures.push({
+          bookingId: booking.id,
+          error: `"${booking.host_name}" has 0 uploads and is past its processing deadline (event was ~${Math.round(hours)}h ago) -- likely abandoned. Cancel it or follow up with the host.`,
+        });
+        continue;
+      }
+
       // Atomic claim: this run and an overlapping one (e.g. a manual
       // workflow_dispatch landing near the top of the hour, next to the
       // cron tick) could otherwise both see this booking as "collecting"

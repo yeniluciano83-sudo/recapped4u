@@ -225,6 +225,18 @@ export default function HomePage() {
           .price-card-pin { display: none; }
         }
 
+        /* Two mutually-exclusive layouts for the pricing comparison --
+           see the comment above .pricing-compare-grid's JSX for why a
+           table (fine down to tablet width) gets swapped for a compact
+           grid instead of just shrinking, once the viewport can't fit
+           all 5 columns without scrolling. */
+        .pricing-compare-grid { display: none; }
+        @media (max-width: 480px) {
+          .pricing-compare-table-wrap { display: none; }
+          .pricing-compare-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 28px; }
+          .pricing-compare-tile { border-radius: 10px; padding: 12px; }
+        }
+
         /* Event-type pills are sized for a comfortable click target on
            desktop, but at mobile widths many labels are long enough that
            only one pill fits per row -- turning a wrapping tag cloud into
@@ -522,17 +534,42 @@ export default function HomePage() {
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"
         subtitle="Start for free, or pick the tier that matches how much of the event you want captured.">
-        {/* Quick-scan comparison table above the full cards -- on mobile
-            especially, four cards each with ~10 checklist lines is a lot
-            of scrolling before you can actually compare tiers. This
-            surfaces the handful of things people decide on (price,
-            photos, video, Roast Reel, retention, turnaround) in one
-            glance; the detailed cards below still have the full list for
-            anyone who wants it. overflowX handles the case where all 5
-            columns don't fit a phone width -- the row-label column stays
-            pinned via position:sticky so you always know what you're
-            comparing while scrolling through the tiers. */}
-        <div style={{ overflowX: "auto", marginBottom: 28, borderRadius: 12, border: "1px solid #E4DED2" }}>
+        {/* Quick-scan comparison of the same handful of decision-relevant
+            facts (price, photos, video, Roast Reel, retention,
+            turnaround) that's on every card below, so you don't have to
+            scroll past ~10 checklist lines per card four times just to
+            compare tiers.
+            Two different layouts for this, not one responsive one: at
+            tablet/desktop widths all 5 columns of the table fit with no
+            scrolling, which already satisfies "see everything at once".
+            But a table forced onto a ~340px-wide phone screen can only
+            hit that same goal by scrolling sideways -- which defeats the
+            point, you still can't see Signature or Luxe without moving
+            something. Below that same width, swap to a 2x2 grid of mini
+            tiles instead: shrinking the CONTENT (fewer stats, tiny type)
+            rather than relying on scroll is the only way four tiers are
+            actually all visible on screen together on a phone. */}
+        <div className="pricing-compare-grid">
+          {TIERS.map((t) => {
+            const TierIcon = TIER_ICONS[t.id] || Sparkles;
+            const stat = (label) => COMPARISON_ROWS.find((r) => r.label === label)[t.id];
+            return (
+              <div key={t.id} className="pricing-compare-tile" style={{ border: t.highlight ? "1.5px solid #C97A3D" : "1px solid #E4DED2", background: t.highlight ? "#FBEEE0" : "#FFFFFF" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                  <TierIcon size={12} color={t.highlight ? "#C97A3D" : "#7A8B76"} />
+                  <span style={{ fontWeight: 700, fontSize: 12.5, color: t.highlight ? "#C97A3D" : "#211F1D" }}>{t.name}</span>
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: "#C97A3D", marginBottom: 5 }}>{t.price}</div>
+                <div style={{ fontSize: 10.5, color: "#4a4642", lineHeight: 1.55 }}>
+                  <div>{stat("Photos")}</div>
+                  <div>{stat("Video")}</div>
+                  <div>{stat("Gallery access")}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="pricing-compare-table-wrap" style={{ overflowX: "auto", marginBottom: 28, borderRadius: 12, border: "1px solid #E4DED2" }}>
           <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 560, fontSize: 13 }}>
             <thead>
               <tr>

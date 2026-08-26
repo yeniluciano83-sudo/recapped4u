@@ -246,7 +246,7 @@ function BookingFormInner() {
           <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
             {isSocialCutsFormat
               ? "Optional — pick one here, or just set a theme on your social cut below, since that's what's actually shown in social-cuts-only delivery. Skip both for a clean, true-to-life default look."
-              : "Optional — pick one if you have a preference. Skip it for a clean, true-to-life default look."}
+              : "Optional — pick one if you have a preference. Skip it for a clean, true-to-life default look. Each theme sets the color grade applied to every photo, not just the music — so it's still worth picking one even if you turn the soundtrack off below."}
           </p>
 
           {isSocialCutEligible && (

@@ -547,7 +547,7 @@ export default function HomePage() {
             );
           })}
         </div>
-        <div style={{ ...cardStyle, marginTop: 16, border: "1.5px solid #C97A3D" }}>
+        <div className="price-card-breeze" style={{ ...cardStyle, marginTop: 16, border: "1.5px solid #C97A3D" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
             <div style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>
               <Flame size={16} color="#FFFFFF" />

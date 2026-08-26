@@ -328,6 +328,18 @@ async function runFullPipeline(booking) {
       console.log(`  ✓ ${upload.storage_key} — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
     } catch (err) {
       console.error(`  ✗ ${upload.storage_key} — analysis failed: ${err.message}`);
+      // Best-effort: a failure logging the failure shouldn't crash the
+      // per-photo loop itself -- the console.error above is the fallback.
+      try {
+        await supabase.from("upload_analysis_failures").insert({
+          booking_id: bookingId,
+          upload_id: upload.id,
+          storage_key: upload.storage_key,
+          error_message: err.message,
+        });
+      } catch (logErr) {
+        console.error(`    failed to record analysis failure for ${upload.storage_key}: ${logErr.message}`);
+      }
     }
   }
 

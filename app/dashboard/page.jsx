@@ -33,6 +33,9 @@ export default function Dashboard() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
 
+  const [analysisFailures, setAnalysisFailures] = useState([]);
+  const [analysisFailuresLoading, setAnalysisFailuresLoading] = useState(false);
+
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [quoteForm, setQuoteForm] = useState(EMPTY_QUOTE_FORM);
   const [quoteSubmitting, setQuoteSubmitting] = useState(false);
@@ -46,6 +49,21 @@ export default function Dashboard() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [selected]);
+
+  useEffect(() => {
+    if (!selected) {
+      setAnalysisFailures([]);
+      return;
+    }
+    let cancelled = false;
+    setAnalysisFailuresLoading(true);
+    fetch(`/api/bookings/${selected.id}/analysis-failures`)
+      .then((res) => res.json())
+      .then((data) => { if (!cancelled) setAnalysisFailures(data.failures || []); })
+      .catch((err) => console.error("Failed to load analysis failures", err))
+      .finally(() => { if (!cancelled) setAnalysisFailuresLoading(false); });
+    return () => { cancelled = true; };
+  }, [selected?.id]);
 
   const closeQuoteForm = () => {
     setShowQuoteForm(false);
@@ -230,6 +248,21 @@ export default function Dashboard() {
               </div>
             )}
             {selected.notes && <DetailRow label="Notes" value={selected.notes} />}
+
+            {analysisFailures.length > 0 && (
+              <div style={{ marginTop: "16px", padding: "12px 14px", background: "#FBE9E7", border: "1px solid #B3402A44", borderRadius: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600, color: "#B3402A", marginBottom: "6px" }}>
+                  <AlertTriangle size={13} /> {analysisFailures.length} photo{analysisFailures.length > 1 ? "s" : ""} failed analysis and {analysisFailures.length > 1 ? "were" : "was"} excluded
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  {analysisFailures.map((f) => (
+                    <div key={f.id} style={{ fontSize: "12px", color: "#6b655c", lineHeight: 1.5 }}>
+                      <span style={{ fontFamily: "monospace" }}>{f.storage_key.split("/").pop()}</span> — {f.error_message}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div style={{ marginTop: "24px" }}>
               <div style={{ fontSize: "12px", color: "#4a4642", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</div>

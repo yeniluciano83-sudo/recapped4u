@@ -276,6 +276,7 @@ function BookingFormInner() {
             </div>
           )}
 
+          <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "10px" }}>Pick your full recap video theme</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (
               <div key={s.id} style={{ position: "relative" }}>
@@ -288,6 +289,14 @@ function BookingFormInner() {
                 <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
               </div>
             ))}
+            {!isSocialCutsFormat && (
+              <button onClick={() => update("fullVideoNoMusic", !form.fullVideoNoMusic)} aria-pressed={form.fullVideoNoMusic} style={{ width: "100%", textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.fullVideoNoMusic ? "#FBEEE0" : "#FFFFFF", border: form.fullVideoNoMusic ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
+                <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  {form.fullVideoNoMusic && <Check size={15} color="#C97A3D" strokeWidth={3} />} No music
+                </div>
+                <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>Skip the soundtrack on your full recap video{isSocialCutEligible ? " (your social cut keeps its music)" : ""} — keeps whichever theme above you picked for the edit and color grade.</div>
+              </button>
+            )}
           </div>
 
           {isSocialCutEligible && (
@@ -315,16 +324,6 @@ function BookingFormInner() {
                 ))}
               </div>
             </div>
-          )}
-
-          {!isSocialCutsFormat && (
-            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", marginTop: "16px", padding: "14px 16px", borderRadius: "12px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
-              <input type="checkbox" checked={form.fullVideoNoMusic} onChange={(e) => update("fullVideoNoMusic", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
-              <div>
-                <div style={{ fontWeight: 600, fontSize: "13.5px" }}>No music on the full video</div>
-                <div style={{ fontSize: "12px", color: "#6b655c", marginTop: "2px" }}>Skip the soundtrack on your full recap video{isSocialCutEligible ? " (your social cut keeps its music)" : ""}.</div>
-              </div>
-            </label>
           )}
 
           {isRoastEligible && (

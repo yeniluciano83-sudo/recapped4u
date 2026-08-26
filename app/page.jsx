@@ -86,10 +86,38 @@ export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sectionRefs = useRef({});
+  // Pricing cards become a swipeable one-at-a-time carousel below 480px
+  // (see .pricing-cards-track) -- these track which tier is currently
+  // centered so the dot indicators below it can highlight the right one.
+  const pricingTrackRef = useRef(null);
+  const [activeTierIndex, setActiveTierIndex] = useState(0);
 
   const scrollTo = (id) => {
     setMobileMenuOpen(false);
     sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Finds whichever pricing card is closest to centered in the scroll
+  // track right now (fires on every scroll event, so this runs during
+  // the swipe, not just after it settles) and updates the active dot.
+  const handlePricingScroll = () => {
+    const track = pricingTrackRef.current;
+    if (!track) return;
+    const cards = track.querySelectorAll(".price-card-breeze");
+    if (!cards.length) return;
+    const trackCenter = track.scrollLeft + track.clientWidth / 2;
+    let closestIndex = 0;
+    let closestDist = Infinity;
+    cards.forEach((el, i) => {
+      const dist = Math.abs(el.offsetLeft + el.offsetWidth / 2 - trackCenter);
+      if (dist < closestDist) { closestDist = dist; closestIndex = i; }
+    });
+    setActiveTierIndex(closestIndex);
+  };
+
+  const scrollToTier = (i) => {
+    const cards = pricingTrackRef.current?.querySelectorAll(".price-card-breeze");
+    cards?.[i]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   };
 
   return (
@@ -212,6 +240,31 @@ export default function HomePage() {
         }
         @media (prefers-reduced-motion: reduce) {
           .price-card-breeze { animation: none; }
+        }
+
+        /* Pricing cards are a side-by-side grid at tablet/desktop widths
+           (already shows every tier at once, no problem there), but on a
+           phone that same grid collapses to one full card per row and
+           you have to scroll vertically past all four to compare them.
+           Below 480px this swaps to a horizontally swipeable one-card-
+           at-a-time carousel instead -- same cards, same full detail,
+           just flip sideways between tiers instead of scrolling past
+           them, with the peek of the next card (flex-basis 82%, not
+           100%) hinting there's more to swipe to. scroll-snap-type
+           handles settling on a card without any JS; handlePricingScroll
+           only needs to run to keep the dot indicator in sync. */
+        .pricing-cards-track { display: grid; }
+        .pricing-dots { display: none; }
+        @media (max-width: 480px) {
+          .pricing-cards-track {
+            display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
+            gap: 16px !important; padding: 6px 30px !important;
+          }
+          .pricing-cards-track::-webkit-scrollbar { display: none; }
+          .pricing-cards-track > .price-card-breeze { flex: 0 0 82%; scroll-snap-align: center; }
+          .pricing-dots { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
+          .pricing-dot { width: 8px; height: 8px; border-radius: 50%; border: none; padding: 0; cursor: pointer; transition: background 0.2s, transform 0.2s; }
         }
 
         /* The pinned-to-a-corkboard tape mark above each non-highlighted
@@ -523,7 +576,7 @@ export default function HomePage() {
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"
         subtitle="Start for free, or pick the tier that matches how much of the event you want captured.">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 20, padding: "6px 4px" }}>
+        <div ref={pricingTrackRef} onScroll={handlePricingScroll} className="pricing-cards-track" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 20, padding: "6px 4px" }}>
           {TIERS.map((t, idx) => {
             const TierIcon = TIER_ICONS[t.id] || Sparkles;
             const stat = (label) => COMPARISON_ROWS.find((r) => r.label === label)[t.id];
@@ -574,6 +627,12 @@ export default function HomePage() {
             </div>
             );
           })}
+        </div>
+        <div className="pricing-dots">
+          {TIERS.map((t, i) => (
+            <button key={t.id} onClick={() => scrollToTier(i)} aria-label={`Show ${t.name} plan`} aria-current={i === activeTierIndex}
+              className="pricing-dot" style={{ background: i === activeTierIndex ? "#C97A3D" : "#D8CFC0" }} />
+          ))}
         </div>
         <div style={{ ...cardStyle, marginTop: 16, border: "1.5px solid #C97A3D" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>

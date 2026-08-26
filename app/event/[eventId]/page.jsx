@@ -13,6 +13,18 @@ import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle } fro
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 900;
 
+// Stable across every retry of the SAME File object -- the browser never
+// changes a file's name/size/lastModified between attempts, whether the
+// retry is this function's own loop or the guest re-tapping the upload
+// button with the same still-selected file. Lets the server recognize a
+// repeat and skip re-inserting it (see app/api/events/[eventId]/upload
+// /route.js) instead of creating a duplicate row when a request actually
+// succeeded but its response got lost -- confirmed live at a real event,
+// not just a theoretical race.
+function clientUploadIdFor(file) {
+  return `${file.name}_${file.size}_${file.lastModified}`;
+}
+
 async function uploadOneFile(endpoint, uploaderName, file) {
   let lastError = "Upload failed. Please try again.";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -20,6 +32,7 @@ async function uploadOneFile(endpoint, uploaderName, file) {
       const formData = new FormData();
       formData.append("uploaderName", uploaderName);
       formData.append("files", file);
+      formData.append("clientUploadId", clientUploadIdFor(file));
       const res = await fetch(endpoint, { method: "POST", body: formData });
       const data = await res.json().catch(() => ({}));
       if (res.ok) return { ok: true };
@@ -73,19 +86,23 @@ export default function EventUploadPage() {
     const stillFailed = [];
     let uploadedCount = 0;
     let stoppedEarly = null;
+    let stoppedAtIndex = -1;
 
-    for (const file of files) {
-      const result = await uploadOneFile(endpoint, name, file);
+    for (let i = 0; i < files.length; i++) {
+      const result = await uploadOneFile(endpoint, name, files[i]);
       if (result.ok) {
         uploadedCount += 1;
       } else if (!result.retryable) {
         // Server rejected the request for a reason retrying won't fix
-        // (uploads closed, event cancelled) -- true of every remaining
-        // file too, so stop here instead of attempting the rest.
+        // (uploads closed, event cancelled, a specific file over the size
+        // limit) -- true of every remaining file too (or, for a single
+        // bad file, true of every future retry of THIS file), so stop
+        // here instead of attempting the rest.
         stoppedEarly = result.error;
+        stoppedAtIndex = i;
         break;
       } else {
-        stillFailed.push(file);
+        stillFailed.push(files[i]);
       }
     }
 
@@ -93,6 +110,13 @@ export default function EventUploadPage() {
 
     if (stoppedEarly) {
       setUploadError(stoppedEarly);
+      // Drop everything up to and including the file that just failed --
+      // the ones before it already succeeded (leaving them selected would
+      // silently re-upload duplicates on retry), and the one that failed
+      // will just fail identically again since the rejection reason won't
+      // change. Whatever's left after it is still untried and worth
+      // keeping selected.
+      setFiles((prev) => prev.slice(stoppedAtIndex + 1));
     } else if (stillFailed.length > 0) {
       setUploadError(
         uploadedCount > 0

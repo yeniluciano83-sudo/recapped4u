@@ -55,6 +55,14 @@ export async function POST(req, { params }) {
     const formData = await req.formData();
     const uploaderName = formData.get("uploaderName") || "Guest";
     const files = formData.getAll("files");
+    // Stable per-file key the client derives from the File object itself
+    // (name + size + lastModified) -- present on every retry of the SAME
+    // file, whether that's this route's own client's automatic retry or a
+    // guest re-tapping "Add to the recap" after a lost/misread response.
+    // Parallel array to `files`; may be shorter/empty for an older client
+    // build that hasn't been redeployed yet, so index access below is
+    // defensive rather than assumed 1:1.
+    const clientUploadIds = formData.getAll("clientUploadId");
 
     if (!files.length) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
@@ -83,24 +91,95 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "This event has reached its upload limit. Please reach out to us for help." }, { status: 400 });
     }
 
+    // Look up any of this batch's client_upload_ids that already made it
+    // in from an earlier attempt, so a retried file skips straight to
+    // "already have it" instead of re-uploading to R2 and inserting a
+    // duplicate row. Tolerates migration 021 (adds the client_upload_id
+    // column) not having run yet -- idsToCheck.length guards against
+    // querying with an empty .in() list, and a query error here (missing
+    // column) just means dedup doesn't happen this request, not a hard
+    // failure that would block uploads.
+    const idsToCheck = clientUploadIds.filter(Boolean);
+    let existingByClientId = new Map();
+    let clientUploadIdColumnMissing = false;
+    if (idsToCheck.length) {
+      const { data: existingRows, error: lookupError } = await supabase
+        .from("uploads")
+        .select()
+        .eq("booking_id", booking.id)
+        .in("client_upload_id", idsToCheck);
+      if (lookupError) {
+        console.error("client_upload_id lookup failed (migration 021 may not be applied yet):", lookupError.message);
+        clientUploadIdColumnMissing = true;
+      } else {
+        existingByClientId = new Map((existingRows || []).map((r) => [r.client_upload_id, r]));
+      }
+    }
+
     const results = [];
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const clientUploadId = clientUploadIdColumnMissing ? null : clientUploadIds[i] || null;
+
+      const existing = clientUploadId ? existingByClientId.get(clientUploadId) : null;
+      if (existing) {
+        results.push(existing);
+        continue;
+      }
+
       const buffer = Buffer.from(await file.arrayBuffer());
       const key = buildStorageKey({ bookingId: booking.id, kind: "raw", filename: file.name });
       await uploadFile(key, buffer, file.type);
 
-      const { data: uploadRow, error: insertError } = await supabase
+      let { data: uploadRow, error: insertError } = await supabase
         .from("uploads")
         .insert({
           booking_id: booking.id,
           uploader_name: uploaderName,
           storage_key: key,
           file_type: "photo",
+          ...(clientUploadId ? { client_upload_id: clientUploadId } : {}),
         })
         .select()
         .single();
 
+      // PGRST204 here means the client_upload_id column doesn't exist yet
+      // (migration 021 not applied) -- fall back to a plain insert so the
+      // actual upload (the thing that must never break) still succeeds;
+      // idempotency just doesn't kick in until the migration runs.
+      if (insertError && insertError.code === "PGRST204" && clientUploadId) {
+        console.error("uploads.client_upload_id column missing (migration 021 not yet applied) -- inserting without idempotency tracking");
+        ({ data: uploadRow, error: insertError } = await supabase
+          .from("uploads")
+          .insert({ booking_id: booking.id, uploader_name: uploaderName, storage_key: key, file_type: "photo" })
+          .select()
+          .single());
+      }
+
       if (insertError) {
+        // Unique violation on (booking_id, client_upload_id) means a
+        // near-simultaneous duplicate request already won the race --
+        // this one lost, so it's a genuine duplicate, not a real error.
+        // Fetch and return the winner instead of failing the guest's
+        // upload over what is, from their side, the exact same photo
+        // having already made it in a moment ago.
+        if (insertError.code === "23505" && clientUploadId) {
+          const { data: winner } = await supabase
+            .from("uploads")
+            .select()
+            .eq("booking_id", booking.id)
+            .eq("client_upload_id", clientUploadId)
+            .single();
+          if (winner) {
+            results.push(winner);
+            try {
+              await deleteFile(key);
+            } catch (cleanupErr) {
+              console.error(`Failed to clean up duplicate-race R2 object ${key}:`, cleanupErr.message);
+            }
+            continue;
+          }
+        }
         // The file already landed in R2 -- without this, a DB insert
         // failure orphans it there (invisible to curation and the 30-day
         // purge job, which both key off the `uploads` row) while the guest

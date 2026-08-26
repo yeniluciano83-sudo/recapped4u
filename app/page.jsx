@@ -457,9 +457,12 @@ export default function HomePage() {
         <p style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 16 }}>
           Event recap videos & photo galleries
         </p>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 18px" }}>
+        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 10px" }}>
           Your event, recapped.
         </h1>
+        <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: "#C97A3D", margin: "0 0 14px" }}>
+          P.S. — Roast Reel is optional: a splash of observational humor, never personal.
+        </p>
         <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
           You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery.
         </p>

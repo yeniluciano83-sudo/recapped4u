@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame, AlertTriangle, Plus, Copy, Check, X } from "lucide-react";
 
 const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
 // Two statuses fall outside the linear happy-path flow above -- pipeline
@@ -10,6 +10,9 @@ const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
 const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", editing: "Editing", delivered: "Delivered", awaiting_roast_approval: "Awaiting Roast Reel approval", pending_confirmation: "Awaiting email confirmation", cancelled: "Cancelled" };
 const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76", awaiting_roast_approval: "#C97A3D", pending_confirmation: "#8a857d", cancelled: "#8a857d" };
 const TIER_LABEL = { free: "Free", standard: "Classic", premium: "Signature", keepsake: "Luxe" };
+// Free is already $0 -- nothing to quote a custom price against.
+const QUOTABLE_TIERS = ["standard", "premium", "keepsake"];
+const EMPTY_QUOTE_FORM = { hostName: "", email: "", eventType: "", eventDate: "", eventEndDate: "", guestCount: "", tier: "standard", amount: "", label: "", description: "", notes: "", roastEnabled: false, roastLevel: "light" };
 const ROAST_LABEL = { light: "Light Roasting", lukewarm: "Lukewarm Roasting", hot: "Hot Roasting" };
 // Keep in sync with GALLERY_EXPIRY_MONTHS in scripts/auto-recap.js.
 const GALLERY_RETENTION = { standard: "2 months", premium: "4 months", keepsake: "6 months" };
@@ -30,12 +33,58 @@ export default function Dashboard() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
 
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [quoteForm, setQuoteForm] = useState(EMPTY_QUOTE_FORM);
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
+  const [quoteError, setQuoteError] = useState(null);
+  const [quoteResult, setQuoteResult] = useState(null); // { checkoutUrl } once created
+  const [quoteLinkCopied, setQuoteLinkCopied] = useState(false);
+
   useEffect(() => {
     if (!selected) return;
     const onKeyDown = (e) => { if (e.key === "Escape") setSelected(null); };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [selected]);
+
+  const closeQuoteForm = () => {
+    setShowQuoteForm(false);
+    setQuoteForm(EMPTY_QUOTE_FORM);
+    setQuoteError(null);
+    setQuoteResult(null);
+    setQuoteLinkCopied(false);
+  };
+
+  const submitQuote = async () => {
+    setQuoteSubmitting(true);
+    setQuoteError(null);
+    try {
+      const res = await fetch("/api/admin/custom-quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(quoteForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create quote");
+      setQuoteResult({ checkoutUrl: data.checkoutUrl });
+      load();
+    } catch (err) {
+      setQuoteError(err.message || "Failed to create quote");
+    } finally {
+      setQuoteSubmitting(false);
+    }
+  };
+
+  const copyQuoteLink = async () => {
+    if (!quoteResult?.checkoutUrl) return;
+    try {
+      await navigator.clipboard.writeText(quoteResult.checkoutUrl);
+      setQuoteLinkCopied(true);
+      setTimeout(() => setQuoteLinkCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy quote link", err);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,9 +135,14 @@ export default function Dashboard() {
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <div {...(selected ? { inert: "" } : {})} style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 20px 60px" }}>
-        <div style={{ marginBottom: "28px" }}>
-          <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 6px" }}>Recapped For You</p>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "28px", margin: 0 }}>Your events</h1>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "28px" }}>
+          <div>
+            <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 6px" }}>Recapped For You</p>
+            <h1 style={{ fontFamily: "Georgia, serif", fontSize: "28px", margin: 0 }}>Your events</h1>
+          </div>
+          <button onClick={() => setShowQuoteForm(true)} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px", borderRadius: "10px", border: "1px solid #C97A3D", background: "#FBEEE0", color: "#C97A3D", fontSize: "13px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+            <Plus size={15} /> Custom quote
+          </button>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "24px" }}>
@@ -150,9 +204,14 @@ export default function Dashboard() {
           <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "380px", height: "100%", background: "#FFFFFF", borderLeft: "1px solid #E4DED2", padding: "28px 22px", overflowY: "auto", boxSizing: "border-box" }}>
             <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#8a857d", fontSize: "13px", cursor: "pointer", marginBottom: "18px", padding: 0 }}>← Back to list</button>
             <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", margin: "0 0 4px" }}>{selected.host_name}</h2>
-            <p style={{ color: "#6b655c", fontSize: "14px", margin: "0 0 22px" }}>{selected.event_type} · {formatDate(selected.event_date)}</p>
+            <p style={{ color: "#6b655c", fontSize: "14px", margin: "0 0 22px" }}>
+              {selected.event_type} · {formatDate(selected.event_date)}{selected.event_end_date ? ` – ${formatDate(selected.event_end_date)}` : ""}
+            </p>
 
             <DetailRow label="Package" value={TIER_LABEL[selected.tier] || selected.tier} />
+            {selected.custom_price_cents != null && (
+              <DetailRow label="Custom price" value={`$${(selected.custom_price_cents / 100).toFixed(2)}`} />
+            )}
             {selected.upload_slug && (
               <div style={{ padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
                 <a href={`/qr/${selected.upload_slug}`} target="_blank" rel="noopener noreferrer"
@@ -211,7 +270,110 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {showQuoteForm && (
+        <div onClick={closeQuoteForm} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: "20px" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "440px", maxHeight: "90vh", overflowY: "auto", background: "#FFFFFF", borderRadius: "16px", padding: "26px 24px", boxSizing: "border-box" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
+              <h2 style={{ fontFamily: "Georgia, serif", fontSize: "20px", margin: 0 }}>Custom quote</h2>
+              <button onClick={closeQuoteForm} style={{ background: "none", border: "none", cursor: "pointer", color: "#8a857d", padding: "4px" }}><X size={18} /></button>
+            </div>
+
+            {quoteResult ? (
+              <div>
+                <p style={{ fontSize: "14px", color: "#4a4642", lineHeight: 1.6, margin: "0 0 14px" }}>
+                  Booking created. Send this checkout link to the host — they'll pay and their event goes live automatically.
+                </p>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <input readOnly value={quoteResult.checkoutUrl} onFocus={(e) => e.target.select()}
+                    style={{ flex: 1, padding: "10px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "12.5px", color: "#211F1D", background: "#FAF7F2" }} />
+                  <button onClick={copyQuoteLink} style={{ display: "flex", alignItems: "center", gap: "5px", padding: "10px 14px", borderRadius: "8px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "13px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    {quoteLinkCopied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
+                  </button>
+                </div>
+                <button onClick={closeQuoteForm} style={{ marginTop: "18px", width: "100%", padding: "12px", borderRadius: "10px", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Done</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <FormField label="Host name">
+                  <input value={quoteForm.hostName} onChange={(e) => setQuoteForm((f) => ({ ...f, hostName: e.target.value }))} style={inputStyle} />
+                </FormField>
+                <FormField label="Email">
+                  <input type="email" value={quoteForm.email} onChange={(e) => setQuoteForm((f) => ({ ...f, email: e.target.value }))} style={inputStyle} />
+                </FormField>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <FormField label="Event type" style={{ flex: 1 }}>
+                    <input value={quoteForm.eventType} onChange={(e) => setQuoteForm((f) => ({ ...f, eventType: e.target.value }))} placeholder="e.g. Corporate" style={inputStyle} />
+                  </FormField>
+                  <FormField label="Event date" style={{ flex: 1 }}>
+                    <input type="date" value={quoteForm.eventDate} onChange={(e) => setQuoteForm((f) => ({ ...f, eventDate: e.target.value }))} style={inputStyle} />
+                  </FormField>
+                </div>
+                <FormField label="End date (optional, for multi-day events)">
+                  <input type="date" value={quoteForm.eventEndDate} onChange={(e) => setQuoteForm((f) => ({ ...f, eventEndDate: e.target.value }))} style={inputStyle} />
+                </FormField>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <FormField label="Base tier" style={{ flex: 1 }}>
+                    <select value={quoteForm.tier} onChange={(e) => setQuoteForm((f) => ({ ...f, tier: e.target.value }))} style={inputStyle}>
+                      {QUOTABLE_TIERS.map((t) => <option key={t} value={t}>{TIER_LABEL[t]}</option>)}
+                    </select>
+                  </FormField>
+                  <FormField label="Guests (optional)" style={{ flex: 1 }}>
+                    <input type="number" min="0" value={quoteForm.guestCount} onChange={(e) => setQuoteForm((f) => ({ ...f, guestCount: e.target.value }))} style={inputStyle} />
+                  </FormField>
+                </div>
+                <p style={{ fontSize: "12px", color: "#8a857d", margin: "-6px 0 0" }}>Base tier drives upload limits, gallery retention, and Roast Reel eligibility — it doesn't set the price.</p>
+
+                <FormField label="Custom price (USD)">
+                  <input type="number" min="0" step="0.01" value={quoteForm.amount} onChange={(e) => setQuoteForm((f) => ({ ...f, amount: e.target.value }))} placeholder="e.g. 125" style={inputStyle} />
+                </FormField>
+                <FormField label="Line item label (optional)">
+                  <input value={quoteForm.label} onChange={(e) => setQuoteForm((f) => ({ ...f, label: e.target.value }))} placeholder="Recapped For You — Custom Quote" style={inputStyle} />
+                </FormField>
+                <FormField label="Description shown at checkout (optional)">
+                  <textarea value={quoteForm.description} onChange={(e) => setQuoteForm((f) => ({ ...f, description: e.target.value }))} rows={2} placeholder="What's included -- e.g. 2-day coverage, priority delivery" style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
+                </FormField>
+
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", cursor: "pointer" }}>
+                  <input type="checkbox" checked={quoteForm.roastEnabled} onChange={(e) => setQuoteForm((f) => ({ ...f, roastEnabled: e.target.checked }))} />
+                  Include Roast Reel
+                </label>
+                {quoteForm.roastEnabled && quoteForm.tier === "premium" && (
+                  <FormField label="Roast level">
+                    <select value={quoteForm.roastLevel} onChange={(e) => setQuoteForm((f) => ({ ...f, roastLevel: e.target.value }))} style={inputStyle}>
+                      <option value="light">Light (free)</option>
+                      <option value="lukewarm">Lukewarm (+$20)</option>
+                      <option value="hot">Hot (+$20)</option>
+                    </select>
+                  </FormField>
+                )}
+
+                <FormField label="Special request notes (optional)">
+                  <textarea value={quoteForm.notes} onChange={(e) => setQuoteForm((f) => ({ ...f, notes: e.target.value }))} rows={2} placeholder="Host's specific asks -- staff-facing, not shown to the host" style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }} />
+                </FormField>
+
+                {quoteError && <p role="alert" style={{ fontSize: "13px", color: "#B3402A", margin: 0 }}>{quoteError}</p>}
+
+                <button onClick={submitQuote} disabled={quoteSubmitting} style={{ marginTop: "6px", width: "100%", padding: "13px", borderRadius: "10px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "14px", fontWeight: 700, cursor: quoteSubmitting ? "default" : "pointer", opacity: quoteSubmitting ? 0.7 : 1 }}>
+                  {quoteSubmitting ? "Creating…" : "Create quote link"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", boxSizing: "border-box" };
+
+function FormField({ label, children, style }) {
+  return (
+    <div style={style}>
+      <label style={{ fontSize: "12.5px", color: "#4a4642", display: "block", marginBottom: "5px" }}>{label}</label>
+      {children}
+    </div>
   );
 }
 

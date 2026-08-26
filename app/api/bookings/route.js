@@ -3,28 +3,9 @@ import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { generateConfirmToken } from "@/lib/confirmToken";
+import { TIER_PRICES, SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents } from "@/lib/pricing";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const TIER_PRICES = {
-  free: { amount: 0, label: "Free Package" },
-  standard: { amount: 3500, label: "Classic Package" },
-  premium: { amount: 7500, label: "Signature Package" },
-  keepsake: { amount: 9500, label: "Luxe Package" },
-};
-
-// Every tier gets Roast Reel now, and Light is complimentary on all of
-// them. Signature is the only tier that ever charges for it -- stepping
-// up to Lukewarm/Hot there is +$20. Luxe is complimentary at every
-// intensity. Kept in sync with roastAddonPrice in app/booking/page.jsx
-// (dollars there, cents here for Stripe).
-const ROAST_FULL_LEVELS_TIERS = ["premium", "keepsake"];
-function roastAddonPriceCents(tier, level) {
-  if (tier === "premium") return level === "light" ? 0 : 2000;
-  return 0;
-}
-
-const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 
 export async function POST(req) {
   try {

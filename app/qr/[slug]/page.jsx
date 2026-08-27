@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause } from "lucide-react";
 
-// Signature/Luxe only, matching what those tiers actually advertise.
+// Spotlight/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 const STYLES = [
   { id: "cinematic", label: "Cinematic" },

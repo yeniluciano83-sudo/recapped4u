@@ -32,7 +32,7 @@ export async function POST(req) {
     // scripts/auto-recap.js generates a separate roast script per social
     // cut in that mode, since there's no full video there to caption.
     const effectiveRoastEnabled = !!roastEnabled;
-    // Free/Classic only ever get Light -- clamp server-side rather than
+    // Free/Highlight only ever get Light -- clamp server-side rather than
     // trust whatever level the client sent (the UI already restricts this,
     // but this is the actual source of truth for what gets charged below).
     const effectiveRoastLevel = effectiveRoastEnabled

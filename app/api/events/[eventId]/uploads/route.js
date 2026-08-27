@@ -6,7 +6,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // Lists a booking's uploaded photos for the host's must-include picker.
 // Photos only. Two independent star flags: must_include (guarantees a spot
 // in the main recap video, every tier) and must_include_social (guarantees
-// a spot in the social cut specifically, Signature/Luxe only).
+// a spot in the social cut specifically, Spotlight/Luxe only).
 export async function GET(req, { params }) {
   const { eventId } = params;
 

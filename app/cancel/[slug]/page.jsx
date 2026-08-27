@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
-const TIER_LABELS = { free: "Free", standard: "Classic", premium: "Signature", keepsake: "Luxe" };
+const TIER_LABELS = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
 
 export default function CancelBookingPage() {
   const params = useParams();

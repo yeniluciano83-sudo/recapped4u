@@ -58,7 +58,7 @@ export default function PrivacyPage() {
 
         <Section title="How long we keep it">
           <p><strong style={{ color: HEADING }}>Raw guest uploads</strong> (the original photos guests submit) are permanently deleted 30 days after your final recap is delivered — once the curated gallery and video are ready, we don't need the originals anymore.</p>
-          <p><strong style={{ color: HEADING }}>Your delivered gallery and video</strong> stay accessible based on your tier: Free's gallery is downloadable for 7 days after delivery, then permanently deleted; Classic for 2 months; Signature for 4 months; Luxe for 6 months.</p>
+          <p><strong style={{ color: HEADING }}>Your delivered gallery and video</strong> stay accessible based on your tier: Free's gallery is downloadable for 7 days after delivery, then permanently deleted; Highlight for 2 months; Spotlight for 4 months; Luxe for 6 months.</p>
         </Section>
 
         <Section title="Cookies">

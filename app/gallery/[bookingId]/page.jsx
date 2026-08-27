@@ -161,7 +161,7 @@ export default function GalleryDeliveryPage() {
   const socialNoRoastUrls = data?.deliverable?.social_video_no_roast_urls || [];
   const socialNoRoastDownloadUrls = data?.deliverable?.social_video_no_roast_download_urls || [];
   // "social-N" selects the Nth social cut (Luxe can have several -- see
-  // SOCIAL_CUTS_COUNT in scripts/auto-recap.js -- Signature/Free have at
+  // SOCIAL_CUTS_COUNT in scripts/auto-recap.js -- Spotlight/Free have at
   // most 1, so this collapses to a single "Social cut" toggle for them).
   // A roasted cut's "without roast" twin is "social-N-no_roast" -- parseInt
   // stops at the first non-digit character, so the trailing suffix doesn't

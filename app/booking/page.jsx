@@ -35,9 +35,9 @@ function StylePreviewButton({ styleId, playingId, onToggle }) {
 const TIERS = [
   { id: "free", name: "Free", price: "$0", tagline: "See it for yourself — no card required",
     features: ["Curated gallery (up to 20 photos)", "Short highlight video (60-90 sec)", "Choose your editing style", "Digital delivery", "24-hour upload window after your event", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Downloadable gallery for 7 days", "Complimentary Light Roast Reel add-on"] },
-  { id: "standard", name: "Classic", price: "$35", tagline: "Everything you need, nothing extra",
+  { id: "standard", name: "Highlight", price: "$35", tagline: "Everything you need, nothing extra",
     features: ["Upload up to 350 photos", "Shareable + printable QR code & link", "48-hour upload window after your event", "Every uploaded photo in your gallery", "One recap video", "Choose your editing style", "Digital delivery", "Downloadable gallery for 2 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Complimentary Light Roast Reel add-on"] },
-  { id: "premium", name: "Signature", price: "$75", tagline: "Make it unmistakably yours",
+  { id: "premium", name: "Spotlight", price: "$75", tagline: "Make it unmistakably yours",
     features: ["Upload up to 500 photos", "Shareable + printable QR code & link", "1-week upload deadline", "Every uploaded photo in your gallery", "Full recap video + 5 social cuts, each from a different set of your best photos", "Choose your editing style, plus a separate theme for your social cuts", "Star must-include photos for your social cuts", "Digital delivery", "Downloadable gallery for 4 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Complimentary Light Roast Reel, +$20 for Lukewarm or Hot"], highlight: true },
   { id: "keepsake", name: "Luxe", price: "$95", tagline: "The full treatment, built to last",
     features: ["Upload up to 500 photos", "Shareable + printable QR code & link", "2-week upload deadline, extendable by 2 more days if needed", "Every uploaded photo in your gallery", "Full recap video + 10 social cuts, each from a different set of your best photos", "Choose your editing style, plus a separate theme for your social cuts", "Star must-include photos for your social cuts", "Digital delivery", "Downloadable gallery for 6 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Complimentary Roast Reel add-on for any event type", "24-hour priority turnaround"] },
@@ -58,15 +58,15 @@ const SOCIAL_STYLE_OPTIONS = [...STYLES, { id: "none", label: "No theme (no musi
 
 const EVENT_TYPES = ["Party", "Birthday", "Wedding", "Engagement Party", "Bridal Shower", "Gender Reveal", "Sweet 16 / Quinceañera", "Corporate Event", "Family Reunion", "Class/Friend Reunion", "Housewarming", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Bachelor/Bachelorette Party", "Religious Ceremony", "Fundraiser/Gala", "Vacation", "Holiday Celebration", "Other"];
 
-// Signature/Luxe only, per what those tiers actually advertise
+// Spotlight/Luxe only, per what those tiers actually advertise
 // ("Social cut (60-90 sec) + full cut").
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
-// Every tier gets Roast Reel now, not just Signature/Luxe.
+// Every tier gets Roast Reel now, not just Spotlight/Luxe.
 const ROAST_ELIGIBLE_TIERS = ["free", "standard", "premium", "keepsake"];
-// Free and Classic only ever get the Light intensity -- Lukewarm/Hot stay a
-// Signature/Luxe perk (see roastAddonPrice below for what each costs).
+// Free and Highlight only ever get the Light intensity -- Lukewarm/Hot stay a
+// Spotlight/Luxe perk (see roastAddonPrice below for what each costs).
 const ROAST_FULL_LEVELS_TIERS = ["premium", "keepsake"];
-// Light is complimentary on every tier. Signature is the only tier that
+// Light is complimentary on every tier. Spotlight is the only tier that
 // ever charges for Roast Reel -- stepping up to Lukewarm/Hot there is
 // +$20. Luxe is complimentary at every intensity.
 function roastAddonPrice(tier, level) {
@@ -125,9 +125,9 @@ function BookingFormInner() {
 
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
   const isRoastFullLevelEligible = ROAST_FULL_LEVELS_TIERS.includes(form.tier);
-  // Free/Classic can only ever get Light -- clamp here rather than trust
-  // form.roastLevel, which can be stale (e.g. picked Hot on Signature, then
-  // switched the tier down to Classic without touching the level picker).
+  // Free/Highlight can only ever get Light -- clamp here rather than trust
+  // form.roastLevel, which can be stale (e.g. picked Hot on Spotlight, then
+  // switched the tier down to Highlight without touching the level picker).
   const effectiveRoastLevel = isRoastFullLevelEligible ? form.roastLevel : "light";
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
@@ -354,7 +354,7 @@ function BookingFormInner() {
                 </div>
               ) : (
                 <p style={{ fontSize: "11.5px", color: "#7A8B76", fontWeight: 600, marginTop: "10px" }}>
-                  Light intensity — playful, gentle teasing. Lukewarm and Hot are a Signature/Luxe perk.
+                  Light intensity — playful, gentle teasing. Lukewarm and Hot are a Spotlight/Luxe perk.
                 </p>
               ))}
             </div>

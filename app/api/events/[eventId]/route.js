@@ -32,7 +32,7 @@ export async function GET(req, { params }) {
 const VALID_STYLES = ["cinematic", "upbeat", "documentary", "retro", "highlight", "none"];
 
 // Currently just used to let the host pick a separate theme for their
-// social cut (Signature/Luxe) -- distinct from the PATCH on
+// social cut (Spotlight/Luxe) -- distinct from the PATCH on
 // /api/bookings/[id], which is the staff dashboard's status-only endpoint.
 export async function PATCH(req, { params }) {
   const { eventId } = params;

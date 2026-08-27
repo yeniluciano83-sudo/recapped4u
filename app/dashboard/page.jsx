@@ -9,7 +9,7 @@ const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
 // a real label/color instead of falling back to the raw DB string.
 const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", editing: "Editing", delivered: "Delivered", awaiting_roast_approval: "Awaiting Roast Reel approval", pending_confirmation: "Awaiting email confirmation", cancelled: "Cancelled" };
 const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76", awaiting_roast_approval: "#C97A3D", pending_confirmation: "#8a857d", cancelled: "#8a857d" };
-const TIER_LABEL = { free: "Free", standard: "Classic", premium: "Signature", keepsake: "Luxe" };
+const TIER_LABEL = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
 // Free is already $0 -- nothing to quote a custom price against.
 const QUOTABLE_TIERS = ["standard", "premium", "keepsake"];
 const EMPTY_QUOTE_FORM = { hostName: "", email: "", eventType: "", eventDate: "", eventEndDate: "", guestCount: "", tier: "standard", amount: "", label: "", description: "", notes: "", roastEnabled: false, roastLevel: "light" };

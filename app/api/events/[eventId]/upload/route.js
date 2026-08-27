@@ -7,7 +7,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // counts, while closing off a scripted client pushing unbounded fake
 // uploads at a guessed/leaked event link and running up R2 storage cost.
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-// Classic's pricing copy caps it below Signature/Luxe; anything not listed
+// Highlight's pricing copy caps it below Spotlight/Luxe; anything not listed
 // here (Free) falls back to the same 500-photo anti-abuse ceiling those two
 // tiers use -- Free's real cap is its 20-photo curated gallery downstream,
 // not this raw-upload count.

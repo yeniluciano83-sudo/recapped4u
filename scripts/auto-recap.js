@@ -56,7 +56,7 @@ const STYLE_MUSIC = {
   highlight: path.join(__dirname, "..", "public", "music", "highlight.mp3"),
 };
 
-// Signature/Luxe only, matching what those tiers actually advertise.
+// Spotlight/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 const TARGET_SOCIAL_SECONDS = 75; // middle of the advertised 60-90s range
 const MAX_SOCIAL_PHOTOS = 15;
@@ -106,7 +106,7 @@ function buildSocialSelections(analyzed, count) {
   return selections;
 }
 
-// Classic's gallery stays downloadable for 2 months, Signature's for 4,
+// Highlight's gallery stays downloadable for 2 months, Spotlight's for 4,
 // and Luxe's for 6. Free's gallery is downloadable for 7 days total, then
 // permanently deleted (see galleryPurgeAt below, which is set to this same
 // date for free). Anything not listed here falls back to 90 days.
@@ -352,7 +352,7 @@ async function runFullPipeline(booking) {
     }
   }
 
-  // Signature/Luxe can choose "social cuts of every photo" instead of a
+  // Spotlight/Luxe can choose "social cuts of every photo" instead of a
   // curated full video (booking.delivery_format) -- in that mode there's no
   // quality-gated shortlist or full-cut video at all, just as many social
   // cuts as it takes to cover every non-flagged upload (buildSocialSelections
@@ -614,7 +614,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   const expiresAt = computeGalleryExpiry(tier);
 
   // Every tier's finished gallery/video is deleted once its own retention
-  // window passes (7 days Free, 2/4/6 months Classic/Signature/Luxe -- see
+  // window passes (7 days Free, 2/4/6 months Highlight/Spotlight/Luxe -- see
   // GALLERY_EXPIRY_DAYS/MONTHS above), matching what the Privacy
   // Policy/FAQ promise. See purgeExpiredGalleries() in
   // scripts/poll-and-recap.js, which reads this.

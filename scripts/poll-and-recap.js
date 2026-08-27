@@ -17,7 +17,7 @@
  *   4. Permanently deletes any booking's finished gallery/video (R2 objects
  *      + the deliverables row) whose gallery_purge_at (set to each tier's
  *      retention window after delivery -- 7 days Free, 2/4/6 months
- *      Classic/Signature/Luxe) has passed, matching the retention policy
+ *      Highlight/Spotlight/Luxe) has passed, matching the retention policy
  *      promised in the Privacy Policy/FAQ.
  *
  * If any booking's pipeline run fails, it's logged and the run moves on to
@@ -40,7 +40,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 
 // Free's deadline is deliberately tight (encourages upgrading for more
 // time) and skips a reminder entirely -- a same-day heads-up doesn't fit a
-// 24h window. Classic keeps the original 48h/24h pairing. Signature gets a
+// 24h window. Highlight keeps the original 48h/24h pairing. Spotlight gets a
 // week (reminder a day before). Luxe gets two weeks, reminded after the
 // first week.
 const TIER_SCHEDULE = {
@@ -67,7 +67,7 @@ function runRecap(bookingId) {
 // single-worker, one-booking-at-a-time runner has: when several bookings are
 // eligible in the same run (or the job's 20-minute timeout cuts a run short,
 // see .github/workflows/recap-scheduler.yml), Luxe goes first, then
-// Signature, then Classic, then Free -- ties within a tier broken by whoever
+// Spotlight, then Highlight, then Free -- ties within a tier broken by whoever
 // has been waiting longest. This doesn't guarantee a 24h turnaround by
 // itself (that also depends on run cadence and how long each recap takes),
 // but it guarantees Luxe is never left waiting behind a lower tier.

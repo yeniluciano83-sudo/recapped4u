@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
 
-// Signature/Luxe only, matching what those tiers actually advertise --
+// Spotlight/Luxe only, matching what those tiers actually advertise --
 // same list as SOCIAL_CUT_ELIGIBLE_TIERS elsewhere (app/qr/[slug]/page.jsx,
 // app/booking/page.jsx).
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -29,7 +29,7 @@ export async function PATCH(req, { params }) {
   const updates = {};
 
   // must_include (main video, every tier) and must_include_social (social
-  // cut, Signature/Luxe only) are independent toggles -- only gate the one
+  // cut, Spotlight/Luxe only) are independent toggles -- only gate the one
   // that's actually tier-restricted.
   if (Object.prototype.hasOwnProperty.call(body, "mustInclude")) {
     updates.must_include = Boolean(body.mustInclude);

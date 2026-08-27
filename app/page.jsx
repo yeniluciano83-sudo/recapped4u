@@ -481,7 +481,7 @@ export default function HomePage() {
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 28 }}>
           {[
-            { icon: QrCode, label: "No app for host and guests" },
+            { icon: QrCode, label: "No app needed for host and guests" },
             { icon: Mail, label: "Delivered straight to your inbox" },
           ].map((p) => (
             <span key={p.label} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: 999, padding: "7px 14px", fontSize: 12.5, color: "#4a4642", fontWeight: 500 }}>
@@ -654,7 +654,7 @@ export default function HomePage() {
       </Section>
       <Section id="contact" refs={sectionRefs} title="Get In Touch" icon={<Mail size={20} color="#C97A3D" />} band="white"
         blob={{ color: "#C97A3D", top: -50, right: 0, size: 240 }}>
-        <div className="contact-row" style={{ justifyContent: "center", marginBottom: 16 }}>
+        <div className="contact-row" style={{ marginBottom: 16 }}>
           <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" className="press-btn" style={{ ...cardStyle, width: "100%", maxWidth: 320, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
             <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #7A8B76, #97A893)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(122,139,118,0.32)" }}>
               <MessageCircle size={18} color="#FFFFFF" />
@@ -665,7 +665,7 @@ export default function HomePage() {
             </div>
           </a>
         </div>
-        <p style={{ fontSize: 15, color: "#6b655c", margin: 0, maxWidth: 520, lineHeight: 1.5, textAlign: "center" }}>Have a corporate event, or just a question? Reach out.</p>
+        <p style={{ fontSize: 15, color: "#6b655c", margin: 0, maxWidth: 520, lineHeight: 1.5 }}>Have a corporate event, or just a question? Reach out.</p>
       </Section>
       </main>
 

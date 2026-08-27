@@ -1012,16 +1012,13 @@ function SampleModal({ onClose, slide, setSlide }) {
           </div>
         </div>
 
-        <div style={{ padding: "0 24px 28px" }}>
+        <div style={{ padding: "0 16px 28px" }}>
           <a href="/samples/sample-social-cut-hot.mp4" target="_blank" rel="noopener noreferrer"
-            style={{ position: "relative", display: "block", maxWidth: 260, margin: "0 auto", borderRadius: 16, overflow: "hidden", background: "#000", aspectRatio: "9 / 16", textDecoration: "none" }}>
+            style={{ position: "relative", display: "block", width: "100%", maxWidth: 340, margin: "0 auto", borderRadius: 16, overflow: "hidden", background: "#000", aspectRatio: "9 / 16", textDecoration: "none" }}>
             <video src="/samples/sample-social-cut-hot.mp4" poster="/samples/sample-poster.jpg" controls playsInline preload="metadata"
               style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
-            <span style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 10px", borderRadius: 999, color: "#FFFFFF", background: "linear-gradient(135deg, #E0632F, #C97A3D)", pointerEvents: "none" }}>
-              <Flame size={11} /> Hot Roast
-            </span>
           </a>
-          <p style={{ textAlign: "center", fontSize: 12, color: "#8a857d", margin: "10px 0 0" }}>58-second social cut &middot; 9 photos, auto-curated</p>
+          <p style={{ textAlign: "center", fontSize: 12, color: "#8a857d", margin: "10px 0 0" }}>Auto-cut social cut &middot; 8 photos, set to your style's music</p>
         </div>
       </div>
     </div>

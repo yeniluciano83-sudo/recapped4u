@@ -94,14 +94,14 @@ export default function QrSharePage() {
   const isSocialCutEligible = eventInfo && SOCIAL_CUT_ELIGIBLE_TIERS.includes(eventInfo.tier);
 
   useEffect(() => {
-    if (!slug || !isSocialCutEligible || eventInfo?.status !== "collecting") return;
+    if (!slug || eventInfo?.status !== "collecting") return;
     setPhotosLoading(true);
     fetch(`/api/events/${slug}/uploads`)
       .then((res) => res.json())
       .then((data) => setPhotos(data.photos || []))
       .catch((err) => console.error("Failed to load photos", err))
       .finally(() => setPhotosLoading(false));
-  }, [slug, isSocialCutEligible, eventInfo?.status]);
+  }, [slug, eventInfo?.status]);
 
   const qrImageUrl = slug ? `/api/qrcode/${slug}` : "";
   const uploadUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/event/${slug}` : "";
@@ -148,7 +148,7 @@ export default function QrSharePage() {
     }
   };
 
-  const handleToggleMustInclude = async (photo) => {
+  const handleToggleMustIncludeSocial = async (photo) => {
     const next = !photo.mustIncludeSocial;
     setTogglingId(photo.id);
     setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustIncludeSocial: next } : p)));
@@ -161,6 +161,24 @@ export default function QrSharePage() {
     } catch (err) {
       console.error("Failed to update photo", err);
       setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustIncludeSocial: !next } : p))); // revert on failure
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleToggleMustInclude = async (photo) => {
+    const next = !photo.mustInclude;
+    setTogglingId(photo.id);
+    setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustInclude: next } : p)));
+    try {
+      await fetch(`/api/events/${slug}/uploads/${photo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mustInclude: next }),
+      });
+    } catch (err) {
+      console.error("Failed to update photo", err);
+      setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustInclude: !next } : p))); // revert on failure
     } finally {
       setTogglingId(null);
     }
@@ -320,6 +338,37 @@ export default function QrSharePage() {
             </div>
           )}
 
+          {eventInfo.status === "collecting" && (
+            <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
+              <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px" }}>Star your favorites</p>
+              <p style={{ fontSize: 12.5, color: "#4a4642", margin: "0 0 12px", lineHeight: 1.5 }}>
+                Our AI picks the best shots for your main video automatically, but it can miss a beautiful photo that scores low on technical sharpness. Star any photo that absolutely has to be in the video, regardless of what the AI thinks of it.
+              </p>
+
+              {photosLoading ? (
+                <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>Loading photos…</p>
+              ) : photos.length === 0 ? (
+                <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                  {photos.map((photo) => (
+                    <button key={photo.id} onClick={() => handleToggleMustInclude(photo)} disabled={togglingId === photo.id}
+                      style={{
+                        position: "relative", aspectRatio: "1", borderRadius: 8, border: photo.mustInclude ? "2px solid #C97A3D" : "1px solid #E4DED2",
+                        padding: 0, cursor: "pointer", overflow: "hidden", backgroundImage: `url(${photo.url})`, backgroundSize: "cover", backgroundPosition: "center",
+                      }}>
+                      {photo.mustInclude && (
+                        <div style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Star size={11} color="#211F1D" fill="#211F1D" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {isSocialCutEligible && eventInfo.status === "collecting" && (
             <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
               <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px" }}>Your social cut</p>
@@ -353,7 +402,7 @@ export default function QrSharePage() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                   {photos.map((photo) => (
-                    <button key={photo.id} onClick={() => handleToggleMustInclude(photo)} disabled={togglingId === photo.id}
+                    <button key={photo.id} onClick={() => handleToggleMustIncludeSocial(photo)} disabled={togglingId === photo.id}
                       style={{
                         position: "relative", aspectRatio: "1", borderRadius: 8, border: photo.mustIncludeSocial ? "2px solid #C97A3D" : "1px solid #E4DED2",
                         padding: 0, cursor: "pointer", overflow: "hidden", backgroundImage: `url(${photo.url})`, backgroundSize: "cover", backgroundPosition: "center",

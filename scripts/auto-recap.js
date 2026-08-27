@@ -233,11 +233,20 @@ async function analyzePhoto(buffer, mediaType) {
   return parseJson(raw);
 }
 
+// A photo can be emotionally beautiful but score low on technical_quality
+// alone (motion blur, backlighting, off-center framing) and get cut here
+// even though it stays in the gallery (buildGallerySelection, no quality
+// filter). must_include (set by the host via app/qr/[slug]/page.jsx) is a
+// direct override for exactly that case -- starred photos always make the
+// cut regardless of score, same precedent as must_include_social below for
+// the social cut specifically.
 async function buildShortlist(analyzed, maxPhotos = 15) {
-  return analyzed
-    .filter((p) => p.analysis.technical_quality >= 4)
-    .sort((a, b) => (b.analysis.emotional_strength + b.analysis.technical_quality) - (a.analysis.emotional_strength + a.analysis.technical_quality))
-    .slice(0, maxPhotos);
+  const starred = analyzed.filter((p) => p.upload.must_include);
+  const starredIds = new Set(starred.map((p) => p.upload.id));
+  const rest = analyzed
+    .filter((p) => !starredIds.has(p.upload.id) && p.analysis.technical_quality >= 4)
+    .sort((a, b) => (b.analysis.emotional_strength + b.analysis.technical_quality) - (a.analysis.emotional_strength + a.analysis.technical_quality));
+  return [...starred, ...rest].slice(0, maxPhotos);
 }
 
 // The gallery always shows every non-flagged uploaded photo -- unlike the

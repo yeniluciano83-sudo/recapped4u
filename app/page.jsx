@@ -70,7 +70,7 @@ const FAQS = [
 // Real output from the actual pipeline (Claude photo scoring, enhancePhoto,
 // generateRoastScript, assembleSlideshow) on a real booking's uploads --
 // nothing here is mocked or hand-edited. See public/samples/.
-const SAMPLE_PAIRS = [1, 2, 3, 4, 5].map((n) => ({
+const SAMPLE_PAIRS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
   raw: `/samples/pair-${n}-raw.jpg`,
   polished: `/samples/pair-${n}-polished.jpg`,
 }));
@@ -948,6 +948,14 @@ function SampleModal({ onClose, slide, setSlide }) {
     if (track) track.children[clamped]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   };
 
+  // Auto-advance, looping back to the start -- restarts on every navigation
+  // (manual or automatic) so a click/swipe doesn't get immediately
+  // overridden by a timer that was already halfway through its countdown.
+  useEffect(() => {
+    const timer = setTimeout(() => { goTo((slide + 1) % SAMPLE_PAIRS.length); }, 4000);
+    return () => clearTimeout(timer);
+  }, [slide]);
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(33,31,29,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "92vh", overflowY: "auto", background: "#FAF7F2", borderRadius: 20, position: "relative" }}>
@@ -963,18 +971,6 @@ function SampleModal({ onClose, slide, setSlide }) {
         </div>
 
         <div style={{ padding: "18px 24px 0" }}>
-          <a href="/samples/sample-social-cut-hot.mp4" target="_blank" rel="noopener noreferrer"
-            style={{ position: "relative", display: "block", maxWidth: 260, margin: "0 auto", borderRadius: 16, overflow: "hidden", background: "#000", aspectRatio: "9 / 16", textDecoration: "none" }}>
-            <video src="/samples/sample-social-cut-hot.mp4" poster="/samples/sample-poster.jpg" controls playsInline preload="metadata"
-              style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
-            <span style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 10px", borderRadius: 999, color: "#FFFFFF", background: "linear-gradient(135deg, #E0632F, #C97A3D)", pointerEvents: "none" }}>
-              <Flame size={11} /> Hot Roast
-            </span>
-          </a>
-          <p style={{ textAlign: "center", fontSize: 12, color: "#8a857d", margin: "10px 0 0" }}>58-second social cut &middot; 9 photos, auto-curated</p>
-        </div>
-
-        <div style={{ padding: "26px 24px 28px" }}>
           <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 4px", textAlign: "center" }}>The best shots, before and after</p>
           <p style={{ fontSize: 12.5, color: "#6b655c", margin: "0 0 16px", textAlign: "center" }}>Auto-selected by the same photo-scoring pass that builds every recap.</p>
 
@@ -982,14 +978,16 @@ function SampleModal({ onClose, slide, setSlide }) {
             <div ref={trackRef} style={{ display: "flex", overflowX: "auto", scrollSnapType: "x mandatory", gap: 0, borderRadius: 14, scrollbarWidth: "none" }}>
               {SAMPLE_PAIRS.map((pair, i) => (
                 <div key={i} style={{ flex: "0 0 100%", scrollSnapAlign: "center", padding: "0 2px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: 14, padding: 4 }}>
-                    <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden" }}>
-                      <img src={pair.raw} alt={`Raw upload ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
-                      <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Raw</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "center", padding: "6px 4px" }}>
+                    <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
+                      <img src={pair.raw} alt={`Uploaded photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
+                      <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
                     </div>
-                    <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden" }}>
-                      <img src={pair.polished} alt={`Polished photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(201,122,61,0.92)" }}>Polished</span>
+                    <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: `rotate(${i % 2 === 0 ? -3 : 3}deg)` }}>
+                      <div style={{ aspectRatio: "1", overflow: "hidden" }}>
+                        <img src={pair.polished} alt={`Polished photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      </div>
+                      <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
                     </div>
                   </div>
                 </div>
@@ -1012,6 +1010,18 @@ function SampleModal({ onClose, slide, setSlide }) {
                 style={{ width: 7, height: 7, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", background: i === slide ? "#C97A3D" : "#E4DED2", transform: i === slide ? "scale(1.3)" : "scale(1)", transition: "background 0.2s, transform 0.2s" }} />
             ))}
           </div>
+        </div>
+
+        <div style={{ padding: "0 24px 28px" }}>
+          <a href="/samples/sample-social-cut-hot.mp4" target="_blank" rel="noopener noreferrer"
+            style={{ position: "relative", display: "block", maxWidth: 260, margin: "0 auto", borderRadius: 16, overflow: "hidden", background: "#000", aspectRatio: "9 / 16", textDecoration: "none" }}>
+            <video src="/samples/sample-social-cut-hot.mp4" poster="/samples/sample-poster.jpg" controls playsInline preload="metadata"
+              style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
+            <span style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 10px", borderRadius: 999, color: "#FFFFFF", background: "linear-gradient(135deg, #E0632F, #C97A3D)", pointerEvents: "none" }}>
+              <Flame size={11} /> Hot Roast
+            </span>
+          </a>
+          <p style={{ textAlign: "center", fontSize: 12, color: "#8a857d", margin: "10px 0 0" }}>58-second social cut &middot; 9 photos, auto-curated</p>
         </div>
       </div>
     </div>

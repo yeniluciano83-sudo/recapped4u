@@ -1018,7 +1018,7 @@ function SampleModal({ onClose, slide, setSlide }) {
             <video src="/samples/sample-social-cut-hot.mp4" poster="/samples/sample-poster.jpg" controls playsInline preload="metadata"
               style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
           </a>
-          <p style={{ textAlign: "center", fontSize: 12, color: "#8a857d", margin: "10px 0 0" }}>Auto-cut social cut &middot; 8 photos, set to your style's music</p>
+          <p style={{ textAlign: "center", fontSize: 12, color: "#8a857d", margin: "10px 0 0" }}>Social cut sample of polished pictures</p>
         </div>
       </div>
     </div>

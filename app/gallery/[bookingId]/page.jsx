@@ -150,7 +150,10 @@ export default function GalleryDeliveryPage() {
 
   const booking = data?.booking || {};
   const photos = data?.photos || [];
-  const eventName = booking.host_name ? `${booking.host_name}'s ${booking.event_type}` : "Your Recap";
+  // .trim() guards against legacy rows predating the trim-at-booking-time
+  // validation in app/api/bookings/route.js -- an untrimmed host_name here
+  // renders as a visible double space before "'s" (confirmed live).
+  const eventName = booking.host_name ? `${booking.host_name.trim()}'s ${booking.event_type}` : "Your Recap";
   // "full" IS the Roast Reel cut whenever a no-roast twin exists -- that
   // twin only ever gets rendered for roast-enabled bookings (see
   // finalizeDelivery in scripts/auto-recap.js).

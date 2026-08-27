@@ -966,7 +966,7 @@ function SampleModal({ onClose, slide, setSlide }) {
 
         <div style={{ padding: "28px 24px 8px" }}>
           <p style={{ fontSize: 11.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C97A3D", fontWeight: 700, margin: "0 0 8px" }}>A real sample</p>
-          <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, margin: "0 0 8px" }}>What a guest's camera roll becomes in our hands.</h3>
+          <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, margin: "0 0 8px" }}>What you and your guest's photo uploads becomes in our hands.</h3>
           <p style={{ fontSize: 13.5, color: "#6b655c", lineHeight: 1.55, margin: 0 }}>Real uploads from a real booking, run through our actual pipeline — nothing here is hand-picked or hand-edited.</p>
         </div>
 
@@ -984,7 +984,7 @@ function SampleModal({ onClose, slide, setSlide }) {
                       <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
                     </div>
                     <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: `rotate(${i % 2 === 0 ? -3 : 3}deg)` }}>
-                      <div style={{ aspectRatio: "1", overflow: "hidden" }}>
+                      <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
                         <img src={pair.polished} alt={`Polished photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                       </div>
                       <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>

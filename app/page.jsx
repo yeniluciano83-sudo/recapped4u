@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, ChevronLeft, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote, Play } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -67,9 +67,19 @@ const FAQS = [
   { q: "What's the Roast Reel add-on?", a: "A specialty add-on, on every tier now, that layers witty, affectionate commentary over your photos — every joke sticks to roasting the moment, never a person's appearance. Every roasted cut — your full recap video and every social cut alike — comes with both a captioned version and a caption-free version of the same video. The Light intensity is complimentary on every tier. Only Signature and Luxe can go past Light to Lukewarm or Hot — complimentary on Luxe, a $20 add-on on Signature. Available for any event type." },
 ];
 
+// Real output from the actual pipeline (Claude photo scoring, enhancePhoto,
+// generateRoastScript, assembleSlideshow) on a real booking's uploads --
+// nothing here is mocked or hand-edited. See public/samples/.
+const SAMPLE_PAIRS = [1, 2, 3, 4, 5].map((n) => ({
+  raw: `/samples/pair-${n}-raw.jpg`,
+  polished: `/samples/pair-${n}-polished.jpg`,
+}));
+
 export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showSampleModal, setShowSampleModal] = useState(false);
+  const [sampleSlide, setSampleSlide] = useState(0);
   const sectionRefs = useRef({});
 
   const scrollTo = (id) => {
@@ -220,6 +230,12 @@ export default function HomePage() {
         @media (max-width: 480px) {
           .event-pill-row { gap: 7px; }
           .event-pill { padding: 6px 12px !important; font-size: 12px !important; gap: 5px !important; }
+        }
+
+        /* Touch-swipe drives the sample carousel on narrow screens -- the
+           overlapping arrow buttons just crowd a small card at that width. */
+        @media (max-width: 560px) {
+          .sample-nav-btn { display: none !important; }
         }
 
         .contact-row { display: flex; flex-direction: column; gap: 12px; }
@@ -473,6 +489,10 @@ export default function HomePage() {
             </span>
           ))}
         </div>
+        <button onClick={() => { setSampleSlide(0); setShowSampleModal(true); }}
+          style={{ display: "inline-flex", alignItems: "center", gap: 7, marginTop: 24, padding: "12px 22px", borderRadius: 999, border: "1.5px solid #C97A3D", background: "#FFFFFF", color: "#C97A3D", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+          <Play size={14} fill="currentColor" /> View a sample
+        </button>
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
@@ -573,6 +593,10 @@ export default function HomePage() {
           </div>
         </div>
       </Section>
+
+      {showSampleModal && (
+        <SampleModal onClose={() => setShowSampleModal(false)} slide={sampleSlide} setSlide={setSampleSlide} />
+      )}
 
       <Section id="events" refs={sectionRefs} title="Events We Cover" icon={<Users size={20} color="#C97A3D" />} band="white"
         subtitle="If people are gathered and phones are out, we've probably got it covered.">
@@ -900,3 +924,96 @@ const cardStyle = {
   borderRadius: 14,
   padding: 20,
 };
+
+// Real output from the actual pipeline, not a mockup -- see SAMPLE_PAIRS'
+// comment above. A plain scroll-snap track (no library) so a swipe on
+// mobile and the prev/next buttons on desktop drive the same state.
+function SampleModal({ onClose, slide, setSlide }) {
+  const trackRef = useRef(null);
+
+  useEffect(() => {
+    const onKeyDown = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  const goTo = (i) => {
+    const clamped = Math.max(0, Math.min(SAMPLE_PAIRS.length - 1, i));
+    setSlide(clamped);
+    const track = trackRef.current;
+    if (track) track.children[clamped]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(33,31,29,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "92vh", overflowY: "auto", background: "#FAF7F2", borderRadius: 20, position: "relative" }}>
+        <button onClick={onClose} aria-label="Close"
+          style={{ position: "absolute", top: 14, right: 14, zIndex: 2, width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.9)", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.15)" }}>
+          <X size={17} />
+        </button>
+
+        <div style={{ padding: "28px 24px 8px" }}>
+          <p style={{ fontSize: 11.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C97A3D", fontWeight: 700, margin: "0 0 8px" }}>A real sample</p>
+          <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, margin: "0 0 8px" }}>What a guest's camera roll becomes in our hands.</h3>
+          <p style={{ fontSize: 13.5, color: "#6b655c", lineHeight: 1.55, margin: 0 }}>Real uploads from a real booking, run through our actual pipeline — nothing here is hand-picked or hand-edited.</p>
+        </div>
+
+        <div style={{ padding: "18px 24px 0" }}>
+          <a href="/samples/sample-social-cut-hot.mp4" target="_blank" rel="noopener noreferrer"
+            style={{ position: "relative", display: "block", maxWidth: 260, margin: "0 auto", borderRadius: 16, overflow: "hidden", background: "#000", aspectRatio: "9 / 16", textDecoration: "none" }}>
+            <video src="/samples/sample-social-cut-hot.mp4" poster="/samples/sample-poster.jpg" controls playsInline preload="metadata"
+              style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
+            <span style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "5px 10px", borderRadius: 999, color: "#FFFFFF", background: "linear-gradient(135deg, #E0632F, #C97A3D)", pointerEvents: "none" }}>
+              <Flame size={11} /> Hot Roast
+            </span>
+          </a>
+          <p style={{ textAlign: "center", fontSize: 12, color: "#8a857d", margin: "10px 0 0" }}>58-second social cut &middot; 9 photos, auto-curated</p>
+        </div>
+
+        <div style={{ padding: "26px 24px 28px" }}>
+          <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 4px", textAlign: "center" }}>The best shots, before and after</p>
+          <p style={{ fontSize: 12.5, color: "#6b655c", margin: "0 0 16px", textAlign: "center" }}>Auto-selected by the same photo-scoring pass that builds every recap.</p>
+
+          <div style={{ position: "relative" }}>
+            <div ref={trackRef} style={{ display: "flex", overflowX: "auto", scrollSnapType: "x mandatory", gap: 0, borderRadius: 14, scrollbarWidth: "none" }}>
+              {SAMPLE_PAIRS.map((pair, i) => (
+                <div key={i} style={{ flex: "0 0 100%", scrollSnapAlign: "center", padding: "0 2px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: 14, padding: 4 }}>
+                    <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden" }}>
+                      <img src={pair.raw} alt={`Raw upload ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
+                      <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Raw</span>
+                    </div>
+                    <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden" }}>
+                      <img src={pair.polished} alt={`Polished photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                      <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(201,122,61,0.92)" }}>Polished</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={() => goTo(slide - 1)} aria-label="Previous pair" className="sample-nav-btn"
+              style={{ position: "absolute", top: "50%", left: -6, transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 14px rgba(33,31,29,0.14)" }}>
+              <ChevronLeft size={17} />
+            </button>
+            <button onClick={() => goTo(slide + 1)} aria-label="Next pair" className="sample-nav-btn"
+              style={{ position: "absolute", top: "50%", right: -6, transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 14px rgba(33,31,29,0.14)" }}>
+              <ChevronRight size={17} />
+            </button>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "center", gap: 7, marginTop: 14 }}>
+            {SAMPLE_PAIRS.map((_, i) => (
+              <button key={i} onClick={() => goTo(i)} aria-label={`Go to pair ${i + 1}`}
+                style={{ width: 7, height: 7, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", background: i === slide ? "#C97A3D" : "#E4DED2", transform: i === slide ? "scale(1.3)" : "scale(1)", transition: "background 0.2s, transform 0.2s" }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

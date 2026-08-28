@@ -29,6 +29,8 @@ const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, ListO
 const { enhancePhoto } = require("../lib/photo-enhance");
 const { assembleSlideshow } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
+const { buildSocialSelections } = require("../lib/socialSelections");
+const { computeGalleryExpiry } = require("../lib/galleryExpiry");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -59,7 +61,6 @@ const STYLE_MUSIC = {
 // Spotlight/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 const TARGET_SOCIAL_SECONDS = 75; // middle of the advertised 60-90s range
-const MAX_SOCIAL_PHOTOS = 15;
 // Both tiers get multiple social cuts, each from a different batch of top
 // photos (cut 1 = must-includes + best remaining, cut 2 = next-best batch,
 // and so on) -- real distinct content per cut, not just re-edits of the
@@ -74,58 +75,6 @@ const SOCIAL_CUTS_COUNT = { premium: 5, keepsake: 10 };
 // acceptable default -- see the SHORTLIST_CAP lookup below.
 const SHORTLIST_CAP = { free: 20 };
 const FULL_CUT_TARGET_SECONDS = { free: 75 }; // middle of the advertised 60-90s range
-
-// Host-starred "must include" photos always make the FIRST social cut,
-// regardless of their AI quality score. That cut is filled out with the
-// highest-scoring remaining photos up to MAX_SOCIAL_PHOTOS; each additional
-// cut (Luxe only) takes the next-best batch after that, so multiple cuts
-// are genuinely different content rather than re-edits of the same shots.
-// Returns an array of selections (empty selections are omitted -- a small
-// event's photo pool can easily run out before 5 cuts' worth exist).
-function buildSocialSelections(analyzed, count) {
-  const ranked = [...analyzed].sort(
-    (a, b) => (b.analysis.emotional_strength + b.analysis.technical_quality) - (a.analysis.emotional_strength + a.analysis.technical_quality)
-  );
-  const mustInclude = ranked.filter((a) => a.upload.must_include_social).slice(0, MAX_SOCIAL_PHOTOS);
-  const usedIds = new Set(mustInclude.map((a) => a.upload.id));
-  const remaining = ranked.filter((a) => !usedIds.has(a.upload.id));
-
-  const selections = [];
-  const firstFillCount = MAX_SOCIAL_PHOTOS - mustInclude.length;
-  const firstCut = [...mustInclude, ...remaining.slice(0, firstFillCount)];
-  if (firstCut.length > 0) selections.push(firstCut);
-  firstCut.slice(mustInclude.length).forEach((a) => usedIds.add(a.upload.id));
-
-  let cursor = firstFillCount;
-  for (let i = 1; i < count; i++) {
-    const nextCut = remaining.slice(cursor, cursor + MAX_SOCIAL_PHOTOS);
-    if (nextCut.length === 0) break;
-    selections.push(nextCut);
-    cursor += MAX_SOCIAL_PHOTOS;
-  }
-  return selections;
-}
-
-// Highlight's gallery stays downloadable for 2 months, Spotlight's for 4,
-// and Luxe's for 6. Free's gallery is downloadable for 7 days total, then
-// permanently deleted (see galleryPurgeAt below, which is set to this same
-// date for free). Anything not listed here falls back to 90 days.
-const GALLERY_EXPIRY_DAYS = { free: 7 };
-const GALLERY_EXPIRY_MONTHS = { standard: 2, premium: 4, keepsake: 6 };
-
-function computeGalleryExpiry(tier) {
-  const expiresAt = new Date();
-  const days = GALLERY_EXPIRY_DAYS[tier];
-  const months = GALLERY_EXPIRY_MONTHS[tier];
-  if (days) {
-    expiresAt.setDate(expiresAt.getDate() + days);
-  } else if (months) {
-    expiresAt.setMonth(expiresAt.getMonth() + months);
-  } else {
-    expiresAt.setDate(expiresAt.getDate() + 90);
-  }
-  return expiresAt;
-}
 
 const s3 = new S3Client({
   region: "auto",
@@ -615,9 +564,8 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 
   // Every tier's finished gallery/video is deleted once its own retention
   // window passes (7 days Free, 2/4/6 months Highlight/Spotlight/Luxe -- see
-  // GALLERY_EXPIRY_DAYS/MONTHS above), matching what the Privacy
-  // Policy/FAQ promise. See purgeExpiredGalleries() in
-  // scripts/poll-and-recap.js, which reads this.
+  // lib/galleryExpiry.js), matching what the Privacy Policy/FAQ promise.
+  // See purgeExpiredGalleries() in scripts/poll-and-recap.js, which reads this.
   const galleryPurgeAt = expiresAt.toISOString();
 
   // Guarded on status still being "editing": the cancel/reschedule routes

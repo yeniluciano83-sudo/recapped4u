@@ -1,7 +1,13 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle } from "lucide-react";
+import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle, Sparkles } from "lucide-react";
+
+// How often to re-check status while it's still moving -- lets a host who
+// leaves this tab open see "processing" flip to "ready" on its own, instead
+// of needing to know to reload. Stopped once status is delivered/cancelled
+// (see the effect below), so this never polls forever.
+const STATUS_POLL_MS = 60000;
 
 // A dropped connection (weak WiFi/cell signal at a real event, common with
 // a room full of phones) fails a request before it ever reaches our
@@ -77,6 +83,16 @@ export default function EventUploadPage() {
 
   useEffect(() => { if (eventId) loadEventInfo(); }, [eventId, loadEventInfo]);
 
+  // Only poll while status can still change -- delivered/cancelled are
+  // terminal, and re-fetching an active upload session (files selected,
+  // an in-flight upload) risks stomping local state for no reason.
+  const status = eventInfo?.status;
+  useEffect(() => {
+    if (!eventId || !status || status === "delivered" || status === "cancelled") return;
+    const interval = setInterval(loadEventInfo, STATUS_POLL_MS);
+    return () => clearInterval(interval);
+  }, [eventId, status, loadEventInfo]);
+
   const handleFiles = (e) => setFiles(Array.from(e.target.files || []));
 
   const handleUpload = async () => {
@@ -140,12 +156,21 @@ export default function EventUploadPage() {
     setUploading(false);
   };
 
-  const notActivated = eventInfo?.status === "pending_confirmation";
-  const uploadsClosed = notActivated || eventInfo?.status === "cancelled" || Boolean(eventInfo?.uploads_closed_at);
+  const notActivated = status === "pending_confirmation";
+  const isCancelled = status === "cancelled";
+  const isProcessing = status === "editing";
+  const isDelivered = status === "delivered";
+  const uploadsClosed = notActivated || isCancelled || isProcessing || isDelivered || Boolean(eventInfo?.uploads_closed_at);
 
   const reelSegments = Math.min(uploadCount, 24);
   const eventName = eventInfo?.host_name ? `${eventInfo.host_name}'s ${eventInfo.event_type}` : "This event";
   const eventDate = formatDate(eventInfo?.event_date);
+  // Matches the turnaround promise already made on the homepage FAQ ("How
+  // long does it take?") -- kept in sync manually since that's plain JSX
+  // text, not a shared constant.
+  const turnaroundText = eventInfo?.tier === "keepsake"
+    ? "Luxe recaps are usually ready within 24 hours (priority turnaround)."
+    : "Recaps are usually ready within a few days.";
 
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>
@@ -167,15 +192,33 @@ export default function EventUploadPage() {
         </div>
 
         <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2" }}>
-          {uploadsClosed ? (
+          {isDelivered ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "16px 8px", textAlign: "center" }}>
+              <Check size={26} color="#7A8B76" />
+              <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is ready!</p>
+              <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
+                The video and photo gallery have been delivered to the host's inbox.
+              </p>
+              <a href={`/gallery/${eventInfo.id}`}
+                style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginTop: "6px", padding: "12px 22px", borderRadius: "10px", background: "#C97A3D", color: "#211F1D", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>
+                View the recap →
+              </a>
+            </div>
+          ) : isProcessing ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
+              <Sparkles size={24} color="#C97A3D" className="pulse" />
+              <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is being made right now!</p>
+              <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>{turnaroundText}</p>
+            </div>
+          ) : uploadsClosed ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
               <AlertTriangle size={24} color="#C97A3D" />
               <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
                 {notActivated
                   ? "This event hasn't been activated yet."
-                  : eventInfo.status === "cancelled"
+                  : isCancelled
                   ? "This event has been cancelled and is no longer accepting uploads."
-                  : "The host has closed uploads for this event — the recap is already being put together."}
+                  : "Uploads are closed for this event — processing starts soon."}
               </p>
             </div>
           ) : (
@@ -226,7 +269,12 @@ export default function EventUploadPage() {
         </p>
       </div>
 
-      <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }`}</style>
+      <style>{`
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+        .pulse { animation: pulse 1.8s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+      `}</style>
     </main>
   );
 }

@@ -39,6 +39,19 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: "This event hasn't been activated yet." }, { status: 400 });
   }
 
+  // Catches a booking that reached its tier's natural deadline (as opposed
+  // to the host manually closing early via close-uploads, which sets
+  // uploads_closed_at below) -- the scheduler claims those straight into
+  // "editing" without ever touching uploads_closed_at, so relying on that
+  // column alone left a gap where uploads could still land mid-pipeline-run
+  // or even after delivery, invisible to the recap that had already run.
+  if (booking.status === "editing" || booking.status === "delivered") {
+    return NextResponse.json(
+      { error: "This event's recap has already started processing -- new uploads can no longer be added." },
+      { status: 400 }
+    );
+  }
+
   if (booking.uploads_closed_at) {
     return NextResponse.json(
       { error: "The host has closed uploads for this event -- the recap is already being put together." },

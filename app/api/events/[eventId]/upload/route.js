@@ -7,11 +7,14 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // counts, while closing off a scripted client pushing unbounded fake
 // uploads at a guessed/leaked event link and running up R2 storage cost.
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-// Highlight's pricing copy caps it below Spotlight/Luxe; anything not listed
-// here (Free) falls back to the same 500-photo anti-abuse ceiling those two
-// tiers use -- Free's real cap is its 20-photo curated gallery downstream,
-// not this raw-upload count.
-const MAX_UPLOADS_PER_EVENT = { standard: 350 };
+// Highlight's pricing copy caps it below Spotlight/Luxe. Spotlight/Luxe are
+// advertised as unlimited -- no real host or guest list gets anywhere near
+// 2000 raw photos for one event, so this ceiling is purely an anti-abuse
+// backstop (a guessed/leaked event link scripting uploads forever) rather
+// than a real product constraint. Anything not listed here (Free) falls
+// back to the 500-photo default -- Free's real cap is its 20-photo curated
+// gallery downstream, not this raw-upload count.
+const MAX_UPLOADS_PER_EVENT = { standard: 350, premium: 2000, keepsake: 2000 };
 const DEFAULT_MAX_UPLOADS_PER_EVENT = 500;
 
 export async function POST(req, { params }) {

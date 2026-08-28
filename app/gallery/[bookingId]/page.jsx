@@ -218,7 +218,7 @@ export default function GalleryDeliveryPage() {
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "32px", margin: "0 0 8px", lineHeight: 1.15 }}>{eventName}</h1>
-          <p style={{ fontSize: "14px", color: "#4a4642", margin: 0 }}>{booking.event_date}</p>
+          <p style={{ fontSize: "14px", color: "#4a4642", margin: 0 }}>{formatDate(booking.event_date)}</p>
         </div>
 
         <div style={{ background: "#FFFFFF", borderRadius: "18px", border: "1px solid #E4DED2", overflow: "hidden", marginBottom: "16px" }}>
@@ -462,6 +462,15 @@ function PolaroidLayout({ photos, selectMode, selected, onSelect }) {
 
 function formatExpiryDate(dateStr) {
   try { return new Date(dateStr).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
+  catch { return dateStr; }
+}
+
+// event_date is a date-only column ("2026-08-27") -- appending T00:00:00
+// anchors it to the local timezone instead of UTC, avoiding the off-by-one-
+// day shift toLocaleDateString would otherwise produce west of UTC.
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
   catch { return dateStr; }
 }
 

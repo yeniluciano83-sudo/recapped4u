@@ -5,6 +5,12 @@ import { AlertTriangle, CheckCircle2, Calendar } from "lucide-react";
 
 const TIER_LABELS = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
 
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
+  catch { return dateStr; }
+}
+
 export default function ReschedulePage() {
   const params = useParams();
   const slug = params?.slug;
@@ -113,7 +119,7 @@ export default function ReschedulePage() {
         Reschedule {booking.host_name.split(" ")[0]}'s {booking.event_type}
       </h1>
       <p style={{ color: "#4a4642", fontSize: "13px", margin: "0 0 24px" }}>
-        Currently {booking.event_date} · {TIER_LABELS[booking.tier] || booking.tier}
+        Currently {formatDate(booking.event_date)} · {TIER_LABELS[booking.tier] || booking.tier}
       </p>
 
       <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2", marginBottom: "20px", textAlign: "left" }}>

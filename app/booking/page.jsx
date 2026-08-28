@@ -3,6 +3,12 @@ import React, { useState, useId, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame, AlertTriangle, Play, Pause } from "lucide-react";
 
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
+  catch { return dateStr; }
+}
+
 // Mirrors the STYLE_MUSIC map in scripts/auto-recap.js -- same files, served
 // from public/ so they're directly playable here for a style preview.
 const MUSIC_PREVIEW_URL = {
@@ -179,7 +185,7 @@ function BookingFormInner() {
             One more step, {form.hostName.split(" ")[0]}
           </h2>
           <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
-            We've sent a confirmation link to <strong style={{ color: "#211F1D" }}>{form.email}</strong> — click it to activate your guest upload link and QR code, ready to share with guests on {form.eventDate}.
+            We've sent a confirmation link to <strong style={{ color: "#211F1D" }}>{form.email}</strong> — click it to activate your guest upload link and QR code, ready to share with guests on {formatDate(form.eventDate)}.
           </p>
         </div>
       </Shell>
@@ -370,7 +376,7 @@ function BookingFormInner() {
         <StepBlock icon={<Users size={20} color="#C97A3D" />} title="Review your booking">
           <SummaryRow label="Host" value={form.hostName} />
           <SummaryRow label="Email" value={form.email} />
-          <SummaryRow label="Event" value={`${effectiveEventType} — ${form.eventDate}`} />
+          <SummaryRow label="Event" value={`${effectiveEventType} — ${formatDate(form.eventDate)}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
           <SummaryRow label="Style" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label} />
           {isSocialCutEligible && form.socialStyle && (

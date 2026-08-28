@@ -25,6 +25,12 @@ function clientUploadIdFor(file) {
   return `${file.name}_${file.size}_${file.lastModified}`;
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
+  catch { return dateStr; }
+}
+
 async function uploadOneFile(endpoint, uploaderName, file) {
   let lastError = "Upload failed. Please try again.";
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -139,7 +145,7 @@ export default function EventUploadPage() {
 
   const reelSegments = Math.min(uploadCount, 24);
   const eventName = eventInfo?.host_name ? `${eventInfo.host_name}'s ${eventInfo.event_type}` : "This event";
-  const eventDate = eventInfo?.event_date || "";
+  const eventDate = formatDate(eventInfo?.event_date);
 
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>

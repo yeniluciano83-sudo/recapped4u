@@ -31,7 +31,7 @@ export default function TermsPage() {
 
         <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "14px 16px", marginBottom: 36 }}>
           <p style={{ fontSize: 13, color: MUTED, margin: 0, lineHeight: 1.6 }}>
-            This is a plain-language summary of what applies when you book, or when a guest uploads to, an event through Recapped For You. It isn't a substitute for legal advice — treat it as a starting point, not a finished legal document.
+            This is a plain-language summary of what applies when you book an event through Recapped For You, or when a guest uploads to one. It isn't a substitute for legal advice — treat it as a starting point, not a finished legal document.
           </p>
         </div>
 

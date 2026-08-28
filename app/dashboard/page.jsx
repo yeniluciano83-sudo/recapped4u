@@ -297,8 +297,8 @@ export default function Dashboard() {
               {selected.gallery_expires_at
                 ? `until ${formatExpiryDate(selected.gallery_expires_at)}`
                 : selected.tier === "free"
-                ? "7 days, then permanently removed"
-                : `${GALLERY_RETENTION[selected.tier] || "90 days"} after delivery`}.
+                ? "for 7 days, then it's permanently removed"
+                : `for ${GALLERY_RETENTION[selected.tier] || "90 days"} after delivery`}.
             </div>
           </div>
         </div>

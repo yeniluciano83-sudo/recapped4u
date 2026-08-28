@@ -30,7 +30,7 @@ const EVENT_TYPES = [
   { label: "Engagement Parties", emoji: "💐" },
   { label: "Bridal Showers", emoji: "🎀" },
   { label: "Gender Reveals", emoji: "🎈" },
-  { label: "Sweet 16s / Quinceañeras", emoji: "👑" },
+  { label: "Sweet 16s/Quinceañeras", emoji: "👑" },
   { label: "Corporate Events", emoji: "💼" },
   { label: "Family Reunions", emoji: "👨‍👩‍👧‍👦" },
   { label: "Class/Friend Reunions", emoji: "🤝" },
@@ -966,7 +966,7 @@ function SampleModal({ onClose, slide, setSlide }) {
 
         <div style={{ padding: "28px 24px 8px" }}>
           <p style={{ fontSize: 11.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C97A3D", fontWeight: 700, margin: "0 0 8px" }}>A real sample</p>
-          <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, margin: "0 0 8px" }}>What you and your guest's photo uploads becomes in our hands.</h3>
+          <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, margin: "0 0 8px" }}>What you and your guests' photo uploads become in our hands.</h3>
           <p style={{ fontSize: 13.5, color: "#6b655c", lineHeight: 1.55, margin: 0 }}>Real uploads from a real booking, run through our actual pipeline.</p>
         </div>
 

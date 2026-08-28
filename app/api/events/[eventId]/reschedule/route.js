@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
-
-// event_date is a plain date (no time-of-day), so "24 hours before the
-// event" is measured from midnight on that date -- same convention as the
-// cancellation/refund-eligibility check in the cancel route.
-function hoursUntilEvent(eventDate) {
-  return (new Date(`${eventDate}T00:00:00`).getTime() - Date.now()) / 3600000;
-}
+import { hoursUntilEventDate } from "@/lib/eventDate";
 
 // Self-service rescheduling is only safe while nothing's happened yet --
 // once the pipeline starts editing (or the event is delivered/cancelled),
@@ -35,7 +29,7 @@ export async function GET(req, { params }) {
 
   return NextResponse.json({
     booking,
-    rescheduleEligible: RESCHEDULABLE_STATUSES.includes(booking.status) && hoursUntilEvent(booking.event_date) >= 24,
+    rescheduleEligible: RESCHEDULABLE_STATUSES.includes(booking.status) && hoursUntilEventDate(booking.event_date) >= 24,
   });
 }
 
@@ -70,14 +64,14 @@ export async function POST(req, { params }) {
     );
   }
 
-  if (hoursUntilEvent(booking.event_date) < 24) {
+  if (hoursUntilEventDate(booking.event_date) < 24) {
     return NextResponse.json(
       { error: "This is within 24 hours of your event, so it's too late to reschedule online — reply to your confirmation email and we'll help." },
       { status: 400 }
     );
   }
 
-  if (hoursUntilEvent(newDate) < 24) {
+  if (hoursUntilEventDate(newDate) < 24) {
     return NextResponse.json({ error: "Your new date needs to be at least 24 hours from now." }, { status: 400 });
   }
 

@@ -2,15 +2,9 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { isAtLeast24HoursOut } from "@/lib/eventDate";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-// event_date is a plain date (no time-of-day), so "24 hours before the
-// event" is measured from midnight on that date.
-function isRefundEligible(eventDate) {
-  const hoursUntilEvent = (new Date(`${eventDate}T00:00:00`).getTime() - Date.now()) / 3600000;
-  return hoursUntilEvent >= 24;
-}
 
 export async function GET(req, { params }) {
   const { eventId } = params;
@@ -32,7 +26,7 @@ export async function GET(req, { params }) {
 
   return NextResponse.json({
     booking,
-    refundEligible: isRefundEligible(booking.event_date),
+    refundEligible: isAtLeast24HoursOut(booking.event_date),
   });
 }
 
@@ -94,7 +88,7 @@ export async function POST(req, { params }) {
     );
   }
 
-  const refundEligible = isRefundEligible(booking.event_date);
+  const refundEligible = isAtLeast24HoursOut(booking.event_date);
   const isPaid = booking.tier !== "free" && booking.stripe_payment_status === "paid";
 
   let refunded = false;

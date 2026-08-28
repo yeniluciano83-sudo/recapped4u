@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useId } from "react";
 import Link from "next/link";
-import { Camera, Sparkles, Users, Check, ChevronRight, ChevronLeft, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote, Play } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, ChevronLeft, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote, Play, Pause } from "lucide-react";
+import { useModalDialog } from "@/lib/useModalDialog";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -945,16 +946,25 @@ const cardStyle = {
 // mobile and the prev/next buttons on desktop drive the same state.
 function SampleModal({ onClose, slide, setSlide }) {
   const trackRef = useRef(null);
+  const containerRef = useRef(null);
+  const titleId = useId();
+  useModalDialog(containerRef, onClose);
+
+  // Respects the OS-level "reduce motion" setting -- read once on mount
+  // (client-only, so this can't run during SSR) rather than watched live,
+  // since a user changing this mid-session while the modal happens to be
+  // open is a vanishingly rare case not worth the extra listener.
+  const [reducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  // Explicit pause control, not just prefers-reduced-motion -- WCAG's
+  // "pause moving content" criterion calls for a way to stop auto-advancing
+  // content regardless of OS setting, for anyone who just wants more time
+  // on a given pair without having to change a system-wide preference.
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    const onKeyDown = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   const goTo = (i) => {
     const clamped = Math.max(0, Math.min(SAMPLE_PAIRS.length - 1, i));
@@ -967,13 +977,14 @@ function SampleModal({ onClose, slide, setSlide }) {
   // (manual or automatic) so a click/swipe doesn't get immediately
   // overridden by a timer that was already halfway through its countdown.
   useEffect(() => {
+    if (paused || reducedMotion) return;
     const timer = setTimeout(() => { goTo((slide + 1) % SAMPLE_PAIRS.length); }, 4000);
     return () => clearTimeout(timer);
-  }, [slide]);
+  }, [slide, paused, reducedMotion]);
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(33,31,29,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "92vh", overflowY: "auto", background: "#FAF7F2", borderRadius: 20, position: "relative" }}>
+      <div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "92vh", overflowY: "auto", background: "#FAF7F2", borderRadius: 20, position: "relative" }}>
         <button onClick={onClose} aria-label="Close"
           style={{ position: "absolute", top: 14, right: 14, zIndex: 2, width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.9)", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.15)" }}>
           <X size={17} />
@@ -981,7 +992,7 @@ function SampleModal({ onClose, slide, setSlide }) {
 
         <div style={{ padding: "28px 24px 8px" }}>
           <p style={{ fontSize: 11.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C97A3D", fontWeight: 700, margin: "0 0 8px" }}>A real sample</p>
-          <h3 style={{ fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, margin: "0 0 8px" }}>What you and your guests' photo uploads become in our hands.</h3>
+          <h3 id={titleId} style={{ fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, margin: "0 0 8px" }}>What you and your guests' photo uploads become in our hands.</h3>
           <p style={{ fontSize: 13.5, color: "#6b655c", lineHeight: 1.55, margin: 0 }}>Real uploads from a real booking, run through our actual pipeline.</p>
         </div>
 
@@ -1019,11 +1030,21 @@ function SampleModal({ onClose, slide, setSlide }) {
             </button>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", gap: 7, marginTop: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>
             {SAMPLE_PAIRS.map((_, i) => (
               <button key={i} onClick={() => goTo(i)} aria-label={`Go to pair ${i + 1}`}
                 style={{ width: 7, height: 7, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", background: i === slide ? "#C97A3D" : "#E4DED2", transform: i === slide ? "scale(1.3)" : "scale(1)", transition: "background 0.2s, transform 0.2s" }} />
             ))}
+            {/* Explicit stop control for the auto-advancing carousel above --
+                WCAG's "pause moving content" criterion, and simple usability
+                for anyone who wants more time on a pair without changing an
+                OS-level motion setting. */}
+            {!reducedMotion && (
+              <button onClick={() => setPaused((p) => !p)} aria-label={paused ? "Resume auto-advancing" : "Pause auto-advancing"}
+                style={{ marginLeft: 4, width: 20, height: 20, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#6b655c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+                {paused ? <Play size={9} fill="currentColor" /> : <Pause size={9} fill="currentColor" />}
+              </button>
+            )}
           </div>
         </div>
 

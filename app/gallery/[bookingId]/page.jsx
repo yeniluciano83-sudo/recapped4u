@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check } from "lucide-react";
+import { useModalDialog } from "@/lib/useModalDialog";
 
 // Keep in sync with GALLERY_RETENTION in app/booking/page.jsx.
 const RETENTION_LABEL = { free: "7-day", standard: "2-month", premium: "4-month", keepsake: "6-month" };
@@ -28,13 +29,6 @@ export default function GalleryDeliveryPage() {
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState(new Set());
-
-  useEffect(() => {
-    if (!lightbox) return;
-    const onKeyDown = (e) => { if (e.key === "Escape") setLightbox(null); };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [lightbox]);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -113,7 +107,7 @@ export default function GalleryDeliveryPage() {
 
   const handlePhotoClick = (index) => {
     if (selectMode) togglePhotoSelected(index);
-    else setLightbox(photos[index]);
+    else setLightbox(index);
   };
 
   const exitSelectMode = () => {
@@ -349,27 +343,41 @@ export default function GalleryDeliveryPage() {
         </div>
       </div>
 
-      {lightbox && (
-        <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 50, overflowY: "auto", padding: "24px" }}>
-          {/* Close button is position:fixed (not absolute) so it stays
-              pinned to the viewport corner instead of scrolling away with
-              the enlarged photo when that photo is taller than the
-              screen. */}
-          <button onClick={() => setLightbox(null)} aria-label="Close photo" style={{ position: "fixed", top: 20, right: 20, background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", zIndex: 51 }}><X size={26} /></button>
-          {/* min-height: 100% + centered flex is the standard pattern for
-              a lightbox that centers short content but still lets you
-              scroll to see the full image when it doesn't fit the
-              viewport -- a plain flex-center with no overflow handling
-              (the old version) just clips whatever doesn't fit, with no
-              way to reach the clipped part. Applies to every gallery
-              template (Grid, Masonry, Polaroid, Slideshow) since they all
-              open this same lightbox. */}
-          <div style={{ minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img src={lightbox} alt="" style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }} />
-          </div>
-        </div>
+      {lightbox !== null && (
+        <Lightbox photos={photos} index={lightbox} onClose={() => setLightbox(null)} />
       )}
     </main>
+  );
+}
+
+function Lightbox({ photos, index, onClose }) {
+  const containerRef = useRef(null);
+  useModalDialog(containerRef, onClose);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 50, overflowY: "auto", padding: "24px" }}>
+      {/* No stopPropagation here -- clicking anywhere, including the photo
+          itself, has always closed this lightbox (unlike this site's other
+          modals, which only close on a backdrop click); preserving that. */}
+      <div ref={containerRef} role="dialog" aria-modal="true" aria-label={`Photo ${index + 1} of ${photos.length}`}>
+        {/* Close button is position:fixed (not absolute) so it stays
+            pinned to the viewport corner instead of scrolling away with
+            the enlarged photo when that photo is taller than the
+            screen. */}
+        <button onClick={onClose} aria-label="Close photo" style={{ position: "fixed", top: 20, right: 20, background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", zIndex: 51 }}><X size={26} /></button>
+        {/* min-height: 100% + centered flex is the standard pattern for
+            a lightbox that centers short content but still lets you
+            scroll to see the full image when it doesn't fit the
+            viewport -- a plain flex-center with no overflow handling
+            (the old version) just clips whatever doesn't fit, with no
+            way to reach the clipped part. Applies to every gallery
+            template (Grid, Masonry, Polaroid, Slideshow) since they all
+            open this same lightbox. */}
+        <div style={{ minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <img src={photos[index]} alt={`Photo ${index + 1} of ${photos.length}`} style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }} />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -388,7 +396,13 @@ function GridLayout({ photos, selectMode, selected, onSelect }) {
   return (
     <div className="gallery-grid" style={{ display: "grid", gap: "8px" }}>
       {photos.map((url, i) => (
-        <button key={i} onClick={() => onSelect(i)} style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }}>
+        <button key={i} onClick={() => onSelect(i)} aria-label={selectMode ? `${selected?.has(i) ? "Deselect" : "Select"} photo ${i + 1} of ${photos.length}` : `View photo ${i + 1} of ${photos.length}`}
+          style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", overflow: "hidden", padding: 0, backgroundColor: "#FFFFFF" }}>
+          {/* Real <img>, not a CSS background -- lets this be lazy-loaded
+              (loading="lazy" does nothing for background-image) and gives
+              screen readers something other than a bare, indistinguishable
+              "button" for every one of up to 2000 photos on a Luxe gallery. */}
+          <img src={url} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
         </button>
       ))}
@@ -400,9 +414,9 @@ function MasonryLayout({ photos, selectMode, selected, onSelect }) {
   return (
     <div className="gallery-masonry" style={{ columnGap: "8px" }}>
       {photos.map((url, i) => (
-        <button key={i} onClick={() => onSelect(i)}
+        <button key={i} onClick={() => onSelect(i)} aria-label={selectMode ? `${selected?.has(i) ? "Deselect" : "Select"} photo ${i + 1} of ${photos.length}` : `View photo ${i + 1} of ${photos.length}`}
           style={{ position: "relative", display: "block", width: "100%", marginBottom: "8px", borderRadius: "8px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", breakInside: "avoid", padding: 0, background: "none" }}>
-          <img src={url} alt="" style={{ width: "100%", borderRadius: "6px", display: "block" }} />
+          <img src={url} alt="" loading="lazy" style={{ width: "100%", borderRadius: "6px", display: "block" }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
         </button>
       ))}
@@ -417,10 +431,10 @@ function SlideshowLayout({ photos, index, setIndex, selectMode, selected, onSele
   return (
     <div>
       <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
-        <img src={current} alt="" onClick={() => onSelect(clampedIndex)} style={{ width: "100%", aspectRatio: "4/3", objectFit: "contain", display: "block", cursor: "pointer" }} />
-        <button onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)}
+        <img src={current} alt={`Photo ${clampedIndex + 1} of ${photos.length}`} onClick={() => onSelect(clampedIndex)} style={{ width: "100%", aspectRatio: "4/3", objectFit: "contain", display: "block", cursor: "pointer" }} />
+        <button onClick={() => setIndex((i) => (i - 1 + photos.length) % photos.length)} aria-label="Previous photo"
           style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>‹</button>
-        <button onClick={() => setIndex((i) => (i + 1) % photos.length)}
+        <button onClick={() => setIndex((i) => (i + 1) % photos.length)} aria-label="Next photo"
           style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>›</button>
         {selectMode && (
           <button onClick={() => onSelect(clampedIndex)} aria-pressed={selected?.has(clampedIndex)}
@@ -438,7 +452,9 @@ function DownloadOnlyLayout({ photos, downloadUrls }) {
   return (
     <div className="gallery-grid" style={{ display: "grid", gap: "8px" }}>
       {photos.map((url, i) => (
-        <a key={i} href={downloadUrls[i] || url} download style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#FFFFFF", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center", textDecoration: "none" }}>
+        <a key={i} href={downloadUrls[i] || url} download aria-label={`Download photo ${i + 1} of ${photos.length}`}
+          style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#FFFFFF", textDecoration: "none" }}>
+          <img src={url} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "6px", background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
             <Download size={12} color="#FFFFFF" />
           </div>
@@ -453,9 +469,9 @@ function PolaroidLayout({ photos, selectMode, selected, onSelect }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", justifyContent: "center", padding: "10px 0" }}>
       {photos.map((url, i) => (
-        <button key={i} onClick={() => onSelect(i)}
+        <button key={i} onClick={() => onSelect(i)} aria-label={selectMode ? `${selected?.has(i) ? "Deselect" : "Select"} photo ${i + 1} of ${photos.length}` : `View photo ${i + 1} of ${photos.length}`}
           style={{ position: "relative", background: "#FFFFFF", padding: "10px 10px 24px", borderRadius: "4px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.15)", width: "150px" }}>
-          <img src={url} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block" }} />
+          <img src={url} alt="" loading="lazy" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block" }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
         </button>
       ))}

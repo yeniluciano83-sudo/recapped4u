@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef, useId } from "react";
 import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame, AlertTriangle, Plus, Copy, Check, X } from "lucide-react";
+import { useModalDialog } from "@/lib/useModalDialog";
 
 const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
 // Two statuses fall outside the linear happy-path flow above -- pipeline
@@ -42,13 +43,8 @@ export default function Dashboard() {
   const [quoteError, setQuoteError] = useState(null);
   const [quoteResult, setQuoteResult] = useState(null); // { checkoutUrl } once created
   const [quoteLinkCopied, setQuoteLinkCopied] = useState(false);
-
-  useEffect(() => {
-    if (!selected) return;
-    const onKeyDown = (e) => { if (e.key === "Escape") setSelected(null); };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [selected]);
+  const quoteModalRef = useRef(null);
+  const quoteModalTitleId = useId();
 
   useEffect(() => {
     if (!selected) {
@@ -72,6 +68,13 @@ export default function Dashboard() {
     setQuoteResult(null);
     setQuoteLinkCopied(false);
   };
+
+  // Called unconditionally (isActive tracks showQuoteForm) rather than
+  // extracted into its own only-mounted-while-open component -- this modal's
+  // form has enough controlled state and handlers that prop-drilling all of
+  // it into a new component risked missing one, versus the small dialogs
+  // elsewhere on this page that were cheap to extract cleanly.
+  useModalDialog(quoteModalRef, closeQuoteForm, showQuoteForm);
 
   const submitQuote = async () => {
     setQuoteSubmitting(true);
@@ -218,98 +221,15 @@ export default function Dashboard() {
       </div>
 
       {selected && (
-        <div onClick={() => setSelected(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", justifyContent: "flex-end", zIndex: 50 }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "380px", height: "100%", background: "#FFFFFF", borderLeft: "1px solid #E4DED2", padding: "28px 22px", overflowY: "auto", boxSizing: "border-box" }}>
-            <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "#8a857d", fontSize: "13px", cursor: "pointer", marginBottom: "18px", padding: 0 }}>← Back to list</button>
-            <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", margin: "0 0 4px" }}>{selected.host_name}</h2>
-            <p style={{ color: "#6b655c", fontSize: "14px", margin: "0 0 22px" }}>
-              {selected.event_type} · {formatDate(selected.event_date)}{selected.event_end_date ? ` – ${formatDate(selected.event_end_date)}` : ""}
-            </p>
-
-            <DetailRow label="Package" value={TIER_LABEL[selected.tier] || selected.tier} />
-            {selected.custom_price_cents != null && (
-              <DetailRow label="Custom price" value={`$${(selected.custom_price_cents / 100).toFixed(2)}`} />
-            )}
-            {selected.upload_slug && (
-              <div style={{ padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
-                <a href={`/qr/${selected.upload_slug}`} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>
-                  View / Share / Print Guest QR Code →
-                </a>
-              </div>
-            )}
-            <DetailRow label="Style" value={selected.style} />
-            {selected.email && <DetailRow label="Email" value={selected.email} />}
-            {selected.guest_count && <DetailRow label="Guests" value={selected.guest_count} />}
-            {selected.roast_enabled && (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #E4DED2", fontSize: "14px" }}>
-                <span style={{ color: "#6b655c", display: "flex", alignItems: "center", gap: "5px" }}><Flame size={13} color="#C97A3D" /> Roast Reel</span>
-                <span style={{ fontWeight: 500, color: "#C97A3D" }}>{ROAST_LABEL[selected.roast_level] || selected.roast_level}</span>
-              </div>
-            )}
-            {selected.notes && <DetailRow label="Notes" value={selected.notes} />}
-
-            {analysisFailures.length > 0 && (
-              <div style={{ marginTop: "16px", padding: "12px 14px", background: "#FBE9E7", border: "1px solid #B3402A44", borderRadius: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600, color: "#B3402A", marginBottom: "6px" }}>
-                  <AlertTriangle size={13} /> {analysisFailures.length} photo{analysisFailures.length > 1 ? "s" : ""} failed analysis and {analysisFailures.length > 1 ? "were" : "was"} excluded
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  {analysisFailures.map((f) => (
-                    <div key={f.id} style={{ fontSize: "12px", color: "#6b655c", lineHeight: 1.5 }}>
-                      <span style={{ fontFamily: "monospace" }}>{f.storage_key.split("/").pop()}</span> — {f.error_message}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginTop: "24px" }}>
-              <div style={{ fontSize: "12px", color: "#4a4642", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</div>
-              {isStale(selected) && (
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 12px", borderRadius: "10px", background: "#FBE9E7", border: "1px solid #B3402A44", marginBottom: "10px", fontSize: "13px", color: "#B3402A", fontWeight: 600 }}>
-                  <AlertTriangle size={14} /> Stuck at "Editing" for over {STALE_EDITING_HOURS}h -- the scheduler will auto-recover it on its next run.
-                </div>
-              )}
-              {!STATUS_FLOW.includes(selected.status) && (
-                <div style={{ padding: "10px 12px", borderRadius: "10px", background: "#FBEEE0", border: `1px solid ${STATUS_COLOR[selected.status] || "#D8CFC0"}`, marginBottom: "10px", fontSize: "14px", color: STATUS_COLOR[selected.status] || "#211F1D", fontWeight: 600 }}>
-                  {STATUS_LABEL[selected.status] || selected.status}
-                </div>
-              )}
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", opacity: STATUS_FLOW.includes(selected.status) ? 1 : 0.5 }}>
-                {STATUS_FLOW.map((s) => {
-                  const active = s === selected.status;
-                  const inFlow = STATUS_FLOW.includes(selected.status);
-                  const done = inFlow && STATUS_FLOW.indexOf(s) < STATUS_FLOW.indexOf(selected.status);
-                  return (
-                    <button key={s} disabled={!inFlow} onClick={() => updateStatus(selected.id, s)} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", cursor: inFlow ? "pointer" : "default", textAlign: "left", background: active ? "#FBEEE0" : "transparent", border: active ? "1px solid #C97A3D" : "1px solid transparent" }}>
-                      {done || active ? <CheckCircle2 size={16} color={active ? "#C97A3D" : "#7A8B76"} /> : <Circle size={16} color="#D8CFC0" />}
-                      <span style={{ fontSize: "14px", color: active ? "#211F1D" : "#4a4642" }}>{STATUS_LABEL[s]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div style={{ marginTop: "18px", padding: "14px", background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: "10px", fontSize: "12px", color: "#6b655c", lineHeight: 1.6 }}>
-              <Clock size={12} style={{ marginRight: "5px", verticalAlign: "-1px" }} />
-              Raw uploads auto-remove 30 days after delivery. Gallery link stays live{" "}
-              {selected.gallery_expires_at
-                ? `until ${formatExpiryDate(selected.gallery_expires_at)}`
-                : selected.tier === "free"
-                ? "for 7 days, then it's permanently removed"
-                : `for ${GALLERY_RETENTION[selected.tier] || "90 days"} after delivery`}.
-            </div>
-          </div>
-        </div>
+        <DetailPanel booking={selected} analysisFailures={analysisFailures} onUpdateStatus={updateStatus} onClose={() => setSelected(null)} />
       )}
 
       {showQuoteForm && (
         <div onClick={closeQuoteForm} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: "20px" }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "440px", maxHeight: "90vh", overflowY: "auto", background: "#FFFFFF", borderRadius: "16px", padding: "26px 24px", boxSizing: "border-box" }}>
+          <div ref={quoteModalRef} role="dialog" aria-modal="true" aria-labelledby={quoteModalTitleId} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "440px", maxHeight: "90vh", overflowY: "auto", background: "#FFFFFF", borderRadius: "16px", padding: "26px 24px", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: "20px", margin: 0 }}>Custom quote</h2>
-              <button onClick={closeQuoteForm} style={{ background: "none", border: "none", cursor: "pointer", color: "#8a857d", padding: "4px" }}><X size={18} /></button>
+              <h2 id={quoteModalTitleId} style={{ fontFamily: "Georgia, serif", fontSize: "20px", margin: 0 }}>Custom quote</h2>
+              <button onClick={closeQuoteForm} aria-label="Close" style={{ background: "none", border: "none", cursor: "pointer", color: "#8a857d", padding: "4px" }}><X size={18} /></button>
             </div>
 
             {quoteResult ? (
@@ -400,6 +320,99 @@ export default function Dashboard() {
 }
 
 const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", boxSizing: "border-box" };
+
+function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
+  const containerRef = useRef(null);
+  const titleId = useId();
+  useModalDialog(containerRef, onClose);
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", justifyContent: "flex-end", zIndex: 50 }}>
+      <div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "380px", height: "100%", background: "#FFFFFF", borderLeft: "1px solid #E4DED2", padding: "28px 22px", overflowY: "auto", boxSizing: "border-box" }}>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: "#8a857d", fontSize: "13px", cursor: "pointer", marginBottom: "18px", padding: 0 }}>← Back to list</button>
+        <h2 id={titleId} style={{ fontFamily: "Georgia, serif", fontSize: "22px", margin: "0 0 4px" }}>{booking.host_name}</h2>
+        <p style={{ color: "#6b655c", fontSize: "14px", margin: "0 0 22px" }}>
+          {booking.event_type} · {formatDate(booking.event_date)}{booking.event_end_date ? ` – ${formatDate(booking.event_end_date)}` : ""}
+        </p>
+
+        <DetailRow label="Package" value={TIER_LABEL[booking.tier] || booking.tier} />
+        {booking.custom_price_cents != null && (
+          <DetailRow label="Custom price" value={`$${(booking.custom_price_cents / 100).toFixed(2)}`} />
+        )}
+        {booking.upload_slug && (
+          <div style={{ padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
+            <a href={`/qr/${booking.upload_slug}`} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>
+              View / Share / Print Guest QR Code →
+            </a>
+          </div>
+        )}
+        <DetailRow label="Style" value={booking.style} />
+        {booking.email && <DetailRow label="Email" value={booking.email} />}
+        {booking.guest_count && <DetailRow label="Guests" value={booking.guest_count} />}
+        {booking.roast_enabled && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #E4DED2", fontSize: "14px" }}>
+            <span style={{ color: "#6b655c", display: "flex", alignItems: "center", gap: "5px" }}><Flame size={13} color="#C97A3D" /> Roast Reel</span>
+            <span style={{ fontWeight: 500, color: "#C97A3D" }}>{ROAST_LABEL[booking.roast_level] || booking.roast_level}</span>
+          </div>
+        )}
+        {booking.notes && <DetailRow label="Notes" value={booking.notes} />}
+
+        {analysisFailures.length > 0 && (
+          <div style={{ marginTop: "16px", padding: "12px 14px", background: "#FBE9E7", border: "1px solid #B3402A44", borderRadius: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600, color: "#B3402A", marginBottom: "6px" }}>
+              <AlertTriangle size={13} /> {analysisFailures.length} photo{analysisFailures.length > 1 ? "s" : ""} failed analysis and {analysisFailures.length > 1 ? "were" : "was"} excluded
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              {analysisFailures.map((f) => (
+                <div key={f.id} style={{ fontSize: "12px", color: "#6b655c", lineHeight: 1.5 }}>
+                  <span style={{ fontFamily: "monospace" }}>{f.storage_key.split("/").pop()}</span> — {f.error_message}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginTop: "24px" }}>
+          <div style={{ fontSize: "12px", color: "#4a4642", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</div>
+          {isStale(booking) && (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 12px", borderRadius: "10px", background: "#FBE9E7", border: "1px solid #B3402A44", marginBottom: "10px", fontSize: "13px", color: "#B3402A", fontWeight: 600 }}>
+              <AlertTriangle size={14} /> Stuck at "Editing" for over {STALE_EDITING_HOURS}h -- the scheduler will auto-recover it on its next run.
+            </div>
+          )}
+          {!STATUS_FLOW.includes(booking.status) && (
+            <div style={{ padding: "10px 12px", borderRadius: "10px", background: "#FBEEE0", border: `1px solid ${STATUS_COLOR[booking.status] || "#D8CFC0"}`, marginBottom: "10px", fontSize: "14px", color: STATUS_COLOR[booking.status] || "#211F1D", fontWeight: 600 }}>
+              {STATUS_LABEL[booking.status] || booking.status}
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", opacity: STATUS_FLOW.includes(booking.status) ? 1 : 0.5 }}>
+            {STATUS_FLOW.map((s) => {
+              const active = s === booking.status;
+              const inFlow = STATUS_FLOW.includes(booking.status);
+              const done = inFlow && STATUS_FLOW.indexOf(s) < STATUS_FLOW.indexOf(booking.status);
+              return (
+                <button key={s} disabled={!inFlow} onClick={() => onUpdateStatus(booking.id, s)} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", cursor: inFlow ? "pointer" : "default", textAlign: "left", background: active ? "#FBEEE0" : "transparent", border: active ? "1px solid #C97A3D" : "1px solid transparent" }}>
+                  {done || active ? <CheckCircle2 size={16} color={active ? "#C97A3D" : "#7A8B76"} /> : <Circle size={16} color="#D8CFC0" />}
+                  <span style={{ fontSize: "14px", color: active ? "#211F1D" : "#4a4642" }}>{STATUS_LABEL[s]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ marginTop: "18px", padding: "14px", background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: "10px", fontSize: "12px", color: "#6b655c", lineHeight: 1.6 }}>
+          <Clock size={12} style={{ marginRight: "5px", verticalAlign: "-1px" }} />
+          Raw uploads auto-remove 30 days after delivery. Gallery link stays live{" "}
+          {booking.gallery_expires_at
+            ? `until ${formatExpiryDate(booking.gallery_expires_at)}`
+            : booking.tier === "free"
+            ? "for 7 days, then it's permanently removed"
+            : `for ${GALLERY_RETENTION[booking.tier] || "90 days"} after delivery`}.
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function FormField({ label, children, style }) {
   return (

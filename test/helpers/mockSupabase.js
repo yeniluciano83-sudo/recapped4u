@@ -12,7 +12,7 @@ export function createSupabaseMock() {
   const queue = [];
   const callLog = [];
 
-  const CHAIN_METHODS = ["select", "insert", "update", "eq", "neq", "order", "single", "maybeSingle"];
+  const CHAIN_METHODS = ["select", "insert", "update", "eq", "neq", "order", "limit", "single", "maybeSingle"];
 
   function from(table) {
     const record = { table, calls: [] };

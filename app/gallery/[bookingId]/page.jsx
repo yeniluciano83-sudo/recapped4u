@@ -94,8 +94,6 @@ export default function GalleryDeliveryPage() {
     });
   };
 
-  const handleDownloadAll = () => triggerStaggeredDownloads(data?.photo_download_urls || []);
-
   const handleDownloadSelected = () => {
     const urls = data?.photo_download_urls || [];
     const selectedUrls = Array.from(selectedIndices).sort((a, b) => a - b).map((i) => urls[i]).filter(Boolean);
@@ -326,9 +324,14 @@ export default function GalleryDeliveryPage() {
                 <button onClick={handleShare} style={{ flex: 1, padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: "pointer" }}>
                   {shareCopied ? <><Check size={16} /> Link copied</> : <><Share2 size={16} /> Share this gallery</>}
                 </button>
-                <button onClick={handleDownloadAll} disabled={downloadingAll || photos.length === 0} style={{ flex: 1, padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: downloadingAll || photos.length === 0 ? "default" : "pointer", opacity: downloadingAll || photos.length === 0 ? 0.6 : 1 }}>
-                  <Download size={16} /> {downloadingAll ? "Downloading…" : "Download all"}
-                </button>
+                {/* A real zip from the server, not a client-side download loop -- Spotlight/Luxe
+                    galleries can run into the thousands of photos, where the old
+                    one-file-per-download-prompt approach took several minutes. Plain <a download>
+                    (no JS click handler) since the browser can drive this download on its own. */}
+                <a href={`/api/gallery/${bookingId}/download-all`} download
+                  style={{ flex: 1, padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: photos.length === 0 ? "#E4DED2" : "transparent", color: photos.length === 0 ? "#8a857d" : "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", textDecoration: "none", cursor: photos.length === 0 ? "default" : "pointer", opacity: photos.length === 0 ? 0.6 : 1, pointerEvents: photos.length === 0 ? "none" : "auto" }}>
+                  <Download size={16} /> Download all
+                </a>
               </>
             )}
           </div>

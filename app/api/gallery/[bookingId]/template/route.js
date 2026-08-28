@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { captureError } from "@/lib/sentry";
 
 // Keep in sync with the templates app/gallery/[bookingId]/page.jsx actually
 // renders -- "fullbleed" isn't implemented there, so accepting it here would
@@ -39,6 +40,7 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ success: true, gallery_template: data.gallery_template });
   } catch (err) {
     console.error("Template update failed:", err);
+    captureError(err, { tags: { route: "gallery.template" }, extra: { bookingId } });
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }

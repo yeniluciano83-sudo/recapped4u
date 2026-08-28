@@ -36,6 +36,7 @@ const path = require("path");
 const { execSync } = require("child_process");
 const { createClient } = require("@supabase/supabase-js");
 const { hoursSinceEvent, sortByProcessingPriority } = require("../lib/processingPriority");
+const { captureError, flushSentry } = require("../lib/sentry");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -66,6 +67,7 @@ async function processCollectingBookings(failures) {
   const { data: bookings, error } = await supabase.from("bookings").select("*").eq("status", "collecting");
   if (error) {
     console.error("Failed to query collecting bookings:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-collecting" } });
     return;
   }
 
@@ -73,6 +75,10 @@ async function processCollectingBookings(failures) {
     const schedule = TIER_SCHEDULE[booking.tier];
     if (!schedule) {
       console.error(`Booking ${booking.id} has unrecognized tier "${booking.tier}" -- skipping.`);
+      captureError(new Error(`Booking has unrecognized tier "${booking.tier}"`), {
+        tags: { script: "poll-and-recap", step: "unrecognized-tier" },
+        extra: { bookingId: booking.id },
+      });
       continue;
     }
 
@@ -130,6 +136,7 @@ async function processCollectingBookings(failures) {
         runRecap(booking.id);
       } catch (err) {
         console.error(`Booking ${booking.id} failed:`, err.message);
+        captureError(err, { tags: { script: "poll-and-recap", step: "run-recap" }, extra: { bookingId: booking.id } });
         failures.push({ bookingId: booking.id, error: err.message });
       }
       continue;
@@ -171,6 +178,7 @@ async function processCollectingBookings(failures) {
         });
       } catch (err) {
         console.error(`Reminder email failed for booking ${booking.id}: ${err.message}`);
+        captureError(err, { tags: { script: "poll-and-recap", email: "upload-reminder" }, extra: { bookingId: booking.id } });
       }
     }
   }
@@ -195,6 +203,7 @@ async function recoverStaleEditingBookings(failures) {
 
   if (error) {
     console.error("Failed to query stale editing bookings:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-stale-editing" } });
     return;
   }
   if (!stale || stale.length === 0) return;
@@ -231,6 +240,7 @@ async function purgeExpiredUploads(failures) {
 
   if (error) {
     console.error("Failed to query uploads past their purge date:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-expired-uploads" } });
     return;
   }
   if (!expired || expired.length === 0) return;
@@ -243,6 +253,7 @@ async function purgeExpiredUploads(failures) {
       await supabase.from("uploads").delete().eq("id", upload.id);
     } catch (err) {
       console.error(`Failed to purge upload ${upload.id}:`, err.message);
+      captureError(err, { tags: { script: "poll-and-recap", step: "purge-upload" }, extra: { uploadId: upload.id, bookingId: upload.booking_id } });
       failures.push({ bookingId: upload.booking_id, error: `Raw upload purge failed (upload ${upload.id}): ${err.message}` });
     }
   }
@@ -257,6 +268,7 @@ async function purgeExpiredGalleries(failures) {
 
   if (error) {
     console.error("Failed to query bookings past their gallery purge date:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-expired-galleries" } });
     return;
   }
   if (!expired || expired.length === 0) return;
@@ -276,6 +288,7 @@ async function purgeExpiredGalleries(failures) {
       await supabase.from("bookings").update({ gallery_purge_at: null }).eq("id", booking.id);
     } catch (err) {
       console.error(`Failed to purge gallery for booking ${booking.id}:`, err.message);
+      captureError(err, { tags: { script: "poll-and-recap", step: "purge-gallery" }, extra: { bookingId: booking.id } });
       failures.push({ bookingId: booking.id, error: `Gallery purge failed: ${err.message}` });
     }
   }
@@ -300,6 +313,10 @@ async function main() {
       await sendFailureAlert({ to: process.env.ADMIN_ALERT_EMAIL, failures });
     } catch (err) {
       console.error(`Failure alert email itself failed to send: ${err.message}`);
+      // The one console.error in this file that most needs an out-of-band
+      // monitor: this is the existing alert mechanism breaking, so nothing
+      // else in this script will ever surface it.
+      captureError(err, { tags: { script: "poll-and-recap", email: "failure-alert" }, extra: { failureCount: failures.length } });
     }
   } else if (failures.length > 0) {
     console.error(`${failures.length} booking(s) failed this run, but ADMIN_ALERT_EMAIL isn't set -- no alert sent.`);
@@ -308,4 +325,7 @@ async function main() {
   console.log("Done.");
 }
 
-main();
+// This process exits right after main() resolves (a GitHub Actions cron job,
+// not a long-lived server) -- flushing here gives any captureError() calls
+// above a chance to actually finish sending before that happens.
+main().finally(() => flushSentry());

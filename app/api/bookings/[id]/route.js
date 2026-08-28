@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { captureError } from "@/lib/sentry";
 
 const VALID_STATUSES = ["booked", "collecting", "editing", "delivered"];
 
@@ -25,6 +26,7 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ success: true, booking: data });
   } catch (err) {
     console.error("Status update failed:", err);
+    captureError(err, { tags: { route: "bookings.status-update" }, extra: { bookingId: id } });
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }

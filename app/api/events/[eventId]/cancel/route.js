@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { isAtLeast24HoursOut } from "@/lib/eventDate";
+import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -118,6 +119,7 @@ export async function POST(req, { params }) {
     });
   } catch (err) {
     console.error("Cancellation confirmation email failed:", err.message);
+    captureError(err, { tags: { route: "events.cancel", email: "cancellation-confirmation" }, extra: { bookingId: booking.id } });
   }
 
   return NextResponse.json({ success: true, refunded, amountRefunded });

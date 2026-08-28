@@ -16,6 +16,7 @@
  * Run: node scripts/auto-recap.js <bookingId>
  */
 require("dotenv").config({ path: require("path").join(__dirname,"..",".env.local") });
+const { captureError, flushSentry } = require("../lib/sentry");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -606,6 +607,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     });
   } catch (err) {
     console.error(`Delivery email failed (booking is still marked delivered): ${err.message}`);
+    captureError(err, { tags: { script: "auto-recap", email: "delivery-notification" }, extra: { bookingId } });
   }
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -619,10 +621,20 @@ if (require.main === module) {
     console.log("Usage: node scripts/auto-recap.js <bookingId>");
     process.exit(1);
   }
-  runAutoRecap(bookingId).catch((err) => {
-    console.error("Pipeline failed:", err);
-    process.exit(1);
-  });
+  runAutoRecap(bookingId)
+    .then(
+      () => 0,
+      (err) => {
+        console.error("Pipeline failed:", err);
+        captureError(err, { tags: { script: "auto-recap", step: "run-auto-recap" }, extra: { bookingId } });
+        return 1;
+      }
+    )
+    // Runs after either branch above, always before exit -- this process
+    // exits right after this resolves (a GitHub Actions job step, not a
+    // long-lived server), so this is the last chance for a captureError()
+    // call above to actually finish sending.
+    .then((exitCode) => flushSentry().then(() => process.exit(exitCode)));
 }
 
 module.exports = { runAutoRecap };

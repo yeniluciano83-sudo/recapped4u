@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { captureError } from "@/lib/sentry";
 
 // Generates a QR code PNG pointing to this event's guest upload page.
 // Usage: GET /api/qrcode/[slug]  -> returns a PNG image
@@ -47,6 +48,7 @@ export async function GET(req, { params }) {
     });
   } catch (err) {
     console.error("QR generation failed:", err);
+    captureError(err, { tags: { route: "qrcode" }, extra: { slug } });
     return NextResponse.json({ error: "QR generation failed" }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { sendBookingConfirmation } from "@/lib/email";
+import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -61,6 +62,7 @@ export async function POST(req) {
           });
         } catch (err) {
           console.error(`Confirmation email failed for booking ${bookingId}:`, err.message);
+          captureError(err, { tags: { route: "webhooks.stripe", email: "booking-confirmation" }, extra: { bookingId } });
         }
       } else if (error) {
         // Expected on a Stripe retry of an already-processed event -- the

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { isValidConfirmToken } from "@/lib/confirmToken";
+import { captureError } from "@/lib/sentry";
 
 // Clicked from the "Confirm your free recap" email -- activates a
 // free-tier booking that was held at "pending_confirmation" so the guest
@@ -50,6 +51,7 @@ export async function GET(req, { params }) {
     });
   } catch (err) {
     console.error("Confirmation email failed:", err.message);
+    captureError(err, { tags: { route: "bookings.confirm", email: "booking-confirmation" }, extra: { bookingId: booking.id } });
   }
 
   return NextResponse.redirect(new URL(`/booking/success?booking_id=${booking.id}&type=email`, req.url));

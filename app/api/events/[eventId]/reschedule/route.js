@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { hoursUntilEventDate } from "@/lib/eventDate";
+import { captureError } from "@/lib/sentry";
 
 // Self-service rescheduling is only safe while nothing's happened yet --
 // once the pipeline starts editing (or the event is delivered/cancelled),
@@ -110,6 +111,7 @@ export async function POST(req, { params }) {
     });
   } catch (err) {
     console.error("Reschedule confirmation email failed:", err.message);
+    captureError(err, { tags: { route: "events.reschedule", email: "reschedule-confirmation" }, extra: { bookingId: booking.id } });
   }
 
   return NextResponse.json({ success: true, newDate });

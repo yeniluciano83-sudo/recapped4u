@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents } from "@/lib/pricing";
+import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -118,6 +119,7 @@ export async function POST(req) {
     return NextResponse.json({ bookingId: booking.id, checkoutUrl: session.url });
   } catch (err) {
     console.error("Custom quote creation failed:", err);
+    captureError(err, { tags: { route: "admin.custom-quote" } });
     return NextResponse.json({ error: "Failed to create custom quote" }, { status: 500 });
   }
 }

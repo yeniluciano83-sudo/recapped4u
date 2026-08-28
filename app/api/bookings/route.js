@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { generateConfirmToken } from "@/lib/confirmToken";
 import { TIER_PRICES, SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents } from "@/lib/pricing";
+import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -98,6 +99,7 @@ export async function POST(req) {
         });
       } catch (err) {
         console.error("Confirmation email failed:", err.message);
+        captureError(err, { tags: { route: "bookings.create", email: "confirm" }, extra: { bookingId: booking.id } });
       }
 
       return NextResponse.json({ bookingId: booking.id });
@@ -147,6 +149,7 @@ export async function POST(req) {
     return NextResponse.json({ bookingId: booking.id, checkoutUrl: session.url });
   } catch (err) {
     console.error("Booking creation failed:", err);
+    captureError(err, { tags: { route: "bookings.create" } });
     return NextResponse.json({ error: "Booking failed" }, { status: 500 });
   }
 }

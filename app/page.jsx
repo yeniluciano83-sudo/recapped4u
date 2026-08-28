@@ -67,6 +67,20 @@ const FAQS = [
   { q: "What's the Roast Reel add-on?", a: "A specialty add-on, on every tier now, that layers witty, affectionate commentary over your photos — every joke sticks to roasting the moment, never a person's appearance. Every roasted cut — your full recap video and every social cut alike — comes with both a captioned version and a caption-free version of the same video. The Light intensity is complimentary on every tier. Only Spotlight and Luxe can go past Light to Lukewarm or Hot — complimentary on Luxe, a $20 add-on on Spotlight. Available for any event type." },
 ];
 
+// FAQPage structured data so Google can show these as a rich result in
+// search. Escaping "<" (JSON.stringify itself doesn't) means a stray literal
+// "</script>"-like substring in any answer above could never prematurely
+// close this script tag.
+const FAQ_JSON_LD = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+}).replace(/</g, "\\u003c");
+
 // Real output from the actual pipeline (Claude photo scoring, enhancePhoto,
 // generateRoastScript, assembleSlideshow) on a real booking's uploads --
 // nothing here is mocked or hand-edited. See public/samples/.
@@ -89,6 +103,7 @@ export default function HomePage() {
 
   return (
     <div style={{ background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSON_LD }} />
       <div style={{ position: "sticky", top: 0, zIndex: 40, background: "#FAF7F2ee", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", borderBottom: "1px solid #E4DED2" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto", padding: "16px 20px", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", flexShrink: 0 }}>

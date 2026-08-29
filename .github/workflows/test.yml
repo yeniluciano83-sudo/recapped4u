@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # No secrets needed here -- every route.test.js mocks its external
+      # dependencies (supabase, stripe, resend, storage), confirmed live by
+      # running the full suite locally with those env vars unset.
+      - run: npm test
+
+      # Placeholders, not real credentials -- lib/supabase.js and lib/email.js
+      # throw at import time if these are unset, and Next collects page data
+      # for every API route at build (importing the route, and transitively
+      # these clients) even though the build never actually calls out to
+      # them. Confirmed live: build fails without these three, succeeds with
+      # dummy values for exactly these three (no others required).
+      - run: npm run build
+        env:
+          APP_URL: https://example.com
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          RESEND_API_KEY: re_placeholder

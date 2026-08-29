@@ -119,20 +119,20 @@ export default function HomePage() {
   const [sampleSlide, setSampleSlide] = useState(0);
   const sectionRefs = useRef({});
 
-  // Hero before/after: rotates through one real pair per event type (same
-  // data as the Before & After section further down) rather than sitting on
-  // a single static pair. Same auto-advance/pause/reduced-motion pattern as
-  // SampleModal's own carousel below, for the same WCAG "pause moving
-  // content" reasoning -- read once on mount (client-only) rather than
-  // watched live, since a user changing this mid-session is a vanishingly
-  // rare case not worth an extra listener.
+  // Hero before/after: rotates through the same SAMPLE_PAIRS shown in the
+  // "View a sample" modal, rather than sitting on a single static pair --
+  // the hero should preview exactly what that modal expands into. Same
+  // auto-advance/pause/reduced-motion pattern as SampleModal's own carousel
+  // below, for the same WCAG "pause moving content" reasoning -- read once
+  // on mount (client-only) rather than watched live, since a user changing
+  // this mid-session is a vanishingly rare case not worth an extra listener.
   const [heroReducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   const [heroPairIndex, setHeroPairIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
 
   useEffect(() => {
     if (heroPaused || heroReducedMotion) return;
-    const timer = setTimeout(() => { setHeroPairIndex((i) => (i + 1) % HOME_BEFORE_AFTER_PAIRS.length); }, 4000);
+    const timer = setTimeout(() => { setHeroPairIndex((i) => (i + 1) % SAMPLE_PAIRS.length); }, 4000);
     return () => clearTimeout(timer);
   }, [heroPairIndex, heroPaused, heroReducedMotion]);
 
@@ -539,26 +539,25 @@ export default function HomePage() {
             one -- the site's whole pitch is "we polish what your guests
             upload," so the hero should show that, not just say it. Same
             visual language (muted raw photo labeled "Uploaded" next to a
-            rotated "Polished" print) as the "View a sample" modal below, so
-            the two reinforce each other. Rotates through one pair per event
-            type -- same data as the Before & After section further down --
-            rather than sitting on a single pair. */}
+            rotated "Polished" print) as the "View a sample" modal below --
+            in fact the exact same SAMPLE_PAIRS images, so the hero is a
+            preview of what that modal expands into, not a different set. */}
         <div style={{ width: "min(300px, 78vw)", margin: "0 auto 10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "center" }}>
           <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
-            <img src={HOME_BEFORE_AFTER_PAIRS[heroPairIndex].raw} alt={`A guest-uploaded photo from a ${HOME_BEFORE_AFTER_PAIRS[heroPairIndex].event.toLowerCase()}, before editing`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
+            <img src={SAMPLE_PAIRS[heroPairIndex].raw} alt="A guest-uploaded photo, before editing" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
             <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
           </div>
           <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: "rotate(3deg)" }}>
             <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
-              <img src={HOME_BEFORE_AFTER_PAIRS[heroPairIndex].polished} alt={`The same ${HOME_BEFORE_AFTER_PAIRS[heroPairIndex].event.toLowerCase()} photo, polished by our pipeline`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={SAMPLE_PAIRS[heroPairIndex].polished} alt="The same photo, polished by our pipeline" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 28 }}>
-          {HOME_BEFORE_AFTER_PAIRS.map((pair, i) => (
-            <button key={pair.event} onClick={() => setHeroPairIndex(i)} aria-label={`Show the ${pair.event} pair`}
+          {SAMPLE_PAIRS.map((pair, i) => (
+            <button key={pair.raw} onClick={() => setHeroPairIndex(i)} aria-label={`Show sample photo ${i + 1}`}
               style={{ width: 7, height: 7, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", background: i === heroPairIndex ? "#C97A3D" : "#E4DED2", transform: i === heroPairIndex ? "scale(1.3)" : "scale(1)", transition: "background 0.2s, transform 0.2s" }} />
           ))}
           {/* Explicit stop control for the auto-advancing rotation above --

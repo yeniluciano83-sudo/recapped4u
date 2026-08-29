@@ -749,19 +749,6 @@ export default function HomePage() {
               <div style={{ fontSize: 14, fontWeight: 700 }}>+1 (646) 512-9151</div>
             </div>
           </a>
-          {/* Same address every transactional email sends from and invites a
-              reply to ("Questions? Just reply to this email" -- see
-              lib/email.js) -- surfacing it here is naming an existing
-              channel, not adding a new one. */}
-          <a href="mailto:hello@recappedforyou.com" className="press-btn" style={{ ...cardStyle, width: "100%", maxWidth: 320, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #C97A3D, #E0A164)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>
-              <Mail size={18} color="#FFFFFF" />
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: "#C97A3D", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>Email</div>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>hello@recappedforyou.com</div>
-            </div>
-          </a>
         </div>
         <p style={{ fontSize: 15, color: "#6b655c", margin: 0, maxWidth: 520, lineHeight: 1.5 }}>Have a corporate event, or just a question? Reach out.</p>
       </Section>

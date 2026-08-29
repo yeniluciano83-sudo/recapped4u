@@ -72,6 +72,10 @@ const SOCIAL_STYLE_OPTIONS = [...STYLES, { id: "none", label: "No theme (no musi
 
 const EVENT_TYPES = ["Party", "Birthday", "Wedding", "Engagement Party", "Bridal Shower", "Gender Reveal", "Sweet 16/Quinceañera", "Corporate Event", "Family Reunion", "Class/Friend Reunion", "Housewarming", "Retirement Party", "Baby Shower", "Graduation", "Anniversary", "Bachelor/Bachelorette Party", "Religious Ceremony", "Fundraiser/Gala", "Vacation", "Holiday Celebration", "Other"];
 
+// Keep in sync with each StepBlock's own title prop below -- shown above the
+// progress bar so it's clear how many steps remain, not just how far along.
+const STEP_LABELS = { 1: "Tell us about the event", 2: "Choose your package", 3: "Pick your editing style", 4: "Review your booking" };
+
 // Spotlight/Luxe only, per what those tiers actually advertise
 // ("Social cut (60-90 sec) + full cut").
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -208,9 +212,13 @@ function BookingFormInner() {
           <p style={{ fontSize: "13px", color: "#4a4642", margin: 0, lineHeight: 1.5 }}>That confirmation link is invalid or expired. If you're trying to activate a free booking, check your email for the most recent confirmation link, or book again below.</p>
         </div>
       )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+        <span style={{ fontSize: "12px", color: "#4a4642", fontWeight: 600 }}>Step {step} of 4</span>
+        <span style={{ fontSize: "12px", color: "#8a857d" }}>{STEP_LABELS[step]}</span>
+      </div>
       <div style={{ display: "flex", gap: "6px", marginBottom: "28px" }}>
         {[1, 2, 3, 4].map((n) => (
-          <div key={n} style={{ flex: 1, height: "3px", borderRadius: "2px", background: n <= step ? "#C97A3D" : "#E4DED2" }} />
+          <div key={n} style={{ flex: 1, height: "3px", borderRadius: "2px", background: n <= step ? "#C97A3D" : "#E4DED2", transition: "background-color 0.35s ease" }} />
         ))}
       </div>
 

@@ -3,13 +3,13 @@ import React, { useState, useEffect, useCallback, useRef, useId } from "react";
 import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame, AlertTriangle, Plus, Copy, Check, X } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
 
-const STATUS_FLOW = ["booked", "collecting", "editing", "delivered"];
+const STATUS_FLOW = ["booked", "collecting", "analyzing", "editing", "delivered"];
 // Two statuses fall outside the linear happy-path flow above -- pipeline
 // pauses awaiting the host's Roast Reel approval, and host-cancelled --
 // so they're not in STATUS_FLOW (nothing to click through), but still need
 // a real label/color instead of falling back to the raw DB string.
-const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", editing: "Editing", delivered: "Delivered", awaiting_roast_approval: "Awaiting Roast Reel approval", pending_confirmation: "Awaiting email confirmation", cancelled: "Cancelled" };
-const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76", awaiting_roast_approval: "#C97A3D", pending_confirmation: "#8a857d", cancelled: "#8a857d" };
+const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", analyzing: "Analyzing photos", editing: "Editing", delivered: "Delivered", awaiting_roast_approval: "Awaiting Roast Reel approval", pending_confirmation: "Awaiting email confirmation", cancelled: "Cancelled" };
+const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", analyzing: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76", awaiting_roast_approval: "#C97A3D", pending_confirmation: "#8a857d", cancelled: "#8a857d" };
 const TIER_LABEL = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
 // Free is already $0 -- nothing to quote a custom price against.
 const QUOTABLE_TIERS = ["standard", "premium", "keepsake"];
@@ -17,14 +17,21 @@ const EMPTY_QUOTE_FORM = { hostName: "", email: "", eventType: "", eventDate: ""
 const ROAST_LABEL = { light: "Light Roasting", lukewarm: "Lukewarm Roasting", hot: "Hot Roasting" };
 // Keep in sync with GALLERY_EXPIRY_MONTHS in scripts/auto-recap.js.
 const GALLERY_RETENTION = { standard: "2 months", premium: "4 months", keepsake: "6 months" };
-// Keep in sync with STALE_EDITING_HOURS in scripts/poll-and-recap.js -- a
-// booking stuck at "editing" past this long was almost certainly killed
-// mid-run (job timeout, OOM) rather than genuinely still processing, and
-// the scheduler will auto-recover it on its next tick. Surfaced here too so
-// a stuck booking isn't invisible between scheduler runs.
+// Keep in sync with STALE_EDITING_HOURS/STALE_ANALYZING_HOURS in
+// scripts/poll-and-recap.js -- a booking stuck at "editing" (or "analyzing",
+// which can legitimately last hours waiting on a Claude batch, hence the
+// much longer threshold) past these was almost certainly killed mid-run
+// (job timeout, OOM) rather than genuinely still processing, and the
+// scheduler will auto-recover it on its next tick. Surfaced here too so a
+// stuck booking isn't invisible between scheduler runs.
 const STALE_EDITING_HOURS = 1.5;
+const STALE_ANALYZING_HOURS = 12;
 function isStale(b) {
-  return b.status === "editing" && b.processing_started_at && Date.now() - new Date(b.processing_started_at).getTime() > STALE_EDITING_HOURS * 3600000;
+  if (!b.processing_started_at) return false;
+  const elapsedMs = Date.now() - new Date(b.processing_started_at).getTime();
+  if (b.status === "editing") return elapsedMs > STALE_EDITING_HOURS * 3600000;
+  if (b.status === "analyzing") return elapsedMs > STALE_ANALYZING_HOURS * 3600000;
+  return false;
 }
 
 export default function Dashboard() {
@@ -166,7 +173,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px", marginBottom: "24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "10px", marginBottom: "24px" }}>
           {STATUS_FLOW.map((s) => (
             <button key={s} onClick={() => setFilter(filter === s ? "all" : s)} aria-pressed={filter === s} style={{ textAlign: "left", padding: "14px", borderRadius: "12px", cursor: "pointer", background: filter === s ? "#FBEEE0" : "#FFFFFF", border: filter === s ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
               <div style={{ fontSize: "22px", fontWeight: 700, color: STATUS_COLOR[s] }}>{counts[s] || 0}</div>
@@ -377,7 +384,7 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
           <div style={{ fontSize: "12px", color: "#4a4642", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</div>
           {isStale(booking) && (
             <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 12px", borderRadius: "10px", background: "#FBE9E7", border: "1px solid #B3402A44", marginBottom: "10px", fontSize: "13px", color: "#B3402A", fontWeight: 600 }}>
-              <AlertTriangle size={14} /> Stuck at "Editing" for over {STALE_EDITING_HOURS}h -- the scheduler will auto-recover it on its next run.
+              <AlertTriangle size={14} /> Stuck at "{STATUS_LABEL[booking.status]}" for over {booking.status === "analyzing" ? STALE_ANALYZING_HOURS : STALE_EDITING_HOURS}h -- the scheduler will auto-recover it on its next run.
             </div>
           )}
           {!STATUS_FLOW.includes(booking.status) && (

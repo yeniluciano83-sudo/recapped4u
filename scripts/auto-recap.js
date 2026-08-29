@@ -6,14 +6,23 @@
  * (enforced at the upload API), so there's no raw footage to incorporate:
  *
  *   1. Pulls the booking's raw uploaded photos from Supabase + R2
- *   2. Sends each photo to Claude for curation (score + shortlist)
+ *   2. Sends every photo to Claude for curation (score + shortlist) as one
+ *      Batch API request (50% cheaper than a call per photo, see
+ *      lib/batchAnalysis.js) -- submitted in one run, picked back up in a
+ *      later one once results are ready (see submitAnalysisBatch/
+ *      resumeAnalysis below and processAnalyzingBookings in
+ *      poll-and-recap.js)
  *   3. Auto-enhances the shortlisted photos (color, sharpness, style grade)
  *   4. Assembles an automated slideshow video (Ken Burns + crossfades + a
  *      royalty-free soundtrack matched to the booking's editing style)
  *   5. Uploads the finished photos + video to R2 under a deliverable/ path
  *   6. Writes the `deliverables` row and flips the booking to "delivered"
  *
- * Run: node scripts/auto-recap.js <bookingId>
+ * Run: node scripts/auto-recap.js <bookingId>          (submits a batch and
+ *        blocks, polling, until it's done -- fine for a manual run, but
+ *        poll-and-recap.js's cron job never has that long; see below)
+ *      node scripts/auto-recap.js submit <bookingId>   (submit only)
+ *      node scripts/auto-recap.js resume <bookingId>   (check/continue once)
  */
 require("dotenv").config({ path: require("path").join(__dirname,"..",".env.local") });
 const { captureError, flushSentry } = require("../lib/sentry");
@@ -32,17 +41,26 @@ const { assembleSlideshow } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
 const { buildSocialSelections } = require("../lib/socialSelections");
 const { computeGalleryExpiry } = require("../lib/galleryExpiry");
+const {
+  ANALYSIS_PROMPT,
+  parseAnalysisJson,
+  buildAnalysisRequest,
+  BATCH_FALLBACK_HOURS,
+  shouldFallBackToSyncAnalysis,
+  parseBatchResults,
+} = require("../lib/batchAnalysis");
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// Tracks the active run's temp dir so runAutoRecap's catch can clean it up
-// on ANY thrown error, not just the two spots inside runFullPipeline that
-// already did this manually (leaving every other error path -- a failed
-// enhancePhoto/uploadToR2/generateRoastScript/finalizeDelivery call -- to
-// leak the downloaded/enhanced JPEGs on disk). Safe as a module-level
-// variable only because this script processes one booking per process
-// invocation (see runRecap's execSync call in poll-and-recap.js), never
-// concurrent bookings in the same process.
+// Tracks the active run's temp dir so the top-level error handlers can
+// clean it up on ANY thrown error, not just the spots inside
+// continuePipelineWithAnalysis that already do this manually (leaving
+// every other error path -- a failed enhancePhoto/uploadToR2/
+// generateRoastScript/finalizeDelivery call -- to leak the downloaded/
+// enhanced JPEGs on disk). Safe as a module-level variable only because
+// this script processes one booking per process invocation (see
+// poll-and-recap.js's execSync calls), never concurrent bookings in the
+// same process.
 let currentTmpDir = null;
 
 // Royalty-free tracks (Pixabay Content License — free for commercial use,
@@ -169,18 +187,242 @@ async function callClaude(messages, maxTokens = 1024) {
   return data.content.find((b) => b.type === "text")?.text || "";
 }
 
-function parseJson(raw) {
-  return JSON.parse(raw.replace(/```json|```/g, "").trim());
-}
-
+// Synchronous, one-call-per-photo analysis -- the only path this pipeline
+// had until the Batch API was wired in. Kept as analyzePhotosSynchronously'
+// fallback for a booking whose batch is taking unusually long (see
+// shouldFallBackToSyncAnalysis), so it still shares the exact prompt
+// (ANALYSIS_PROMPT) and parsing (parseAnalysisJson) the batch path uses,
+// via lib/batchAnalysis.js, so the two can never silently drift apart.
 // `flagged`/`flag_reason` implement the "Acceptable use" terms (sexually
 // explicit content or nudity isn't allowed) -- checked on every photo.
 async function analyzePhoto(buffer, mediaType) {
-  const prompt = `Analyze this event photo. Also check whether it contains nudity or sexually explicit content that would be inappropriate for a general event recap shared with the host and their guests. Respond ONLY with JSON: {"technical_quality": 1-10, "emotional_strength": 1-10, "moment_type": "string", "notes": "short phrase", "flagged": boolean, "flag_reason": "short phrase or null"}`;
   const raw = await callClaude([
-    { role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data: buffer.toString("base64") } }, { type: "text", text: prompt }] },
+    { role: "user", content: [{ type: "image", source: { type: "base64", media_type: mediaType, data: buffer.toString("base64") } }, { type: "text", text: ANALYSIS_PROMPT }] },
   ]);
-  return parseJson(raw);
+  return parseAnalysisJson(raw);
+}
+
+const ANTHROPIC_API_BASE = "https://api.anthropic.com/v1";
+
+async function anthropicFetch(urlPath, options = {}) {
+  const res = await fetch(`${ANTHROPIC_API_BASE}${urlPath}`, {
+    ...options,
+    headers: {
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...options.headers,
+    },
+  });
+  if (!res.ok) throw new Error(`Anthropic API error ${res.status} (${urlPath}): ${await res.text()}`);
+  return res;
+}
+
+async function createAnalysisBatch(requests) {
+  const res = await anthropicFetch("/messages/batches", { method: "POST", body: JSON.stringify({ requests }) });
+  return res.json();
+}
+
+async function getBatch(batchId) {
+  const res = await anthropicFetch(`/messages/batches/${batchId}`);
+  return res.json();
+}
+
+// Streams the batch's .jsonl results and returns them as an array of
+// parsed-JSON lines -- an event with up to 2000 photos comfortably fits in
+// memory this way (each line is a short analysis object, not the photo
+// itself), so this skips the true streaming the Batches API docs recommend
+// for much larger batches than this pipeline ever produces.
+async function fetchBatchResults(resultsUrl) {
+  const res = await fetch(resultsUrl, {
+    headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch batch results: ${res.status} ${await res.text()}`);
+  const text = await res.text();
+  return text.split("\n").filter(Boolean);
+}
+
+// Terms of Service, "Acceptable use": we can reject specific photos/videos
+// for nudity or sexually explicit content. Flagged uploads are removed
+// from R2 and the uploads table entirely -- not just excluded from the
+// shortlist -- so they don't linger in storage or get a second look. Used
+// by both the synchronous and batch-result analysis paths.
+async function rejectFlaggedUpload(upload, analysis, label) {
+  console.log(`  ⚠ ${upload.storage_key}${label} — flagged (${analysis.flag_reason || "inappropriate content"}), removing`);
+  try {
+    await deleteFromR2(upload.storage_key);
+  } catch (err) {
+    console.error(`    failed to delete ${upload.storage_key} from R2: ${err.message}`);
+  }
+  await supabase.from("uploads").delete().eq("id", upload.id);
+}
+
+async function recordAnalysisFailure(bookingId, upload, errorMessage) {
+  console.error(`  ✗ ${upload.storage_key} — analysis failed: ${errorMessage}`);
+  // Best-effort: a failure logging the failure shouldn't crash the
+  // per-photo loop itself -- the console.error above is the fallback.
+  try {
+    await supabase.from("upload_analysis_failures").insert({
+      booking_id: bookingId,
+      upload_id: upload.id,
+      storage_key: upload.storage_key,
+      error_message: errorMessage,
+    });
+  } catch (logErr) {
+    console.error(`    failed to record analysis failure for ${upload.storage_key}: ${logErr.message}`);
+  }
+}
+
+async function fetchPhotoUploads(bookingId) {
+  const { data: uploads, error } = await supabase.from("uploads").select("*").eq("booking_id", bookingId);
+  if (error) throw error;
+  if (!uploads || uploads.length === 0) throw new Error("No uploads found for this booking");
+  return uploads.filter((u) => u.file_type === "photo");
+}
+
+// The old, fully synchronous analysis path -- one Claude call per photo,
+// blocking. No longer the default (see submitAnalysisBatch), but kept as
+// the fallback resumeAnalysis reaches for when a booking's batch has been
+// processing for longer than BATCH_FALLBACK_HOURS, so a slow batch can
+// never cost a booking its promised turnaround.
+async function analyzePhotosSynchronously(bookingId) {
+  const photoUploads = await fetchPhotoUploads(bookingId);
+  console.log(`Analyzing ${photoUploads.length} photo(s) synchronously (batch fallback)...`);
+
+  const analyzed = [];
+  for (const upload of photoUploads) {
+    try {
+      const buffer = await downloadFromR2(upload.storage_key);
+      const ext = path.extname(upload.storage_key).toLowerCase();
+      const mediaType = ext === ".png" ? "image/png" : "image/jpeg";
+      const analysis = await analyzePhoto(buffer, mediaType);
+      if (analysis.flagged) {
+        await rejectFlaggedUpload(upload, analysis, "");
+        continue;
+      }
+      analyzed.push({ upload, buffer, analysis });
+      console.log(`  ✓ ${upload.storage_key} — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
+    } catch (err) {
+      await recordAnalysisFailure(bookingId, upload, err.message);
+    }
+  }
+  return analyzed;
+}
+
+// Phase 1 of the batched pipeline: downloads every raw photo, submits one
+// Message Batch request per photo, and stores the batch id -- then returns
+// immediately without waiting. See resumeAnalysis for phase 2.
+async function submitAnalysisBatch(bookingId) {
+  console.log(`Submitting analysis batch for booking ${bookingId}`);
+
+  const { data: booking, error: bookingErr } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
+  if (bookingErr || !booking) throw new Error("Booking not found");
+
+  // Set here (not just by poll-and-recap.js's claim) so a manual
+  // `node scripts/auto-recap.js submit <id>` run -- which never goes
+  // through that claim -- is also covered by the stale-booking recovery in
+  // recoverStaleBookings().
+  await supabase.from("bookings").update({ status: "analyzing", processing_started_at: new Date().toISOString() }).eq("id", bookingId);
+
+  const photoUploads = await fetchPhotoUploads(bookingId);
+  console.log(`Found ${photoUploads.length} raw photos. Downloading and building the analysis batch...`);
+
+  const requests = [];
+  for (const upload of photoUploads) {
+    try {
+      const buffer = await downloadFromR2(upload.storage_key);
+      const ext = path.extname(upload.storage_key).toLowerCase();
+      const mediaType = ext === ".png" ? "image/png" : "image/jpeg";
+      requests.push(buildAnalysisRequest(upload.id, buffer, mediaType));
+    } catch (err) {
+      await recordAnalysisFailure(bookingId, upload, `Download failed before batch submission: ${err.message}`);
+    }
+  }
+
+  if (requests.length === 0) {
+    await supabase.from("bookings").update({ status: "collecting", processing_started_at: null, batch_id: null }).eq("id", bookingId);
+    throw new Error(`No downloadable photos for booking ${bookingId} -- reverted status to "collecting".`);
+  }
+
+  const batch = await createAnalysisBatch(requests);
+  console.log(`Batch ${batch.id} submitted with ${requests.length} photo(s), status: ${batch.processing_status}`);
+
+  await supabase.from("bookings").update({ batch_id: batch.id }).eq("id", bookingId);
+}
+
+// Turns a finished batch's results into the same { upload, buffer,
+// analysis } shape analyzePhotosSynchronously produces -- re-downloads each
+// non-flagged photo's buffer from R2 since phase 1's buffers don't survive
+// across a process boundary (submit and resume can run in entirely
+// separate poll-and-recap.js ticks, hours apart).
+async function buildAnalyzedFromBatchResults(bookingId, resultsUrl) {
+  const photoUploads = await fetchPhotoUploads(bookingId);
+  const resultLines = await fetchBatchResults(resultsUrl);
+  const resultsByUploadId = parseBatchResults(resultLines);
+
+  const analyzed = [];
+  for (const upload of photoUploads) {
+    const result = resultsByUploadId.get(upload.id);
+    if (!result) {
+      // Every photo submitted in the batch gets exactly one custom_id-
+      // matched result, even on failure -- shouldn't happen, but skip
+      // rather than crash the whole booking if it ever does.
+      console.error(`  ✗ ${upload.storage_key} — no batch result found, skipping`);
+      continue;
+    }
+    if (result.error) {
+      await recordAnalysisFailure(bookingId, upload, result.error);
+      continue;
+    }
+    if (result.analysis.flagged) {
+      await rejectFlaggedUpload(upload, result.analysis, " (batch)");
+      continue;
+    }
+    try {
+      const buffer = await downloadFromR2(upload.storage_key);
+      analyzed.push({ upload, buffer, analysis: result.analysis });
+      console.log(`  ✓ ${upload.storage_key} — quality ${result.analysis.technical_quality}, emotion ${result.analysis.emotional_strength}`);
+    } catch (err) {
+      await recordAnalysisFailure(bookingId, upload, `Download failed after batch analysis: ${err.message}`);
+    }
+  }
+  return analyzed;
+}
+
+// Phase 2: called once per poll-and-recap.js tick for every "analyzing"
+// booking. Checks the booking's batch; if it's ended, builds `analyzed`
+// from the results and continues the pipeline. If it's still running and
+// past BATCH_FALLBACK_HOURS, falls back to the old synchronous path
+// instead of waiting any longer. Otherwise does nothing this tick.
+// Returns true if it took a terminal action (continued the pipeline),
+// false if the batch is still healthy and just needs more time.
+async function resumeAnalysis(bookingId) {
+  const { data: booking, error: bookingErr } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
+  if (bookingErr || !booking) throw new Error("Booking not found");
+
+  if (booking.status !== "analyzing") {
+    console.log(`Booking ${bookingId} is no longer "analyzing" (status: ${booking.status}) -- nothing to resume.`);
+    return true;
+  }
+  if (!booking.batch_id) throw new Error(`Booking ${bookingId} is "analyzing" but has no batch_id`);
+
+  const batch = await getBatch(booking.batch_id);
+  console.log(`Batch ${booking.batch_id} for booking ${bookingId}: ${batch.processing_status} (${JSON.stringify(batch.request_counts)})`);
+
+  let analyzed;
+  if (batch.processing_status === "ended") {
+    analyzed = await buildAnalyzedFromBatchResults(bookingId, batch.results_url);
+  } else if (shouldFallBackToSyncAnalysis(booking.processing_started_at)) {
+    console.log(`Batch ${booking.batch_id} has been processing for over ${BATCH_FALLBACK_HOURS}h -- falling back to synchronous per-photo analysis for booking ${bookingId}.`);
+    analyzed = await analyzePhotosSynchronously(bookingId);
+  } else {
+    console.log(`Batch ${booking.batch_id} still processing -- will check again next run.`);
+    return false;
+  }
+
+  await supabase.from("bookings").update({ status: "editing", processing_started_at: new Date().toISOString(), batch_id: null }).eq("id", bookingId);
+  await continuePipelineWithAnalysis(booking, analyzed);
+  return true;
 }
 
 // A photo can be emotionally beautiful but score low on technical_quality
@@ -210,24 +452,39 @@ function buildGallerySelection(analyzed, cap) {
   return cap === Infinity ? ranked : ranked.slice(0, cap);
 }
 
-async function runAutoRecap(bookingId) {
-  console.log(`Starting automated recap for booking ${bookingId}`);
+// Manual-run-only: blocks and polls resumeAnalysis until the batch
+// submitAnalysisBatch just kicked off finishes (or the fallback threshold
+// is reached), then returns once the rest of the pipeline has run. Fine
+// for an operator running this by hand, but poll-and-recap.js never calls
+// this -- its cron job has a hard 20-minute budget (see
+// .github/workflows/recap-scheduler.yml), far shorter than a batch can
+// take, so it calls submitAnalysisBatch and resumeAnalysis as two separate
+// steps across separate scheduled ticks instead (see
+// processAnalyzingBookings there).
+const MANUAL_POLL_INTERVAL_MS = 30_000;
+async function waitForAnalysisAndContinue(bookingId) {
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const done = await resumeAnalysis(bookingId);
+    if (done) return;
+    await new Promise((resolve) => setTimeout(resolve, MANUAL_POLL_INTERVAL_MS));
+  }
+}
 
-  const { data: booking, error: bookingErr } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
-  if (bookingErr || !booking) throw new Error("Booking not found");
-
+async function withStatusRevertOnFailure(bookingId, fn) {
   try {
-    return await runFullPipeline(booking);
+    return await fn();
   } catch (err) {
-    // Without this, any failure partway through runFullPipeline (network
-    // blip, API error, anything) leaves the booking stuck at "editing"
+    // Without this, any failure partway through submitting/resuming/
+    // continuing leaves the booking stuck at "analyzing" or "editing"
     // forever -- processCollectingBookings only re-queries
     // status === "collecting", so nothing would ever retry it
     // automatically. Revert so the next scheduled run picks it back up.
-    // Guarded on status still being "editing" so this doesn't clobber a
-    // status change that happened for another reason mid-run (e.g. the
-    // zero-shortlist case above already reverts to "collecting" itself,
-    // or the host cancelled the booking while this was running).
+    // Guarded per-status so this can't clobber a status change that
+    // happened for another reason mid-run (e.g. continuePipelineWithAnalysis's
+    // own zero-shortlist case already reverts to "collecting" itself, or the
+    // host cancelled the booking while this was running).
+    await supabase.from("bookings").update({ status: "collecting", processing_started_at: null, batch_id: null }).eq("id", bookingId).eq("status", "analyzing");
     await supabase.from("bookings").update({ status: "collecting", processing_started_at: null }).eq("id", bookingId).eq("status", "editing");
     if (currentTmpDir) {
       fs.rmSync(currentTmpDir, { recursive: true, force: true });
@@ -237,70 +494,30 @@ async function runAutoRecap(bookingId) {
   }
 }
 
+async function runAutoRecap(bookingId) {
+  console.log(`Starting automated recap for booking ${bookingId}`);
+  return withStatusRevertOnFailure(bookingId, async () => {
+    await submitAnalysisBatch(bookingId);
+    await waitForAnalysisAndContinue(bookingId);
+  });
+}
 
-async function runFullPipeline(booking) {
+async function runSubmitOnly(bookingId) {
+  return withStatusRevertOnFailure(bookingId, () => submitAnalysisBatch(bookingId));
+}
+
+async function runResumeOnly(bookingId) {
+  return withStatusRevertOnFailure(bookingId, () => resumeAnalysis(bookingId));
+}
+
+// The back half of the pipeline -- everything that happens once a photo's
+// analysis is known, regardless of whether it came from a finished batch
+// or the synchronous fallback. Unchanged in behavior from before the Batch
+// API was wired in; only the analysis step above it changed.
+async function continuePipelineWithAnalysis(booking, analyzed) {
   const bookingId = booking.id;
-
-  // processing_started_at set here (not just by poll-and-recap.js's claim)
-  // so a manual `node scripts/auto-recap.js <id>` run -- which never goes
-  // through that claim -- is also covered by the stale-editing recovery in
-  // recoverStaleEditingBookings().
-  await supabase.from("bookings").update({ status: "editing", processing_started_at: new Date().toISOString() }).eq("id", bookingId);
-
-  const { data: uploads, error: uploadsErr } = await supabase.from("uploads").select("*").eq("booking_id", bookingId);
-  if (uploadsErr) throw uploadsErr;
-  if (!uploads || uploads.length === 0) throw new Error("No uploads found for this booking");
-
-  const photoUploads = uploads.filter((u) => u.file_type === "photo");
-
-  console.log(`Found ${photoUploads.length} raw photos. Downloading and analyzing...`);
-
-  const analyzed = [];
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-"));
   currentTmpDir = tmpDir;
-
-  // Terms of Service, "Acceptable use": we can reject specific photos/videos
-  // for nudity or sexually explicit content. Flagged uploads are removed
-  // from R2 and the uploads table entirely -- not just excluded from the
-  // shortlist -- so they don't linger in storage or get a second look.
-  async function rejectFlaggedUpload(upload, analysis, label) {
-    console.log(`  ⚠ ${upload.storage_key}${label} — flagged (${analysis.flag_reason || "inappropriate content"}), removing`);
-    try {
-      await deleteFromR2(upload.storage_key);
-    } catch (err) {
-      console.error(`    failed to delete ${upload.storage_key} from R2: ${err.message}`);
-    }
-    await supabase.from("uploads").delete().eq("id", upload.id);
-  }
-
-  for (const upload of photoUploads) {
-    try {
-      const buffer = await downloadFromR2(upload.storage_key);
-      const ext = path.extname(upload.storage_key).toLowerCase();
-      const mediaType = ext === ".png" ? "image/png" : "image/jpeg";
-      const analysis = await analyzePhoto(buffer, mediaType);
-      if (analysis.flagged) {
-        await rejectFlaggedUpload(upload, analysis, "");
-        continue;
-      }
-      analyzed.push({ upload, buffer, analysis });
-      console.log(`  ✓ ${upload.storage_key} — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
-    } catch (err) {
-      console.error(`  ✗ ${upload.storage_key} — analysis failed: ${err.message}`);
-      // Best-effort: a failure logging the failure shouldn't crash the
-      // per-photo loop itself -- the console.error above is the fallback.
-      try {
-        await supabase.from("upload_analysis_failures").insert({
-          booking_id: bookingId,
-          upload_id: upload.id,
-          storage_key: upload.storage_key,
-          error_message: err.message,
-        });
-      } catch (logErr) {
-        console.error(`    failed to record analysis failure for ${upload.storage_key}: ${logErr.message}`);
-      }
-    }
-  }
 
   // Spotlight/Luxe can choose "social cuts of every photo" instead of a
   // curated full video (booking.delivery_format) -- in that mode there's no
@@ -422,8 +639,8 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   let noRoastVideoKey = null;
 
   // "Social cuts of every photo" delivery format has no full video at all --
-  // see useAllPhotoSocialCuts in runFullPipeline, the only caller that ever
-  // passes skipFullVideo = true.
+  // see useAllPhotoSocialCuts in continuePipelineWithAnalysis, the only
+  // caller that ever passes skipFullVideo = true.
   if (!skipFullVideo) {
     console.log("Assembling automated slideshow video...");
     const videoLocalPath = path.join(tmpDir, "recap.mp4");
@@ -457,11 +674,11 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   }
 
   // The social cut(s)' photo selections were already uploaded to R2 in
-  // runFullPipeline -- recover them here rather than needing anything still
-  // in memory from that run. If Roast Reel is enabled, each cut gets its
-  // own roast script generated from its own photo selection (cuts don't
-  // share a selection with each other or with the full video, so the
-  // full-video script above can't just be reused/sliced), plus a
+  // continuePipelineWithAnalysis -- recover them here rather than needing
+  // anything still in memory from that run. If Roast Reel is enabled, each
+  // cut gets its own roast script generated from its own photo selection
+  // (cuts don't share a selection with each other or with the full video,
+  // so the full-video script above can't just be reused/sliced), plus a
   // caption-free twin of that same cut, same as full_video_no_roast_key
   // already does for the full video. roast_enabled is a single
   // booking-level flag, not per-cut, so socialVideoNoRoastKeys always ends
@@ -616,17 +833,25 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 }
 
 if (require.main === module) {
-  const bookingId = process.argv[2];
+  const [arg1, arg2] = process.argv.slice(2);
+  const isSubcommand = arg1 === "submit" || arg1 === "resume";
+  const bookingId = isSubcommand ? arg2 : arg1;
+
   if (!bookingId) {
     console.log("Usage: node scripts/auto-recap.js <bookingId>");
+    console.log("       node scripts/auto-recap.js submit <bookingId>  (submit the analysis batch only)");
+    console.log("       node scripts/auto-recap.js resume <bookingId>  (check/continue after a submitted batch)");
     process.exit(1);
   }
-  runAutoRecap(bookingId)
+
+  const run = arg1 === "submit" ? runSubmitOnly : arg1 === "resume" ? runResumeOnly : runAutoRecap;
+
+  run(bookingId)
     .then(
       () => 0,
       (err) => {
         console.error("Pipeline failed:", err);
-        captureError(err, { tags: { script: "auto-recap", step: "run-auto-recap" }, extra: { bookingId } });
+        captureError(err, { tags: { script: "auto-recap", step: isSubcommand ? arg1 : "run-auto-recap" }, extra: { bookingId } });
         return 1;
       }
     )
@@ -637,4 +862,4 @@ if (require.main === module) {
     .then((exitCode) => flushSentry().then(() => process.exit(exitCode)));
 }
 
-module.exports = { runAutoRecap };
+module.exports = { runAutoRecap, runSubmitOnly, runResumeOnly };

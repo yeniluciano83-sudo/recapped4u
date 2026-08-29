@@ -158,7 +158,7 @@ export default function EventUploadPage() {
 
   const notActivated = status === "pending_confirmation";
   const isCancelled = status === "cancelled";
-  const isProcessing = status === "editing";
+  const isProcessing = status === "analyzing" || status === "editing";
   const isDelivered = status === "delivered";
   const uploadsClosed = notActivated || isCancelled || isProcessing || isDelivered || Boolean(eventInfo?.uploads_closed_at);
 

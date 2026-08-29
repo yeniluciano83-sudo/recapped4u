@@ -97,7 +97,7 @@ export default function CancelBookingPage() {
     );
   }
 
-  if (["editing", "awaiting_roast_approval"].includes(booking?.status)) {
+  if (["analyzing", "editing", "awaiting_roast_approval"].includes(booking?.status)) {
     return (
       <PageShell>
         <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />

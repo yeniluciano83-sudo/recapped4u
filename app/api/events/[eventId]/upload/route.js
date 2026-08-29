@@ -42,10 +42,14 @@ export async function POST(req, { params }) {
   // Catches a booking that reached its tier's natural deadline (as opposed
   // to the host manually closing early via close-uploads, which sets
   // uploads_closed_at below) -- the scheduler claims those straight into
-  // "editing" without ever touching uploads_closed_at, so relying on that
+  // "analyzing" without ever touching uploads_closed_at, so relying on that
   // column alone left a gap where uploads could still land mid-pipeline-run
   // or even after delivery, invisible to the recap that had already run.
-  if (booking.status === "editing" || booking.status === "delivered") {
+  // "analyzing" specifically: its raw photos were already pulled into a
+  // Claude batch by submitAnalysisBatch (scripts/auto-recap.js) at the
+  // moment of submission -- an upload landing after that would silently
+  // never get analyzed at all, not just missed by this run.
+  if (booking.status === "analyzing" || booking.status === "editing" || booking.status === "delivered") {
     return NextResponse.json(
       { error: "This event's recap has already started processing -- new uploads can no longer be added." },
       { status: 400 }
@@ -212,6 +216,7 @@ export async function POST(req, { params }) {
       .from("bookings")
       .update({ status: "collecting" })
       .eq("id", booking.id)
+      .neq("status", "analyzing")
       .neq("status", "editing")
       .neq("status", "delivered")
       .neq("status", "cancelled");

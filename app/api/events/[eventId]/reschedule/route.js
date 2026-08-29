@@ -77,7 +77,7 @@ export async function POST(req, { params }) {
   }
 
   // Guarded on status still matching what we just read: the pipeline's
-  // atomic claim (collecting -> editing, see poll-and-recap.js) could land
+  // atomic claim (collecting -> analyzing, see poll-and-recap.js) could land
   // in the gap between the RESCHEDULABLE_STATUSES check above and this
   // update -- without this guard, that race lets event_date change on a
   // booking that's already mid-processing, desyncing its deadlines from

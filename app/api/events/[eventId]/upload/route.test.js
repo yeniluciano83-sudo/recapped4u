@@ -35,6 +35,16 @@ describe("POST /api/events/[eventId]/upload -- status guards", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects an event that's already processing (analyzing), even with uploads_closed_at unset", async () => {
+    // Its raw photos were already pulled into a Claude batch at submission
+    // time -- an upload landing after that would never get analyzed at all.
+    sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "analyzing" }, error: null });
+    const res = await POST(makeRequest(), { params: { eventId: "slug-1" } });
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.error).toMatch(/already started processing/);
+  });
+
   it("rejects an event that's already processing (editing), even with uploads_closed_at unset", async () => {
     // This is the real gap: a booking claimed via its natural deadline (not
     // a manual close-uploads call) never gets uploads_closed_at set at all.

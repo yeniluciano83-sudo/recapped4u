@@ -6,15 +6,23 @@
  *
  *   1. Finds bookings still "collecting" whose event was >= that tier's
  *      upload deadline ago (see TIER_SCHEDULE) -- or whose host has
- *      manually closed uploads early via the QR share page -- and runs
- *      the full auto-recap pipeline for them.
- *   2. Finds bookings still "collecting" past that tier's reminder
+ *      manually closed uploads early via the QR share page -- and submits
+ *      each one's photo analysis as a Claude Message Batch (50% cheaper
+ *      than analyzing one photo at a time, see lib/batchAnalysis.js).
+ *   2. Checks every booking still "analyzing" from a prior run's batch --
+ *      once it's done (or has taken too long, see BATCH_FALLBACK_HOURS),
+ *      continues that booking through the rest of the auto-recap pipeline
+ *      (enhancement, video assembly, delivery). Submitting and finishing
+ *      are two separate steps, possibly hours apart across separate runs
+ *      of this script, because a batch can take far longer than this
+ *      scheduler's own 20-minute job budget allows for.
+ *   3. Finds bookings still "collecting" past that tier's reminder
  *      threshold (but before the deadline), with no reminder sent yet,
  *      and emails the host a heads-up that processing starts soon.
- *   3. Permanently deletes raw guest uploads whose purge_at (set to 30 days
+ *   4. Permanently deletes raw guest uploads whose purge_at (set to 30 days
  *      after delivery, see finalizeDelivery in auto-recap.js) has passed --
  *      matching the retention policy already promised in the UI copy.
- *   4. Permanently deletes any booking's finished gallery/video (R2 objects
+ *   5. Permanently deletes any booking's finished gallery/video (R2 objects
  *      + the deliverables row) whose gallery_purge_at (set to each tier's
  *      retention window after delivery -- 7 days Free, 2/4/6 months
  *      Highlight/Spotlight/Luxe) has passed, matching the retention policy
@@ -52,8 +60,15 @@ const TIER_SCHEDULE = {
   keepsake: { processHours: 24 * 14, reminderHours: 24 * 7 },
 };
 
-function runRecap(bookingId) {
-  execSync(`node "${path.join(__dirname, "auto-recap.js")}" ${bookingId}`, {
+function runSubmitAnalysis(bookingId) {
+  execSync(`node "${path.join(__dirname, "auto-recap.js")}" submit ${bookingId}`, {
+    stdio: "inherit",
+    cwd: path.join(__dirname, ".."),
+  });
+}
+
+function runResumeAnalysis(bookingId) {
+  execSync(`node "${path.join(__dirname, "auto-recap.js")}" resume ${bookingId}`, {
     stdio: "inherit",
     cwd: path.join(__dirname, ".."),
   });
@@ -117,9 +132,12 @@ async function processCollectingBookings(failures) {
       // from their own initial query and both process it, generating
       // duplicate roast scripts/emails. The conditional .eq("status",
       // "collecting") means only one run's UPDATE actually matches a row.
+      // Claims into "analyzing" (not "editing") -- submitting the photo
+      // analysis batch is the first step now, see processAnalyzingBookings
+      // below for what picks it up once that batch is done.
       const { data: claimed } = await supabase
         .from("bookings")
-        .update({ status: "editing", processing_started_at: new Date().toISOString() })
+        .update({ status: "analyzing", processing_started_at: new Date().toISOString() })
         .eq("id", booking.id)
         .eq("status", "collecting")
         .select("id")
@@ -131,12 +149,12 @@ async function processCollectingBookings(failures) {
       }
 
       const reason = closedEarly ? "host closed uploads early" : `event was ~${Math.round(hours)}h ago`;
-      console.log(`\nProcessing booking ${booking.id} (${booking.tier}, ${reason})...`);
+      console.log(`\nSubmitting analysis batch for booking ${booking.id} (${booking.tier}, ${reason})...`);
       try {
-        runRecap(booking.id);
+        runSubmitAnalysis(booking.id);
       } catch (err) {
         console.error(`Booking ${booking.id} failed:`, err.message);
-        captureError(err, { tags: { script: "poll-and-recap", step: "run-recap" }, extra: { bookingId: booking.id } });
+        captureError(err, { tags: { script: "poll-and-recap", step: "submit-analysis" }, extra: { bookingId: booking.id } });
         failures.push({ bookingId: booking.id, error: err.message });
       }
       continue;
@@ -184,40 +202,83 @@ async function processCollectingBookings(failures) {
   }
 }
 
-// A real run (photo analysis + video encoding for a handful of bookings)
-// finishes in minutes. If a booking is still "editing" after this long, the
-// process that claimed it was killed before reaching runAutoRecap's own
+// Every "analyzing" booking has a Claude photo-analysis batch in flight
+// (submitted by processCollectingBookings above, see lib/batchAnalysis.js
+// for why this can't just block and wait inside that same run). Checked
+// again on every tick: most batches are done well within this scheduler's
+// 3-hour cadence, and auto-recap.js's resume step falls back to synchronous
+// analysis on its own once a batch has taken too long, so this loop just
+// needs to keep giving each one another chance to finish.
+async function processAnalyzingBookings(failures) {
+  const { data: bookings, error } = await supabase.from("bookings").select("*").eq("status", "analyzing");
+  if (error) {
+    console.error("Failed to query analyzing bookings:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-analyzing" } });
+    return;
+  }
+  if (!bookings || bookings.length === 0) return;
+
+  console.log(`\nChecking ${bookings.length} booking(s) with an in-flight analysis batch...`);
+  for (const booking of sortByProcessingPriority(bookings)) {
+    try {
+      runResumeAnalysis(booking.id);
+    } catch (err) {
+      console.error(`Resuming analysis for booking ${booking.id} failed:`, err.message);
+      captureError(err, { tags: { script: "poll-and-recap", step: "resume-analysis" }, extra: { bookingId: booking.id } });
+      failures.push({ bookingId: booking.id, error: err.message });
+    }
+  }
+}
+
+// A real synchronous run (photo analysis + video encoding for a handful of
+// bookings) finishes in minutes. If a booking is still "editing" after this
+// long, the process that claimed it was killed before reaching its own
 // catch block (job timeout -- see the 20-minute limit in
 // .github/workflows/recap-scheduler.yml -- OOM, or a crash) and never
-// reverted itself. Left alone, that booking is invisible forever: this
-// query is the only thing that ever looks at status = "editing" again.
+// reverted itself. Left alone, that booking is invisible forever: this is
+// the only thing that ever looks at status = "editing" again.
 const STALE_EDITING_HOURS = 1.5;
 
-async function recoverStaleEditingBookings(failures) {
-  const staleCutoff = new Date(Date.now() - STALE_EDITING_HOURS * 60 * 60 * 1000).toISOString();
+// "analyzing" bookings wait on a Claude batch that can legitimately take
+// hours -- BATCH_FALLBACK_HOURS (lib/batchAnalysis.js) normally moves a
+// booking out of "analyzing" on its own well before this, so this threshold
+// is only meant to catch a genuinely abandoned booking (the submit/resume
+// process itself was killed before it could revert), not a slow-but-healthy
+// batch -- set comfortably past the fallback threshold plus a couple of
+// retry cycles at this scheduler's 3-hour cadence.
+const STALE_ANALYZING_HOURS = 12;
+
+async function recoverStaleBookings(failures) {
+  await recoverStaleBookingsInStatus(failures, "editing", STALE_EDITING_HOURS);
+  await recoverStaleBookingsInStatus(failures, "analyzing", STALE_ANALYZING_HOURS);
+}
+
+async function recoverStaleBookingsInStatus(failures, status, staleHours) {
+  const staleCutoff = new Date(Date.now() - staleHours * 60 * 60 * 1000).toISOString();
   const { data: stale, error } = await supabase
     .from("bookings")
     .select("id, host_name, processing_started_at")
-    .eq("status", "editing")
+    .eq("status", status)
     .lt("processing_started_at", staleCutoff);
 
   if (error) {
-    console.error("Failed to query stale editing bookings:", error.message);
-    captureError(error, { tags: { script: "poll-and-recap", step: "query-stale-editing" } });
+    console.error(`Failed to query stale ${status} bookings:`, error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: `query-stale-${status}` } });
     return;
   }
   if (!stale || stale.length === 0) return;
 
-  console.log(`\nFound ${stale.length} booking(s) stuck in "editing" for over ${STALE_EDITING_HOURS}h -- recovering...`);
+  console.log(`\nFound ${stale.length} booking(s) stuck in "${status}" for over ${staleHours}h -- recovering...`);
   for (const booking of stale) {
     // Guarded the same way as the claim above: only revert if it's still
-    // "editing" right now, so this can't clobber a run that finishes (or
-    // gets cancelled) in the moment between the query above and this update.
+    // in this status right now, so this can't clobber a run that finishes
+    // (or gets cancelled) in the moment between the query above and this
+    // update.
     const { data: recovered } = await supabase
       .from("bookings")
-      .update({ status: "collecting", processing_started_at: null })
+      .update({ status: "collecting", processing_started_at: null, batch_id: null })
       .eq("id", booking.id)
-      .eq("status", "editing")
+      .eq("status", status)
       .select("id")
       .maybeSingle();
 
@@ -225,7 +286,7 @@ async function recoverStaleEditingBookings(failures) {
       console.log(`Recovered booking ${booking.id} (${booking.host_name}) -- reset to "collecting" for retry.`);
       failures.push({
         bookingId: booking.id,
-        error: `Stuck in "editing" for over ${STALE_EDITING_HOURS}h (likely killed by a job timeout mid-run) -- automatically reset to "collecting" and will retry next run.`,
+        error: `Stuck in "${status}" for over ${staleHours}h (likely killed by a job timeout mid-run) -- automatically reset to "collecting" and will retry next run.`,
       });
     }
   }
@@ -297,7 +358,11 @@ async function purgeExpiredGalleries(failures) {
 async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
   const failures = [];
-  await recoverStaleEditingBookings(failures);
+  await recoverStaleBookings(failures);
+  // Resume already-in-flight batches before submitting new ones, so
+  // finishing existing work is prioritized if this run is ever tight on
+  // its 20-minute budget.
+  await processAnalyzingBookings(failures);
   await processCollectingBookings(failures);
   await purgeExpiredUploads(failures);
   await purgeExpiredGalleries(failures);

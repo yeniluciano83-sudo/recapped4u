@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { captureError } from "@/lib/sentry";
 
-const VALID_STATUSES = ["booked", "collecting", "editing", "delivered"];
+const VALID_STATUSES = ["booked", "collecting", "analyzing", "editing", "delivered"];
 
 export async function PATCH(req, { params }) {
   const { id } = params;

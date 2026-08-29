@@ -55,8 +55,11 @@ export async function POST(req, { params }) {
 
   // Once the recap pipeline has started (or finished), silently cancelling
   // out from under it would let a refunded/cancelled booking still get
-  // delivered -- same reasoning as RESCHEDULABLE_STATUSES in reschedule/route.js.
-  if (["editing", "awaiting_roast_approval", "delivered"].includes(booking.status)) {
+  // delivered -- same reasoning as RESCHEDULABLE_STATUSES in
+  // reschedule/route.js. "analyzing" counts as started: its photos are
+  // already in a paid-for Claude batch by the time a booking reaches it
+  // (see submitAnalysisBatch in scripts/auto-recap.js).
+  if (["analyzing", "editing", "awaiting_roast_approval", "delivered"].includes(booking.status)) {
     return NextResponse.json(
       { error: "This event is already being processed and can't be cancelled online — reply to your confirmation email and we'll help." },
       { status: 400 }

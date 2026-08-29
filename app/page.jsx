@@ -117,9 +117,6 @@ export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSampleModal, setShowSampleModal] = useState(false);
   const [sampleSlide, setSampleSlide] = useState(0);
-  // Gates the hero preview's autoplay loop below -- same check SampleModal
-  // makes for its own carousel.
-  const [reducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   const sectionRefs = useRef({});
 
   const scrollTo = (id) => {
@@ -521,24 +518,23 @@ export default function HomePage() {
           You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery — with an optional splash of humor.
         </p>
 
-        {/* A real, actual-pipeline sample video, not just a description of
-            one -- the site's whole pitch is "we turn your photos into a
-            video," so the hero should show that, not just say it. Muted
-            autoplay loop is purely a decorative preview of the same clip
-            "View a sample" below opens with full controls -- aria-hidden so
-            a screen reader doesn't announce it twice. */}
-        <div style={{ width: "min(220px, 60vw)", aspectRatio: "9 / 16", margin: "0 auto 28px", borderRadius: 20, overflow: "hidden", background: "#000", boxShadow: "0 18px 40px rgba(33,31,29,0.18), 0 0 0 5px #FFFFFF, 0 0 0 6px #E4DED2" }}>
-          <video
-            aria-hidden="true"
-            src="/samples/sample-social-cut-hot.mp4"
-            poster="/samples/sample-poster.jpg"
-            autoPlay={!reducedMotion}
-            loop={!reducedMotion}
-            muted
-            playsInline
-            preload="metadata"
-            style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
-          />
+        {/* A real, actual-pipeline before/after, not just a description of
+            one -- the site's whole pitch is "we polish what your guests
+            upload," so the hero should show that, not just say it. Same
+            pair (and the same visual language -- muted raw photo labeled
+            "Uploaded" next to a rotated "Polished" print) as the "View a
+            sample" modal below, so the two reinforce each other. */}
+        <div style={{ width: "min(300px, 78vw)", margin: "0 auto 28px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "center" }}>
+          <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
+            <img src={SAMPLE_PAIRS[0].raw} alt="A guest-uploaded photo, before editing" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
+            <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
+          </div>
+          <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: "rotate(3deg)" }}>
+            <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
+              <img src={SAMPLE_PAIRS[0].polished} alt="The same photo, polished by our pipeline" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+            <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
+          </div>
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 28 }}>

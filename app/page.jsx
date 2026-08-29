@@ -99,16 +99,6 @@ const SAMPLE_PAIRS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
   polished: `/samples/pair-${n}-polished.jpg`,
 }));
 
-// Same before/after idea as SAMPLE_PAIRS above, but one real pair per event
-// type, shown directly on the page for the Before & After section below.
-const HOME_BEFORE_AFTER_PAIRS = [
-  { event: "Wedding", raw: "/images/before-after-wedding-raw.jpg", polished: "/images/before-after-wedding-enhanced.jpg" },
-  { event: "Birthday", raw: "/images/before-after-birthday-raw.jpg", polished: "/images/before-after-birthday-enhanced.jpg" },
-  { event: "Graduation", raw: "/images/before-after-graduation-raw.jpg", polished: "/images/before-after-graduation-enhanced.jpg" },
-  { event: "Garden party", raw: "/images/before-after-garden-raw.jpg", polished: "/images/before-after-garden-enhanced.jpg" },
-  { event: "Reunion", raw: "/images/before-after-reunion-raw.jpg", polished: "/images/before-after-reunion-enhanced.jpg" },
-];
-
 export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -599,30 +589,6 @@ export default function HomePage() {
       <div style={{ display: "flex", justifyContent: "center", overflowX: "hidden" }}>
         <EventPhotoScene />
       </div>
-
-      <Section id="before-after" refs={sectionRefs} title="Before & After" icon={<Wand2 size={20} color="#C97A3D" />} band="white">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 28 }}>
-          {HOME_BEFORE_AFTER_PAIRS.map((pair) => (
-            <div key={pair.event}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "center" }}>
-                <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
-                  <img src={pair.raw} alt={`Guest-uploaded photo from a ${pair.event.toLowerCase()}, before editing`} loading="lazy"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
-                  <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
-                </div>
-                <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.16)", transform: "rotate(-3deg)" }}>
-                  <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
-                    <img src={pair.polished} alt={`The same ${pair.event.toLowerCase()} photo, polished by our pipeline`} loading="lazy"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  </div>
-                  <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
-                </div>
-              </div>
-              <p style={{ textAlign: "center", fontSize: 12.5, color: "#8a857d", margin: "10px 0 0", fontWeight: 600 }}>{pair.event}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
 
       <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"
         subtitle="Start for free, or pick the tier that matches how much of the event you want captured.">

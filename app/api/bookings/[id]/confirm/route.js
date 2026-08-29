@@ -9,7 +9,7 @@ import { captureError } from "@/lib/sentry";
 // actually confirms it. See lib/confirmToken.js for why there's no stored
 // token to look up.
 export async function GET(req, { params }) {
-  const { id } = params;
+  const { id } = await params;
   const token = req.nextUrl.searchParams.get("token");
 
   if (!isValidConfirmToken(id, token)) {

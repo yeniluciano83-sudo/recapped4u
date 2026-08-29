@@ -8,7 +8,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // in the main recap video, every tier) and must_include_social (guarantees
 // a spot in the social cut specifically, Spotlight/Luxe only).
 export async function GET(req, { params }) {
-  const { eventId } = params;
+  const { eventId } = await params;
 
   const { success } = await checkRateLimit("event-photos", req, { requests: 30, windowSeconds: 60 });
   if (!success) {

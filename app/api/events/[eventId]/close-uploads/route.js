@@ -8,7 +8,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 // request) -- it just flags the booking, and the scheduler picks it up
 // and processes it on its next run instead of waiting for the deadline.
 export async function POST(req, { params }) {
-  const { eventId } = params;
+  const { eventId } = await params;
 
   const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
   if (!success) {

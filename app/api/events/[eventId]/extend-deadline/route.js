@@ -9,7 +9,7 @@ const EXTENSION_HOURS = 48;
 // flags the booking -- the scheduler (poll-and-recap.js) is what actually
 // respects the pushed-out deadline on its next run.
 export async function POST(req, { params }) {
-  const { eventId } = params;
+  const { eventId } = await params;
 
   const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
   if (!success) {

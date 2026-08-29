@@ -5,7 +5,7 @@ import { captureError } from "@/lib/sentry";
 const VALID_STATUSES = ["booked", "collecting", "analyzing", "editing", "delivered"];
 
 export async function PATCH(req, { params }) {
-  const { id } = params;
+  const { id } = await params;
 
   try {
     const { status } = await req.json();

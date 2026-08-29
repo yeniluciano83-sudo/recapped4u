@@ -10,7 +10,7 @@ import { getUploadLimit } from "@/lib/uploadLimits";
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 export async function POST(req, { params }) {
-  const { eventId } = params;
+  const { eventId } = await params;
 
   // upload_slug is the only credential gating this route -- generous
   // enough for a real guest uploading many photos back-to-back (one

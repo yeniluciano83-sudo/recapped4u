@@ -10,7 +10,7 @@ const VALID_TEMPLATES = ["grid", "masonry", "slideshow", "polaroid"];
 
 // PATCH /api/gallery/[bookingId]/template  { template: "masonry" }
 export async function PATCH(req, { params }) {
-  const { bookingId } = params;
+  const { bookingId } = await params;
 
   // Public, unauthenticated route (the gallery link is what's shared with
   // guests) -- rate-limited like every other guest-facing mutation in this

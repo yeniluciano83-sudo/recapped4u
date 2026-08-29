@@ -8,7 +8,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 
 export async function PATCH(req, { params }) {
-  const { eventId, uploadId } = params;
+  const { eventId, uploadId } = await params;
 
   const { success } = await checkRateLimit("event-photos", req, { requests: 30, windowSeconds: 60 });
   if (!success) {

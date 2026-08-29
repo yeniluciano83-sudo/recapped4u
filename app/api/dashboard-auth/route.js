@@ -29,7 +29,7 @@ function isCorrectPassword(candidate) {
   // Without this, an unset DASHBOARD_PASSWORD coerces `expected` to "" below,
   // and an empty submitted password becomes two zero-length buffers -- which
   // timingSafeEqual treats as trivially equal, so login would "succeed" with
-  // no password set. middleware.js independently blocks that cookie from
+  // no password set. proxy.js independently blocks that cookie from
   // ever reaching /dashboard, so this was never a real bypass, but the login
   // response itself shouldn't claim success.
   if (!expected) return false;

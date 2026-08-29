@@ -13,7 +13,7 @@ const VALID_TIERS = ["standard", "premium", "keepsake"];
 
 // Staff-only: creates a booking + Stripe Checkout link at a custom price for
 // a host who negotiated outside the standard tiers (corporate events, etc).
-// Auth is handled entirely by middleware.js's dashboard_auth cookie check
+// Auth is handled entirely by proxy.js's dashboard_auth cookie check
 // (see the /api/admin/:path* matcher) -- this route trusts that gate rather
 // than re-checking anything itself.
 export async function POST(req) {

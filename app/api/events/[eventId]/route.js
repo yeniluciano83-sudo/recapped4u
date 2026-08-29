@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 
 // eventId here is the booking's upload_slug (the short code in the QR/link URL)
 export async function GET(req, { params }) {
-  const { eventId } = params;
+  const { eventId } = await params;
 
   const { success } = await checkRateLimit("event-info", req, { requests: 30, windowSeconds: 60 });
   if (!success) {
@@ -35,7 +35,7 @@ const VALID_STYLES = ["cinematic", "upbeat", "documentary", "retro", "highlight"
 // social cut (Spotlight/Luxe) -- distinct from the PATCH on
 // /api/bookings/[id], which is the staff dashboard's status-only endpoint.
 export async function PATCH(req, { params }) {
-  const { eventId } = params;
+  const { eventId } = await params;
 
   const { success } = await checkRateLimit("event-info", req, { requests: 30, windowSeconds: 60 });
   if (!success) {

@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
 
+// This used to be middleware.js -- Next.js 16 renamed the convention to
+// proxy.js/export function proxy() to clarify it's a network boundary /
+// routing concern, not general-purpose middleware. Runs on the Node.js
+// runtime now (proxy doesn't support the edge runtime the old middleware.js
+// ran on), but nothing here needed edge specifically -- see the comment on
+// timingSafeEqualString below.
+//
 // Next.js middleware runs on the Edge runtime, which has no `node:crypto` --
 // so this can't reuse crypto.timingSafeEqual like lib/confirmToken.js and
 // the dashboard-auth route do. Same technique, just built on TextEncoder
@@ -20,7 +27,7 @@ function timingSafeEqualString(a, b) {
   return diff === 0;
 }
 
-export function middleware(req) {
+export function proxy(req) {
   // Public booking creation must stay open to unauthenticated customers.
   if (req.nextUrl.pathname === "/api/bookings" && req.method === "POST") {
     return NextResponse.next();

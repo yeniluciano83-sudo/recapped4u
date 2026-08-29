@@ -8,7 +8,7 @@ import { captureError } from "@/lib/sentry";
 // Usage: GET /api/qrcode/[slug]  -> returns a PNG image
 // The slug is the booking's upload_slug (the same one used in /event/[slug]).
 export async function GET(req, { params }) {
-  const { slug } = params;
+  const { slug } = await params;
 
   const { success } = await checkRateLimit("qrcode", req, { requests: 60, windowSeconds: 60 });
   if (!success) {

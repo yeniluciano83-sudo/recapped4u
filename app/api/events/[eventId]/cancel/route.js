@@ -8,7 +8,7 @@ import { captureError } from "@/lib/sentry";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function GET(req, { params }) {
-  const { eventId } = params;
+  const { eventId } = await params;
 
   const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
   if (!success) {
@@ -32,7 +32,7 @@ export async function GET(req, { params }) {
 }
 
 export async function POST(req, { params }) {
-  const { eventId } = params;
+  const { eventId } = await params;
 
   const { success } = await checkRateLimit("event-action", req, { requests: 10, windowSeconds: 60 });
   if (!success) {

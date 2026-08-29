@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-// Staff-only, covered by middleware.js's /api/bookings/:path* matcher --
+// Staff-only, covered by proxy.js's /api/bookings/:path* matcher --
 // same dashboard cookie gate as the rest of the bookings API.
 export async function GET(req, { params }) {
-  const { id } = params;
+  const { id } = await params;
 
   const { data, error } = await supabase
     .from("upload_analysis_failures")

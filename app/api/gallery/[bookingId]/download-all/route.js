@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 // request than that route (streams every photo from R2 and re-compresses
 // it), so rate-limited unlike that one.
 export async function GET(req, { params }) {
-  const { bookingId } = params;
+  const { bookingId } = await params;
 
   const { success } = await checkRateLimit("gallery-download-all", req, { requests: 5, windowSeconds: 60 });
   if (!success) {

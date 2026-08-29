@@ -5,7 +5,7 @@ import { getSignedDownloadUrl } from "@/lib/storage";
 export const dynamic = "force-dynamic";
 
 export async function GET(req, { params }) {
-  const { bookingId } = params;
+  const { bookingId } = await params;
 
   // Public, unauthenticated route (this is the link hosts share with guests)
   // -- select only the fields the gallery view actually renders, not "*".

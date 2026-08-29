@@ -23,29 +23,42 @@ const TIERS = [
     features: ["Unlimited photo uploads (up to 2000 per event)", "Shareable + printable QR code & link", "2-week upload deadline, extendable by 2 more days if needed", "Every uploaded photo in your gallery", "Full recap video + 10 social cuts, each from a different set of your best photos, or swap to social-cuts-only at booking", "Choose your editing style, plus a separate theme for your social cuts", "Star must-include photos for your social cuts", "Digital delivery", "Downloadable gallery for 6 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Complimentary Roast Reel add-on for any event type", "24-hour priority turnaround"] },
 ];
 
-const EVENT_TYPES = [
-  { label: "Parties", emoji: "🎉" },
-  { label: "Birthdays", emoji: "🎂" },
-  { label: "Weddings", emoji: "💍" },
-  { label: "Engagement Parties", emoji: "💐" },
-  { label: "Bridal Showers", emoji: "🎀" },
-  { label: "Gender Reveals", emoji: "🎈" },
-  { label: "Sweet 16s/Quinceañeras", emoji: "👑" },
-  { label: "Corporate Events", emoji: "💼" },
-  { label: "Family Reunions", emoji: "👨‍👩‍👧‍👦" },
-  { label: "Class/Friend Reunions", emoji: "🤝" },
-  { label: "Housewarmings", emoji: "🏡" },
-  { label: "Retirement Parties", emoji: "🥂" },
-  { label: "Baby Showers", emoji: "🍼" },
-  { label: "Graduations", emoji: "🎓" },
-  { label: "Anniversaries", emoji: "✨" },
-  { label: "Bachelor/Bachelorette Parties", emoji: "🎊" },
-  { label: "Religious Ceremonies", emoji: "🙏" },
-  { label: "Fundraisers & Galas", emoji: "🎗️" },
-  { label: "Vacations", emoji: "✈️" },
-  { label: "Holiday Celebrations", emoji: "🎇" },
-  { label: "Something Else? Ask Us", emoji: "💬" },
+// Grouped rather than one long flat wall of ~20 pills -- the categories
+// break up the monotony and let a scanning eye jump straight to "does this
+// cover MY event" instead of reading the whole list. "Something Else? Ask
+// Us" isn't an event type at all (it's a CTA), so it renders separately
+// below the groups rather than as pill #20 in the wall.
+const EVENT_TYPE_GROUPS = [
+  { category: "Weddings & Milestones", items: [
+    { label: "Weddings", emoji: "💍" },
+    { label: "Engagement Parties", emoji: "💐" },
+    { label: "Bridal Showers", emoji: "🎀" },
+    { label: "Graduations", emoji: "🎓" },
+    { label: "Anniversaries", emoji: "✨" },
+  ] },
+  { category: "Birthdays & Parties", items: [
+    { label: "Parties", emoji: "🎉" },
+    { label: "Birthdays", emoji: "🎂" },
+    { label: "Sweet 16s/Quinceañeras", emoji: "👑" },
+    { label: "Gender Reveals", emoji: "🎈" },
+    { label: "Baby Showers", emoji: "🍼" },
+    { label: "Bachelor/Bachelorette Parties", emoji: "🎊" },
+  ] },
+  { category: "Reunions & Gatherings", items: [
+    { label: "Family Reunions", emoji: "👨‍👩‍👧‍👦" },
+    { label: "Class/Friend Reunions", emoji: "🤝" },
+    { label: "Housewarmings", emoji: "🏡" },
+    { label: "Retirement Parties", emoji: "🥂" },
+    { label: "Religious Ceremonies", emoji: "🙏" },
+    { label: "Holiday Celebrations", emoji: "🎇" },
+  ] },
+  { category: "Corporate & More", items: [
+    { label: "Corporate Events", emoji: "💼" },
+    { label: "Fundraisers & Galas", emoji: "🎗️" },
+    { label: "Vacations", emoji: "✈️" },
+  ] },
 ];
+const EVENT_TYPE_ASK = { label: "Something Else? Ask Us", emoji: "💬" };
 
 // Small visual identity per tier for the pricing cards -- purely
 // decorative, doesn't touch the actual price/feature data above.
@@ -648,11 +661,16 @@ export default function HomePage() {
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
-              { label: "Light Roasting", desc: "Playful, gentle teasing" },
-              { label: "Lukewarm Roasting", desc: "Sharper, inside-joke energy" },
-              { label: "Hot Roasting", desc: "Full send, thick skin required" },
+              { label: "Light Roasting", desc: "Playful, gentle teasing", flames: 1, tint: "#FBEEE0", border: "#E4DED2", flameColor: "#D9A46B" },
+              { label: "Lukewarm Roasting", desc: "Sharper, inside-joke energy", flames: 2, tint: "#FBE3CC", border: "#E0985A", flameColor: "#E0985A" },
+              { label: "Hot Roasting", desc: "Full send, thick skin required", flames: 3, tint: "#F9D5B0", border: "#C97A3D", flameColor: "#C97A3D" },
             ].map((r) => (
-              <div key={r.label} style={{ background: "#FAF7F2", border: "1px solid #E4DED2", borderRadius: 10, padding: "10px 14px", flex: "1 1 150px" }}>
+              <div key={r.label} style={{ background: r.tint, border: `1px solid ${r.border}`, borderRadius: 10, padding: "10px 14px", flex: "1 1 150px" }}>
+                <div style={{ display: "flex", gap: 2, marginBottom: 4 }}>
+                  {Array.from({ length: r.flames }).map((_, i) => (
+                    <Flame key={i} size={11} color={r.flameColor} fill={r.flameColor} />
+                  ))}
+                </div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{r.label}</div>
                 <div style={{ fontSize: 11.5, color: "#6b655c", marginTop: 2 }}>{r.desc}</div>
               </div>
@@ -663,19 +681,23 @@ export default function HomePage() {
 
       <Section id="events" refs={sectionRefs} title="Events We Cover" icon={<Users size={20} color="#C97A3D" />} band="white"
         subtitle="If people are gathered and phones are out, we've probably got it covered.">
-        <div className="event-pill-row" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {EVENT_TYPES.map((e, idx) =>
-            e.label.startsWith("Something Else") ? (
-              <button key={e.label} onClick={() => scrollTo("contact")} className="press-btn event-pill"
-                style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "#FBEEE0", border: "1px solid #C97A3D", color: "#C97A3D", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, cursor: "pointer", fontWeight: 600, maxWidth: "100%" }}>
-                <span aria-hidden="true">{e.emoji}</span> {e.label}
-              </button>
-            ) : (
-              <span key={e.label} className="event-pill" style={{ display: "inline-flex", alignItems: "center", gap: 7, background: idx % 2 === 0 ? "#FAF7F2" : "#FBEEE0", border: "1px solid #E4DED2", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, maxWidth: "100%" }}>
-                <span aria-hidden="true">{e.emoji}</span> {e.label}
-              </span>
-            )
-          )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {EVENT_TYPE_GROUPS.map((group) => (
+            <div key={group.category}>
+              <p style={{ fontSize: 11.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 700, margin: "0 0 9px" }}>{group.category}</p>
+              <div className="event-pill-row" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {group.items.map((e, idx) => (
+                  <span key={e.label} className="event-pill" style={{ display: "inline-flex", alignItems: "center", gap: 7, background: idx % 2 === 0 ? "#FAF7F2" : "#FBEEE0", border: "1px solid #E4DED2", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, maxWidth: "100%" }}>
+                    <span aria-hidden="true">{e.emoji}</span> {e.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button onClick={() => scrollTo("contact")} className="press-btn event-pill"
+            style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 7, background: "#FBEEE0", border: "1px solid #C97A3D", color: "#C97A3D", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, cursor: "pointer", fontWeight: 600, maxWidth: "100%" }}>
+            <span aria-hidden="true">{EVENT_TYPE_ASK.emoji}</span> {EVENT_TYPE_ASK.label}
+          </button>
         </div>
       </Section>
 
@@ -725,6 +747,19 @@ export default function HomePage() {
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12, color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>WhatsApp (text only)</div>
               <div style={{ fontSize: 14, fontWeight: 700 }}>+1 (646) 512-9151</div>
+            </div>
+          </a>
+          {/* Same address every transactional email sends from and invites a
+              reply to ("Questions? Just reply to this email" -- see
+              lib/email.js) -- surfacing it here is naming an existing
+              channel, not adding a new one. */}
+          <a href="mailto:hello@recappedforyou.com" className="press-btn" style={{ ...cardStyle, width: "100%", maxWidth: 320, display: "flex", alignItems: "center", gap: 14, textDecoration: "none", color: "inherit" }}>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg, #C97A3D, #E0A164)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>
+              <Mail size={18} color="#FFFFFF" />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: "#C97A3D", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 2 }}>Email</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>hello@recappedforyou.com</div>
             </div>
           </a>
         </div>

@@ -249,7 +249,7 @@ export default function QrSharePage() {
           <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, margin: "0 0 10px" }}>This event has been cancelled</h1>
           <p style={{ color: "#4a4642", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-            The guest upload link for {eventName} is no longer active. If this wasn't expected, reply to your booking confirmation email and we'll help.
+            The guest upload link for {eventName} is no longer active. If this wasn't expected, <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D" }}>message us on WhatsApp</a> and we'll help.
           </p>
         </div>
       </main>

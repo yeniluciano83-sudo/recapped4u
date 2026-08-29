@@ -61,7 +61,7 @@ export async function POST(req, { params }) {
   // (see submitAnalysisBatch in scripts/auto-recap.js).
   if (["analyzing", "editing", "awaiting_roast_approval", "delivered"].includes(booking.status)) {
     return NextResponse.json(
-      { error: "This event is already being processed and can't be cancelled online — reply to your confirmation email and we'll help." },
+      { error: "This event is already being processed and can't be cancelled online — message us on WhatsApp (+1 (646) 512-9151) and we'll help." },
       { status: 400 }
     );
   }
@@ -87,7 +87,7 @@ export async function POST(req, { params }) {
 
   if (!cancelledRow) {
     return NextResponse.json(
-      { error: "This event just started processing and can't be cancelled online anymore — reply to your confirmation email and we'll help." },
+      { error: "This event just started processing and can't be cancelled online anymore — message us on WhatsApp (+1 (646) 512-9151) and we'll help." },
       { status: 409 }
     );
   }

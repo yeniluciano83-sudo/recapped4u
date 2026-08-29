@@ -60,14 +60,14 @@ export async function POST(req, { params }) {
 
   if (!RESCHEDULABLE_STATUSES.includes(booking.status)) {
     return NextResponse.json(
-      { error: "This event can't be rescheduled online anymore — reply to your confirmation email and we'll help." },
+      { error: "This event can't be rescheduled online anymore — message us on WhatsApp (+1 (646) 512-9151) and we'll help." },
       { status: 400 }
     );
   }
 
   if (hoursUntilEventDate(booking.event_date) < 24) {
     return NextResponse.json(
-      { error: "This is within 24 hours of your event, so it's too late to reschedule online — reply to your confirmation email and we'll help." },
+      { error: "This is within 24 hours of your event, so it's too late to reschedule online — message us on WhatsApp (+1 (646) 512-9151) and we'll help." },
       { status: 400 }
     );
   }
@@ -96,7 +96,7 @@ export async function POST(req, { params }) {
 
   if (!rescheduledRow) {
     return NextResponse.json(
-      { error: "This event just started processing and can't be rescheduled online anymore — reply to your confirmation email and we'll help." },
+      { error: "This event just started processing and can't be rescheduled online anymore — message us on WhatsApp (+1 (646) 512-9151) and we'll help." },
       { status: 409 }
     );
   }

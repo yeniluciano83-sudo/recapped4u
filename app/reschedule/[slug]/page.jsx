@@ -105,8 +105,9 @@ export default function ReschedulePage() {
         <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
         <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
           {booking.status === "delivered"
-            ? "This event has already been delivered and can't be rescheduled online — reply to your confirmation email and we'll help."
-            : "This is within 24 hours of your event (or already being processed), so it's too late to reschedule online — reply to your confirmation email and we'll help."}
+            ? "This event has already been delivered and can't be rescheduled online — "
+            : "This is within 24 hours of your event (or already being processed), so it's too late to reschedule online — "}
+          <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D" }}>message us on WhatsApp</a> and we'll help.
         </p>
       </PageShell>
     );

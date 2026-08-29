@@ -618,8 +618,7 @@ export default function HomePage() {
         <EventPhotoScene />
       </div>
 
-      <Section id="before-after" refs={sectionRefs} title="Before & After" icon={<Wand2 size={20} color="#C97A3D" />} band="white"
-        subtitle="The same guest-uploaded photo, run through our actual pipeline — not a mockup.">
+      <Section id="before-after" refs={sectionRefs} title="Before & After" icon={<Wand2 size={20} color="#C97A3D" />} band="white">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 28 }}>
           {HOME_BEFORE_AFTER_PAIRS.map((pair) => (
             <div key={pair.event}>

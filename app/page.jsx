@@ -117,9 +117,9 @@ const SAMPLE_PAIRS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
 // voice (see "Witty, affectionate commentary" below) instead of just a
 // description of it. Genuinely tied to what's in each photo, not generic.
 const ROAST_PREVIEW_PAIRS = [
-  { event: "Wedding", photo: "/images/before-after-wedding-enhanced.jpg", roast: "Everyone got the black-tie memo. One of you improvised in green — respect." },
-  { event: "Birthday", photo: "/images/before-after-birthday-enhanced.jpg", roast: "The cake's still fully intact. Bold move posing before cutting it." },
-  { event: "Graduation", photo: "/images/before-after-graduation-enhanced.jpg", roast: "Four years of tuition for a cap that fits none of you." },
+  { event: "Wedding", photo: "/images/before-after-wedding-enhanced.jpg", roast: "Three people got the \"formal\" memo. One got the \"main character\" memo." },
+  { event: "Reunion", photo: "/images/before-after-reunion-enhanced.jpg", roast: "Four generations, zero personal space, and somehow everyone's still smiling." },
+  { event: "Graduation", photo: "/images/before-after-graduation-enhanced.jpg", roast: "Tassels flipped, degrees earned, job market completely unbothered." },
 ];
 
 export default function HomePage() {

@@ -37,7 +37,7 @@ ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH || require("ffmpeg-static"));
 const { createClient } = require("@supabase/supabase-js");
 const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const { enhancePhoto } = require("../lib/photo-enhance");
-const { assembleSlideshow } = require("../lib/video-assemble");
+const { assembleSlideshow, extractPosterFrame } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
 const { buildSocialSelections } = require("../lib/socialSelections");
 const { computeGalleryExpiry } = require("../lib/galleryExpiry");
@@ -115,6 +115,18 @@ async function downloadFromR2(key) {
 async function uploadToR2(key, buffer, contentType) {
   await s3.send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: buffer, ContentType: contentType }));
   return key;
+}
+
+// Grabs a poster frame from a just-rendered video and uploads it under the
+// same deliverable/ prefix -- one per rendered file (not shared between a
+// roast-captioned cut and its caption-free twin), since a frame grabbed
+// from the captioned version can genuinely have caption text baked into it.
+async function uploadPosterFor(videoLocalPath, tmpDir, posterKey) {
+  const posterLocalPath = path.join(tmpDir, `${path.basename(videoLocalPath, ".mp4")}-poster.jpg`);
+  await extractPosterFrame(videoLocalPath, posterLocalPath);
+  const posterBuffer = fs.readFileSync(posterLocalPath);
+  await uploadToR2(posterKey, posterBuffer, "image/jpeg");
+  return posterKey;
 }
 
 async function deleteFromR2(key) {
@@ -637,6 +649,8 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
 async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "") {
   let videoKey = null;
   let noRoastVideoKey = null;
+  let videoPosterKey = null;
+  let noRoastVideoPosterKey = null;
 
   // "Social cuts of every photo" delivery format has no full video at all --
   // see useAllPhotoSocialCuts in continuePipelineWithAnalysis, the only
@@ -656,6 +670,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     const videoBuffer = fs.readFileSync(videoLocalPath);
     videoKey = `deliverable/${bookingId}/full-cut.mp4`;
     await uploadToR2(videoKey, videoBuffer, "video/mp4");
+    videoPosterKey = await uploadPosterFor(videoLocalPath, tmpDir, `deliverable/${bookingId}/full-cut-poster.jpg`);
 
     // Roast Reel bookings previously only ever got the captioned cut -- render
     // a second, caption-free twin of the exact same shortlist/pacing so hosts
@@ -668,6 +683,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       const noRoastVideoBuffer = fs.readFileSync(noRoastVideoLocalPath);
       noRoastVideoKey = `deliverable/${bookingId}/full-cut-no-roast.mp4`;
       await uploadToR2(noRoastVideoKey, noRoastVideoBuffer, "video/mp4");
+      noRoastVideoPosterKey = await uploadPosterFor(noRoastVideoLocalPath, tmpDir, `deliverable/${bookingId}/full-cut-no-roast-poster.jpg`);
     }
   } else {
     console.log("Delivery format is social cuts of every photo -- skipping the full recap video.");
@@ -693,6 +709,8 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
   // run past the advertised 60-90s.
   const socialVideoKeys = [];
   const socialVideoNoRoastKeys = [];
+  const socialVideoPosterKeys = [];
+  const socialVideoNoRoastPosterKeys = [];
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier)) {
     // skipFullVideo (all-photos social cuts mode) has no fixed cut count --
     // keep rendering cuts until a prefix comes up empty, rather than
@@ -736,6 +754,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
       socialVideoKeys.push(socialVideoKey);
+      socialVideoPosterKeys.push(await uploadPosterFor(socialVideoLocalPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`));
 
       if (cutRoastLines) {
         console.log(`Roast Reel enabled -- also assembling a caption-free version of social cut ${cutIndex + 1}...`);
@@ -745,6 +764,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
         const noRoastKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast.mp4`;
         await uploadToR2(noRoastKey, noRoastBuffer, "video/mp4");
         socialVideoNoRoastKeys.push(noRoastKey);
+        socialVideoNoRoastPosterKeys.push(await uploadPosterFor(noRoastLocalPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast-poster.jpg`));
       }
     }
   }
@@ -760,12 +780,16 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       booking_id: bookingId,
       full_video_key: videoKey,
       full_video_no_roast_key: noRoastVideoKey,
+      full_video_poster_key: videoPosterKey,
+      full_video_no_roast_poster_key: noRoastVideoPosterKey,
       // social_video_key (singular) kept in sync with the first cut for
       // anything still reading it (e.g. poll-and-recap.js's purge step);
       // social_video_keys is the real, complete list.
       social_video_key: socialVideoKeys[0] || null,
       social_video_keys: socialVideoKeys,
       social_video_no_roast_keys: socialVideoNoRoastKeys,
+      social_video_poster_keys: socialVideoPosterKeys,
+      social_video_no_roast_poster_keys: socialVideoNoRoastPosterKeys,
       gallery_photo_keys: enhancedKeys,
       delivered_at: new Date().toISOString(),
     },

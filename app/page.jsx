@@ -52,6 +52,16 @@ const EVENT_TYPES = [
 // decorative, doesn't touch the actual price/feature data above.
 const TIER_ICONS = { free: Gift, standard: Camera, premium: Star, keepsake: Crown };
 
+// A feature line that appears verbatim on every tier (computed, not
+// hand-classified, so it can't silently go stale if TIERS changes) reads as
+// baseline boilerplate rather than a reason to pick one tier over another --
+// styled quieter in the card so what actually differs (upload caps,
+// deadlines, retention, the deliverable itself) is what a shopper's eye
+// lands on first.
+const SHARED_TIER_FEATURES = new Set(
+  TIERS[0].features.filter((f) => TIERS.every((t) => t.features.includes(f)))
+);
+
 const FAQS = [
   { q: "What exactly do we get?", a: "A full recap video, a photo gallery of every shot your guests upload, and — on Spotlight and Luxe — ready-to-post social cuts sized for Instagram, TikTok, or Reels. Every photo is polished (color graded, cleaned up) before it goes into any of them, all built from photos you and your guests already have on your phones." },
   { q: "Is this real footage, or generated?", a: "It's all real — every photo is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
@@ -95,6 +105,9 @@ export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSampleModal, setShowSampleModal] = useState(false);
   const [sampleSlide, setSampleSlide] = useState(0);
+  // Gates the hero preview's autoplay loop below -- same check SampleModal
+  // makes for its own carousel.
+  const [reducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   const sectionRefs = useRef({});
 
   const scrollTo = (id) => {
@@ -492,9 +505,30 @@ export default function HomePage() {
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 18px" }}>
           Your event, recapped.
         </h1>
-        <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 32px" }}>
+        <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 28px" }}>
           You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery — with an optional splash of humor.
         </p>
+
+        {/* A real, actual-pipeline sample video, not just a description of
+            one -- the site's whole pitch is "we turn your photos into a
+            video," so the hero should show that, not just say it. Muted
+            autoplay loop is purely a decorative preview of the same clip
+            "View a sample" below opens with full controls -- aria-hidden so
+            a screen reader doesn't announce it twice. */}
+        <div style={{ width: "min(220px, 60vw)", aspectRatio: "9 / 16", margin: "0 auto 28px", borderRadius: 20, overflow: "hidden", background: "#000", boxShadow: "0 18px 40px rgba(33,31,29,0.18), 0 0 0 5px #FFFFFF, 0 0 0 6px #E4DED2" }}>
+          <video
+            aria-hidden="true"
+            src="/samples/sample-social-cut-hot.mp4"
+            poster="/samples/sample-poster.jpg"
+            autoPlay={!reducedMotion}
+            loop={!reducedMotion}
+            muted
+            playsInline
+            preload="metadata"
+            style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }}
+          />
+        </div>
+
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 28 }}>
           {[
             { icon: QrCode, label: "No app needed for host and guests" },
@@ -571,12 +605,15 @@ export default function HomePage() {
                 <span style={{ color: "#C97A3D", fontWeight: 700 }}><CountUpPrice value={t.price} /></span>
               </div>
               <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 12px" }}>{t.tagline}</p>
-              <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 13, color: "#6b655c" }}>
-                {t.features.map((f) => (
-                  <li key={f} style={{ display: "flex", gap: 6, marginBottom: 5 }}>
-                    <Check size={13} color="#7A8B76" style={{ flexShrink: 0, marginTop: 2 }} /> {f}
-                  </li>
-                ))}
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 13 }}>
+                {t.features.map((f) => {
+                  const shared = SHARED_TIER_FEATURES.has(f);
+                  return (
+                    <li key={f} style={{ display: "flex", gap: 6, marginBottom: 5, color: shared ? "#8a857d" : "#211F1D", fontWeight: shared ? 400 : 600 }}>
+                      <Check size={13} color={shared ? "#ADA79B" : "#C97A3D"} style={{ flexShrink: 0, marginTop: 2 }} /> {f}
+                    </li>
+                  );
+                })}
               </ul>
             </TiltCard>
             </div>

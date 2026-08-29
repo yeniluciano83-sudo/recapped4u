@@ -155,6 +155,8 @@ export default function GalleryDeliveryPage() {
   const socialDownloadUrls = data?.deliverable?.social_video_download_urls || [];
   const socialNoRoastUrls = data?.deliverable?.social_video_no_roast_urls || [];
   const socialNoRoastDownloadUrls = data?.deliverable?.social_video_no_roast_download_urls || [];
+  const socialPosterUrls = data?.deliverable?.social_video_poster_urls || [];
+  const socialNoRoastPosterUrls = data?.deliverable?.social_video_no_roast_poster_urls || [];
   // "social-N" selects the Nth social cut (Luxe can have several -- see
   // SOCIAL_CUTS_COUNT in scripts/auto-recap.js -- Spotlight/Free have at
   // most 1, so this collapses to a single "Social cut" toggle for them).
@@ -174,6 +176,13 @@ export default function GalleryDeliveryPage() {
     : videoLength === "no_roast" ? data?.deliverable?.full_video_no_roast_download_url
     : isSocialNoRoast ? socialNoRoastDownloadUrls[socialIndex]
     : socialDownloadUrls[socialIndex];
+  // Falls back to the plain gradient box below when missing -- older
+  // deliverables rendered before migration 027 just don't have one.
+  const activeVideoPosterUrl =
+    videoLength === "full" ? data?.deliverable?.full_video_poster_url
+    : videoLength === "no_roast" ? data?.deliverable?.full_video_no_roast_poster_url
+    : isSocialNoRoast ? socialNoRoastPosterUrls[socialIndex]
+    : socialPosterUrls[socialIndex];
   const isExpired = booking.gallery_expires_at && new Date(booking.gallery_expires_at) < new Date();
   const isDownloadOnly = isExpired;
 
@@ -214,14 +223,23 @@ export default function GalleryDeliveryPage() {
         </div>
 
         <div style={{ background: "#FFFFFF", borderRadius: "18px", border: "1px solid #E4DED2", overflow: "hidden", marginBottom: "16px" }}>
-          <div style={{ aspectRatio: "16/9", background: "linear-gradient(135deg, #FBEEE0, #FAF7F2)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer" }}
+          <div style={{
+              aspectRatio: "16/9",
+              background: activeVideoPosterUrl ? `#000 url(${activeVideoPosterUrl}) center / cover no-repeat` : "linear-gradient(135deg, #FBEEE0, #FAF7F2)",
+              display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer",
+            }}
             onClick={() => { if (activeVideoUrl) window.open(activeVideoUrl, "_blank"); }}>
+            {/* Posters are an arbitrary frame from the actual cut, so a
+                white play button needs a floor of contrast under it no
+                matter how bright that frame happens to be -- the gradient
+                fallback never needed this. */}
+            {activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.18)" }} />}
             {isRoastCut && (
               <span style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 5, background: "#C97A3D", color: "#211F1D", fontSize: 12, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
                 🔥 Roast Reel cut
               </span>
             )}
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: activeVideoPosterUrl ? "0 4px 18px rgba(0,0,0,0.4)" : "none", position: "relative" }}>
               <Play size={26} color="#211F1D" fill="#211F1D" style={{ marginLeft: "3px" }} />
             </div>
           </div>

@@ -1,8 +1,7 @@
 "use client";
-import React, { useState, useRef, useEffect, useId } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Camera, Sparkles, Users, Check, ChevronRight, ChevronLeft, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote, Play, Pause } from "lucide-react";
-import { useModalDialog } from "@/lib/useModalDialog";
+import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote, Play, Pause } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -101,9 +100,7 @@ const SAMPLE_PAIRS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
 }));
 
 // Same before/after idea as SAMPLE_PAIRS above, but one real pair per event
-// type, shown directly on the page instead of behind the "View a sample"
-// click -- proof the polish claim is real belongs where a visitor's
-// actually scrolling, not just in a modal most people never open.
+// type, shown directly on the page for the Before & After section below.
 const HOME_BEFORE_AFTER_PAIRS = [
   { event: "Wedding", raw: "/images/before-after-wedding-raw.jpg", polished: "/images/before-after-wedding-enhanced.jpg" },
   { event: "Birthday", raw: "/images/before-after-birthday-raw.jpg", polished: "/images/before-after-birthday-enhanced.jpg" },
@@ -115,17 +112,15 @@ const HOME_BEFORE_AFTER_PAIRS = [
 export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showSampleModal, setShowSampleModal] = useState(false);
-  const [sampleSlide, setSampleSlide] = useState(0);
   const sectionRefs = useRef({});
 
-  // Hero before/after: rotates through the same SAMPLE_PAIRS shown in the
-  // "View a sample" modal, rather than sitting on a single static pair --
-  // the hero should preview exactly what that modal expands into. Same
-  // auto-advance/pause/reduced-motion pattern as SampleModal's own carousel
-  // below, for the same WCAG "pause moving content" reasoning -- read once
-  // on mount (client-only) rather than watched live, since a user changing
-  // this mid-session is a vanishingly rare case not worth an extra listener.
+  // Hero before/after: rotates through SAMPLE_PAIRS, the same real-pipeline
+  // pairs used in the Before & After section, rather than sitting on a
+  // single static pair. Same auto-advance/pause/reduced-motion pattern used
+  // throughout the page for the WCAG "pause moving content" criterion --
+  // read once on mount (client-only) rather than watched live, since a user
+  // changing this mid-session is a vanishingly rare case not worth an extra
+  // listener.
   const [heroReducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   const [heroPairIndex, setHeroPairIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
@@ -285,12 +280,6 @@ export default function HomePage() {
         @media (max-width: 480px) {
           .event-pill-row { gap: 7px; }
           .event-pill { padding: 6px 12px !important; font-size: 12px !important; gap: 5px !important; }
-        }
-
-        /* Touch-swipe drives the sample carousel on narrow screens -- the
-           overlapping arrow buttons just crowd a small card at that width. */
-        @media (max-width: 560px) {
-          .sample-nav-btn { display: none !important; }
         }
 
         .contact-row { display: flex; flex-direction: column; gap: 12px; }
@@ -537,12 +526,10 @@ export default function HomePage() {
 
         {/* A real, actual-pipeline before/after, not just a description of
             one -- the site's whole pitch is "we polish what your guests
-            upload," so the hero should show that, not just say it. Same
-            visual language (muted raw photo labeled "Uploaded" next to a
-            rotated "Polished" print) as the "View a sample" modal below --
-            in fact the exact same SAMPLE_PAIRS images, so the hero is a
-            preview of what that modal expands into, not a different set. */}
-        <div style={{ width: "min(300px, 78vw)", margin: "0 auto 10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "center" }}>
+            upload," so the hero should show that, not just say it. Muted
+            raw photo labeled "Uploaded" next to a rotated "Polished" print,
+            cycling through the real SAMPLE_PAIRS output. */}
+        <div style={{ width: "min(460px, 92vw)", margin: "0 auto 10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "center" }}>
           <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
             <img src={SAMPLE_PAIRS[heroPairIndex].raw} alt="A guest-uploaded photo, before editing" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
             <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
@@ -561,8 +548,7 @@ export default function HomePage() {
               style={{ width: 7, height: 7, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", background: i === heroPairIndex ? "#C97A3D" : "#E4DED2", transform: i === heroPairIndex ? "scale(1.3)" : "scale(1)", transition: "background 0.2s, transform 0.2s" }} />
           ))}
           {/* Explicit stop control for the auto-advancing rotation above --
-              WCAG's "pause moving content" criterion, same as SampleModal's
-              own pause button below. */}
+              WCAG's "pause moving content" criterion. */}
           {!heroReducedMotion && (
             <button onClick={() => setHeroPaused((p) => !p)} aria-label={heroPaused ? "Resume auto-advancing" : "Pause auto-advancing"}
               style={{ marginLeft: 4, width: 20, height: 20, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#6b655c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
@@ -581,10 +567,6 @@ export default function HomePage() {
             </span>
           ))}
         </div>
-        <button onClick={() => { setSampleSlide(0); setShowSampleModal(true); }}
-          style={{ display: "inline-flex", alignItems: "center", gap: 7, marginTop: 24, padding: "12px 22px", borderRadius: 999, border: "1.5px solid #C97A3D", background: "#FFFFFF", color: "#C97A3D", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-          <Play size={14} fill="currentColor" /> View a sample
-        </button>
       </section>
 
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
@@ -712,10 +694,6 @@ export default function HomePage() {
           </div>
         </div>
       </Section>
-
-      {showSampleModal && (
-        <SampleModal onClose={() => setShowSampleModal(false)} slide={sampleSlide} setSlide={setSampleSlide} />
-      )}
 
       <Section id="events" refs={sectionRefs} title="Events We Cover" icon={<Users size={20} color="#C97A3D" />} band="white"
         subtitle="If people are gathered and phones are out, we've probably got it covered.">
@@ -1044,122 +1022,3 @@ const cardStyle = {
   padding: 20,
 };
 
-// Real output from the actual pipeline, not a mockup -- see SAMPLE_PAIRS'
-// comment above. A plain scroll-snap track (no library) so a swipe on
-// mobile and the prev/next buttons on desktop drive the same state.
-function SampleModal({ onClose, slide, setSlide }) {
-  const trackRef = useRef(null);
-  const containerRef = useRef(null);
-  const titleId = useId();
-  useModalDialog(containerRef, onClose);
-
-  // Respects the OS-level "reduce motion" setting -- read once on mount
-  // (client-only, so this can't run during SSR) rather than watched live,
-  // since a user changing this mid-session while the modal happens to be
-  // open is a vanishingly rare case not worth the extra listener.
-  const [reducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
-  // Explicit pause control, not just prefers-reduced-motion -- WCAG's
-  // "pause moving content" criterion calls for a way to stop auto-advancing
-  // content regardless of OS setting, for anyone who just wants more time
-  // on a given pair without having to change a system-wide preference.
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
-
-  const goTo = (i) => {
-    const clamped = Math.max(0, Math.min(SAMPLE_PAIRS.length - 1, i));
-    setSlide(clamped);
-    const track = trackRef.current;
-    if (track) track.children[clamped]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-  };
-
-  // Auto-advance, looping back to the start -- restarts on every navigation
-  // (manual or automatic) so a click/swipe doesn't get immediately
-  // overridden by a timer that was already halfway through its countdown.
-  useEffect(() => {
-    if (paused || reducedMotion) return;
-    const timer = setTimeout(() => { goTo((slide + 1) % SAMPLE_PAIRS.length); }, 4000);
-    return () => clearTimeout(timer);
-  }, [slide, paused, reducedMotion]);
-
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(33,31,29,0.72)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 16 }}>
-      <div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 720, maxHeight: "92vh", overflowY: "auto", background: "#FAF7F2", borderRadius: 20, position: "relative" }}>
-        <button onClick={onClose} aria-label="Close"
-          style={{ position: "absolute", top: 14, right: 14, zIndex: 2, width: 34, height: 34, borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.9)", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.15)" }}>
-          <X size={17} />
-        </button>
-
-        <div style={{ padding: "28px 24px 8px" }}>
-          <p style={{ fontSize: 11.5, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C97A3D", fontWeight: 700, margin: "0 0 8px" }}>A real sample</p>
-          <h3 id={titleId} style={{ fontFamily: "Georgia, serif", fontSize: 24, lineHeight: 1.2, margin: "0 0 8px" }}>What you and your guests' photo uploads become in our hands.</h3>
-          <p style={{ fontSize: 13.5, color: "#6b655c", lineHeight: 1.55, margin: 0 }}>Real uploads from a real booking, run through our actual pipeline.</p>
-        </div>
-
-        <div style={{ padding: "18px 24px 0" }}>
-          <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 4px", textAlign: "center" }}>The best shots, before and after</p>
-          <p style={{ fontSize: 12.5, color: "#6b655c", margin: "0 0 16px", textAlign: "center" }}>Auto-selected by the same photo-scoring pass that builds every recap.</p>
-
-          <div style={{ position: "relative" }}>
-            <div ref={trackRef} style={{ display: "flex", overflowX: "auto", scrollSnapType: "x mandatory", gap: 0, borderRadius: 14, scrollbarWidth: "none" }}>
-              {SAMPLE_PAIRS.map((pair, i) => (
-                <div key={i} style={{ flex: "0 0 100%", scrollSnapAlign: "center", padding: "0 2px" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "center", padding: "6px 4px" }}>
-                    <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
-                      <img src={pair.raw} alt={`Uploaded photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
-                      <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
-                    </div>
-                    <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: `rotate(${i % 2 === 0 ? -3 : 3}deg)` }}>
-                      <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
-                        <img src={pair.polished} alt={`Polished photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                      </div>
-                      <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button onClick={() => goTo(slide - 1)} aria-label="Previous pair" className="sample-nav-btn"
-              style={{ position: "absolute", top: "50%", left: -6, transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 14px rgba(33,31,29,0.14)" }}>
-              <ChevronLeft size={17} />
-            </button>
-            <button onClick={() => goTo(slide + 1)} aria-label="Next pair" className="sample-nav-btn"
-              style={{ position: "absolute", top: "50%", right: -6, transform: "translateY(-50%)", width: 36, height: 36, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 14px rgba(33,31,29,0.14)" }}>
-              <ChevronRight size={17} />
-            </button>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 14 }}>
-            {SAMPLE_PAIRS.map((_, i) => (
-              <button key={i} onClick={() => goTo(i)} aria-label={`Go to pair ${i + 1}`}
-                style={{ width: 7, height: 7, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", background: i === slide ? "#C97A3D" : "#E4DED2", transform: i === slide ? "scale(1.3)" : "scale(1)", transition: "background 0.2s, transform 0.2s" }} />
-            ))}
-            {/* Explicit stop control for the auto-advancing carousel above --
-                WCAG's "pause moving content" criterion, and simple usability
-                for anyone who wants more time on a pair without changing an
-                OS-level motion setting. */}
-            {!reducedMotion && (
-              <button onClick={() => setPaused((p) => !p)} aria-label={paused ? "Resume auto-advancing" : "Pause auto-advancing"}
-                style={{ marginLeft: 4, width: 20, height: 20, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#6b655c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
-                {paused ? <Play size={9} fill="currentColor" /> : <Pause size={9} fill="currentColor" />}
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div style={{ padding: "0 16px 28px" }}>
-          <a href="/samples/sample-social-cut-hot.mp4" target="_blank" rel="noopener noreferrer"
-            style={{ position: "relative", display: "block", width: "100%", maxWidth: 340, margin: "0 auto", borderRadius: 16, overflow: "hidden", background: "#000", aspectRatio: "9 / 16", textDecoration: "none" }}>
-            <video src="/samples/sample-social-cut-hot.mp4" poster="/samples/sample-poster.jpg" controls playsInline preload="metadata"
-              style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
-          </a>
-          <p style={{ textAlign: "center", fontSize: 12, color: "#8a857d", margin: "10px 0 0" }}>Social cut sample of polished pictures</p>
-        </div>
-      </div>
-    </div>
-  );
-}

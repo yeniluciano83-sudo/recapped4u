@@ -134,8 +134,21 @@ export default function GalleryDeliveryPage() {
 
   if (loading) {
     return (
-      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
-        Loading your recap…
+      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+        <style>{`
+          .gallery-loader-badge { animation: gallery-loader-pulse 1.6s ease-in-out infinite; }
+          @keyframes gallery-loader-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.08); opacity: 0.75; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .gallery-loader-badge { animation: none; }
+          }
+        `}</style>
+        <div className="gallery-loader-badge" style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>
+          <Film size={22} color="#FFFFFF" />
+        </div>
+        <p style={{ fontSize: 13.5, color: "#6b655c" }}>Loading your recap…</p>
       </main>
     );
   }
@@ -214,8 +227,20 @@ export default function GalleryDeliveryPage() {
           .gallery-grid { grid-template-columns: repeat(1, 1fr); }
           .gallery-masonry { column-count: 1; }
         }
+
+        /* The moment this page finishes loading is often someone's first
+           look at their finished recap -- a soft rise-and-fade instead of
+           the content just snapping in gives that moment a beat of its own. */
+        .gallery-reveal { animation: gallery-reveal-in 0.55s ease-out; }
+        @keyframes gallery-reveal-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .gallery-reveal { animation: none; }
+        }
       `}</style>
-      <div {...(lightbox ? { inert: true } : {})} style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
+      <div {...(lightbox ? { inert: true } : {})} className="gallery-reveal" style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: "32px", margin: "0 0 8px", lineHeight: 1.15 }}>{eventName}</h1>

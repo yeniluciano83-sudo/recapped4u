@@ -112,14 +112,24 @@ const SAMPLE_PAIRS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
   polished: `/samples/pair-${n}-polished.jpg`,
 }));
 
+// Same real photos used elsewhere (see public/images/before-after-*.jpg),
+// paired with an example Roast Reel line for each -- proof of the actual
+// voice (see "Witty, affectionate commentary" below) instead of just a
+// description of it. Genuinely tied to what's in each photo, not generic.
+const ROAST_PREVIEW_PAIRS = [
+  { event: "Wedding", photo: "/images/before-after-wedding-enhanced.jpg", roast: "Everyone got the black-tie memo. One of you improvised in green — respect." },
+  { event: "Birthday", photo: "/images/before-after-birthday-enhanced.jpg", roast: "The cake's still fully intact. Bold move posing before cutting it." },
+  { event: "Graduation", photo: "/images/before-after-graduation-enhanced.jpg", roast: "Four years of tuition for a cap that fits none of you." },
+];
+
 export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sectionRefs = useRef({});
 
-  // Hero before/after: rotates through SAMPLE_PAIRS, the same real-pipeline
-  // pairs used in the Before & After section, rather than sitting on a
-  // single static pair. Same auto-advance/pause/reduced-motion pattern used
+  // Hero before/after: rotates through SAMPLE_PAIRS, real output from the
+  // actual pipeline, rather than sitting on a single static pair. Same
+  // auto-advance/pause/reduced-motion pattern used
   // throughout the page for the WCAG "pause moving content" criterion --
   // read once on mount (client-only) rather than watched live, since a user
   // changing this mid-session is a vanishingly rare case not worth an extra
@@ -260,6 +270,15 @@ export default function HomePage() {
         }
         @media (prefers-reduced-motion: reduce) {
           .price-card-breeze { animation: none; }
+        }
+
+        .hero-polaroid-photo { animation: photo-develop 0.9s ease-out; }
+        @keyframes photo-develop {
+          0% { filter: sepia(0.55) saturate(0.35) blur(3px) brightness(1.08); opacity: 0.75; }
+          100% { filter: sepia(0) saturate(1) blur(0) brightness(1); opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-polaroid-photo { animation: none; }
         }
 
         /* The pinned-to-a-corkboard tape mark above each non-highlighted
@@ -539,7 +558,12 @@ export default function HomePage() {
           </div>
           <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: "rotate(3deg)" }}>
             <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
-              <img src={SAMPLE_PAIRS[heroPairIndex].polished} alt="The same photo, polished by our pipeline" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              {/* key={heroPairIndex} forces a remount on every rotation --
+                  a CSS animation doesn't replay just because `src` changed,
+                  it needs a fresh element each time. Mimics an instant photo
+                  actually developing (blurred/desaturated -> sharp), tying
+                  into the polaroid print this already looks like. */}
+              <img key={heroPairIndex} src={SAMPLE_PAIRS[heroPairIndex].polished} alt="The same photo, polished by our pipeline" className="hero-polaroid-photo" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
           </div>
@@ -673,6 +697,27 @@ export default function HomePage() {
                 </div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{r.label}</div>
                 <div style={{ fontSize: 11.5, color: "#6b655c", marginTop: 2 }}>{r.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Roast Reel is only ever described above -- these are three real
+            photos (same assets used elsewhere on the page) each paired with
+            an actual example line, so the "witty, affectionate commentary"
+            claim two paragraphs up has something concrete backing it. */}
+        <div style={{ marginTop: 20 }}>
+          <p style={{ fontSize: 11.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 700, margin: "0 0 10px" }}>What Roast Reel actually sounds like</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+            {ROAST_PREVIEW_PAIRS.map((p) => (
+              <div key={p.event} style={cardStyle}>
+                <div style={{ aspectRatio: "4 / 3", borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
+                  <img src={p.photo} alt={`Guests at a ${p.event.toLowerCase()}`} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <Flame size={13} color="#C97A3D" style={{ flexShrink: 0, marginTop: 3 }} />
+                  <p style={{ margin: 0, fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13.5, color: "#211F1D", lineHeight: 1.5 }}>{p.roast}</p>
+                </div>
               </div>
             ))}
           </div>

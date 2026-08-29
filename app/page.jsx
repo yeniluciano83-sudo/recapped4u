@@ -750,7 +750,7 @@ export default function HomePage() {
             </div>
           </a>
         </div>
-        <p style={{ fontSize: 15, color: "#6b655c", margin: 0, maxWidth: 520, lineHeight: 1.5 }}>Have a corporate event, or just a question? Reach out.</p>
+        <p style={{ fontSize: 15, color: "#6b655c", margin: 0, maxWidth: 520, lineHeight: 1.5 }}>Have specific requests, or just a question? Reach out.</p>
       </Section>
       </main>
 

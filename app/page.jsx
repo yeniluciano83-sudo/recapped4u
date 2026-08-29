@@ -119,6 +119,23 @@ export default function HomePage() {
   const [sampleSlide, setSampleSlide] = useState(0);
   const sectionRefs = useRef({});
 
+  // Hero before/after: rotates through one real pair per event type (same
+  // data as the Before & After section further down) rather than sitting on
+  // a single static pair. Same auto-advance/pause/reduced-motion pattern as
+  // SampleModal's own carousel below, for the same WCAG "pause moving
+  // content" reasoning -- read once on mount (client-only) rather than
+  // watched live, since a user changing this mid-session is a vanishingly
+  // rare case not worth an extra listener.
+  const [heroReducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  const [heroPairIndex, setHeroPairIndex] = useState(0);
+  const [heroPaused, setHeroPaused] = useState(false);
+
+  useEffect(() => {
+    if (heroPaused || heroReducedMotion) return;
+    const timer = setTimeout(() => { setHeroPairIndex((i) => (i + 1) % HOME_BEFORE_AFTER_PAIRS.length); }, 4000);
+    return () => clearTimeout(timer);
+  }, [heroPairIndex, heroPaused, heroReducedMotion]);
+
   const scrollTo = (id) => {
     setMobileMenuOpen(false);
     sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -521,20 +538,38 @@ export default function HomePage() {
         {/* A real, actual-pipeline before/after, not just a description of
             one -- the site's whole pitch is "we polish what your guests
             upload," so the hero should show that, not just say it. Same
-            pair (and the same visual language -- muted raw photo labeled
-            "Uploaded" next to a rotated "Polished" print) as the "View a
-            sample" modal below, so the two reinforce each other. */}
-        <div style={{ width: "min(300px, 78vw)", margin: "0 auto 28px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "center" }}>
+            visual language (muted raw photo labeled "Uploaded" next to a
+            rotated "Polished" print) as the "View a sample" modal below, so
+            the two reinforce each other. Rotates through one pair per event
+            type -- same data as the Before & After section further down --
+            rather than sitting on a single pair. */}
+        <div style={{ width: "min(300px, 78vw)", margin: "0 auto 10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, alignItems: "center" }}>
           <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
-            <img src={SAMPLE_PAIRS[0].raw} alt="A guest-uploaded photo, before editing" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
+            <img src={HOME_BEFORE_AFTER_PAIRS[heroPairIndex].raw} alt={`A guest-uploaded photo from a ${HOME_BEFORE_AFTER_PAIRS[heroPairIndex].event.toLowerCase()}, before editing`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
             <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
           </div>
           <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: "rotate(3deg)" }}>
             <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
-              <img src={SAMPLE_PAIRS[0].polished} alt="The same photo, polished by our pipeline" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={HOME_BEFORE_AFTER_PAIRS[heroPairIndex].polished} alt={`The same ${HOME_BEFORE_AFTER_PAIRS[heroPairIndex].event.toLowerCase()} photo, polished by our pipeline`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
           </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, marginBottom: 28 }}>
+          {HOME_BEFORE_AFTER_PAIRS.map((pair, i) => (
+            <button key={pair.event} onClick={() => setHeroPairIndex(i)} aria-label={`Show the ${pair.event} pair`}
+              style={{ width: 7, height: 7, borderRadius: "50%", border: "none", padding: 0, cursor: "pointer", background: i === heroPairIndex ? "#C97A3D" : "#E4DED2", transform: i === heroPairIndex ? "scale(1.3)" : "scale(1)", transition: "background 0.2s, transform 0.2s" }} />
+          ))}
+          {/* Explicit stop control for the auto-advancing rotation above --
+              WCAG's "pause moving content" criterion, same as SampleModal's
+              own pause button below. */}
+          {!heroReducedMotion && (
+            <button onClick={() => setHeroPaused((p) => !p)} aria-label={heroPaused ? "Resume auto-advancing" : "Pause auto-advancing"}
+              style={{ marginLeft: 4, width: 20, height: 20, borderRadius: "50%", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#6b655c", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}>
+              {heroPaused ? <Play size={9} fill="currentColor" /> : <Pause size={9} fill="currentColor" />}
+            </button>
+          )}
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: 28 }}>

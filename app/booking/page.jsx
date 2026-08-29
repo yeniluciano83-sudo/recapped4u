@@ -49,6 +49,14 @@ const TIERS = [
     features: ["Unlimited photo uploads", "Shareable + printable QR code & link", "2-week upload deadline, extendable by 2 more days if needed", "Every uploaded photo in your gallery", "Full recap video + 10 social cuts, each from a different set of your best photos", "Choose your editing style, plus a separate theme for your social cuts", "Star must-include photos for your social cuts", "Digital delivery", "Downloadable gallery for 6 months", "Add your own photos from your share page", "Close uploads early once everyone's uploaded", "Complimentary Roast Reel add-on for any event type", "24-hour priority turnaround"] },
 ];
 
+// Same "what's actually different" scannability treatment as the homepage
+// pricing cards (app/page.jsx's SHARED_TIER_FEATURES) -- computed, not
+// hand-classified, so a feature list edit here can't silently drift out of
+// sync with which lines render as shared vs. differentiating.
+const SHARED_TIER_FEATURES = new Set(
+  TIERS[0].features.filter((f) => TIERS.every((t) => t.features.includes(f)))
+);
+
 const STYLES = [
   { id: "cinematic", label: "Cinematic", desc: "Slow, emotional, warm color grade" },
   { id: "upbeat", label: "Upbeat", desc: "Fast cuts, high energy, beat-synced" },
@@ -238,8 +246,15 @@ function BookingFormInner() {
                   <span style={{ color: "#C97A3D", fontWeight: 700 }}>{t.price}</span>
                 </div>
                 <p style={{ fontSize: "13px", color: "#4a4642", margin: "4px 0 10px" }}>{t.tagline}</p>
-                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "13px", color: "#6b655c" }}>
-                  {t.features.map((f) => <li key={f} style={{ display: "flex", gap: "6px", marginBottom: "4px" }}><Check size={13} color="#7A8B76" style={{ flexShrink: 0, marginTop: "2px" }} /> {f}</li>)}
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "13px" }}>
+                  {t.features.map((f) => {
+                    const shared = SHARED_TIER_FEATURES.has(f);
+                    return (
+                      <li key={f} style={{ display: "flex", gap: "6px", marginBottom: "4px", color: shared ? "#8a857d" : "#211F1D", fontWeight: shared ? 400 : 600 }}>
+                        <Check size={13} color={shared ? "#ADA79B" : "#C97A3D"} style={{ flexShrink: 0, marginTop: "2px" }} /> {f}
+                      </li>
+                    );
+                  })}
                 </ul>
               </button>
             ))}

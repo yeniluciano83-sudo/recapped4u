@@ -126,6 +126,11 @@ export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sectionRefs = useRef({});
+  // Independent of the "how" Section's own reveal (which just fades the
+  // whole block in) -- this one gates a staggered per-step pop so the four
+  // steps activate in order, reinforcing that they're an actual sequence
+  // rather than four unrelated cards.
+  const { ref: howRef, visible: howVisible } = useScrollReveal();
 
   // Hero before/after: rotates through SAMPLE_PAIRS, real output from the
   // actual pipeline, rather than sitting on a single static pair. Same
@@ -211,6 +216,23 @@ export default function HomePage() {
         }
         .how-step-line { width: 2px; flex: 1; min-height: 0; background: #E4DED2; margin: 6px 0; }
         .how-step-content { padding-bottom: 28px; }
+
+        /* Off until the timeline scrolls into view (how-timeline-visible),
+           then each circle pops in after the one before it -- reinforces
+           that these are four steps IN ORDER, not just four cards. */
+        .how-step-circle { opacity: 0; transform: scale(0.6); }
+        .how-timeline-visible .how-step-circle { animation: how-step-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .how-timeline-visible .how-step:nth-child(1) .how-step-circle { animation-delay: 0s; }
+        .how-timeline-visible .how-step:nth-child(2) .how-step-circle { animation-delay: 0.15s; }
+        .how-timeline-visible .how-step:nth-child(3) .how-step-circle { animation-delay: 0.3s; }
+        .how-timeline-visible .how-step:nth-child(4) .how-step-circle { animation-delay: 0.45s; }
+        @keyframes how-step-pop {
+          from { opacity: 0; transform: scale(0.6); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .how-step-circle { opacity: 1; transform: none; animation: none; }
+        }
         .how-step-title { font-family: Georgia, serif; font-size: 17px; font-weight: 700; margin: 12px 0 5px; }
         .how-step-desc { font-size: 13.5px; color: #4a4642; line-height: 1.55; max-width: 480px; }
         @media (min-width: 760px) {
@@ -599,7 +621,7 @@ export default function HomePage() {
       <Section id="how" refs={sectionRefs} title="How It Works" icon={<Camera size={20} color="#C97A3D" />}
         blob={{ color: "#C97A3D", top: -50, right: 0, size: 260 }}
         subtitle="Every guest already has a camera in their pocket. Four simple steps turn what they capture into one story worth watching.">
-        <div className="how-timeline">
+        <div className={`how-timeline${howVisible ? " how-timeline-visible" : ""}`} ref={howRef}>
           {[
             { n: "1", icon: Calendar, t: "Book", d: "Tell us about your event, pick your editing style — takes less than 2 minutes." },
             { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Share your QR code digitally or print it on cards. Guests add photos with zero apps and zero fuss, and you can toss in your own from the same page." },

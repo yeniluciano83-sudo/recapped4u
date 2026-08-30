@@ -314,9 +314,9 @@ function BookingFormInner() {
             </div>
           )}
 
-          <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>Pick your full recap video theme</div>
+          <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>{isSocialCutsFormat ? "Pick your editing theme" : "Pick your full recap video theme"}</div>
           <p style={{ fontSize: "12.5px", color: "#6b655c", margin: "0 0 10px", lineHeight: 1.5 }}>
-            Once guests start uploading, you can star must-include photos to guarantee they make the video — even if our AI's automatic picks would've skipped them. That happens later, from your QR share page.
+            Once guests start uploading, you can star must-include photos to guarantee they make {isSocialCutsFormat ? "your social cuts" : "the video"} — even if our AI's automatic picks would've skipped them. That happens later, from your QR share page.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {STYLES.map((s) => (

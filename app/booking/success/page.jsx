@@ -22,6 +22,9 @@ function SuccessContent() {
           Booking reference: {bookingId}
         </p>
       )}
+      <a href="/" style={{ display: "inline-block", marginTop: "28px", background: "#C97A3D", color: "#211F1D", fontSize: 14, fontWeight: 700, padding: "12px 22px", borderRadius: 10, textDecoration: "none" }}>
+        Back to homepage
+      </a>
     </div>
   );
 }

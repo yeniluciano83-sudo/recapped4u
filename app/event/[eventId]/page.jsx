@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle, Sparkles } from "lucide-react";
+import { Camera, Upload, Check, Loader2, AlertTriangle, Sparkles } from "lucide-react";
 
 // How often to re-check status while it's still moving -- lets a host who
 // leaves this tab open see "processing" flip to "ready" on its own, instead
@@ -63,6 +63,7 @@ export default function EventUploadPage() {
   const eventId = params?.eventId;
 
   const [files, setFiles] = useState([]);
+  const [thumbnails, setThumbnails] = useState([]);
   const [uploaderName, setUploaderName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
@@ -92,6 +93,18 @@ export default function EventUploadPage() {
     const interval = setInterval(loadEventInfo, STATUS_POLL_MS);
     return () => clearInterval(interval);
   }, [eventId, status, loadEventInfo]);
+
+  // Real thumbnails, not just filenames -- a guest recognizes their own
+  // photo on sight, not by "IMG_2594.HEIC". Regenerated whenever `files`
+  // changes, including the post-upload narrowing down to just the file(s)
+  // that still need a retry, so what's shown always matches what's selected.
+  // Revoking on every change (not just unmount) keeps this from leaking a
+  // blob URL per photo over a guest uploading many batches in one session.
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setThumbnails(urls);
+    return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
+  }, [files]);
 
   const handleFiles = (e) => setFiles(Array.from(e.target.files || []));
 
@@ -240,13 +253,15 @@ export default function EventUploadPage() {
 
               {files.length > 0 && (
                 <div style={{ marginTop: "14px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {/* Actual photos, not filenames -- after a partial upload
+                      failure this list narrows down to just what still
+                      needs a retry, and a guest recognizes their own photo
+                      on sight far faster than "IMG_2594.HEIC". */}
                   {files.slice(0, 6).map((f, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", background: "#FAF7F2", padding: "5px 9px", borderRadius: "999px", color: "#4a4642" }}>
-                      <ImageIcon size={12} />
-                      {f.name.length > 14 ? f.name.slice(0, 12) + "…" : f.name}
-                    </div>
+                    <img key={i} src={thumbnails[i]} alt={f.name} title={f.name}
+                      style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", border: "1px solid #E4DED2", display: "block" }} />
                   ))}
-                  {files.length > 6 && <div style={{ fontSize: "12px", color: "#6b655c", padding: "5px 4px" }}>+{files.length - 6} more</div>}
+                  {files.length > 6 && <div style={{ fontSize: "12px", color: "#6b655c", padding: "5px 4px", alignSelf: "center" }}>+{files.length - 6} more</div>}
                 </div>
               )}
 

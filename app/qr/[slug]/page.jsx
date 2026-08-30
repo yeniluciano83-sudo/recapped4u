@@ -362,6 +362,11 @@ export default function QrSharePage() {
                           <Star size={11} color="#211F1D" fill="#211F1D" />
                         </div>
                       )}
+                      {photo.uploaderName && (
+                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2px 5px", background: "rgba(33,31,29,0.65)", color: "#FFFFFF", fontSize: 9.5, fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {photo.uploaderName}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -410,6 +415,11 @@ export default function QrSharePage() {
                       {photo.mustIncludeSocial && (
                         <div style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Star size={11} color="#211F1D" fill="#211F1D" />
+                        </div>
+                      )}
+                      {photo.uploaderName && (
+                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2px 5px", background: "rgba(33,31,29,0.65)", color: "#FFFFFF", fontSize: 9.5, fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {photo.uploaderName}
                         </div>
                       )}
                     </button>

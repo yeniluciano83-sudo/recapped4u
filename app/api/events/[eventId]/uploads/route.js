@@ -27,7 +27,7 @@ export async function GET(req, { params }) {
 
   const { data: uploads, error } = await supabase
     .from("uploads")
-    .select("id, storage_key, must_include, must_include_social, uploaded_at")
+    .select("id, storage_key, must_include, must_include_social, uploader_name, uploaded_at")
     .eq("booking_id", booking.id)
     .eq("file_type", "photo")
     .order("uploaded_at", { ascending: true });
@@ -41,6 +41,7 @@ export async function GET(req, { params }) {
       id: u.id,
       mustInclude: u.must_include,
       mustIncludeSocial: u.must_include_social,
+      uploaderName: u.uploader_name,
       url: await getSignedDownloadUrl(u.storage_key, 3600),
     }))
   );

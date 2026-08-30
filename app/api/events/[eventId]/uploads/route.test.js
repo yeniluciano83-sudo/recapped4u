@@ -39,8 +39,8 @@ describe("GET /api/events/[eventId]/uploads", () => {
     sb.mockResponse({ data: { id: "b1" }, error: null });
     sb.mockResponse({
       data: [
-        { id: "u1", storage_key: "k1", must_include: true, must_include_social: false, uploaded_at: "2026-01-01" },
-        { id: "u2", storage_key: "k2", must_include: false, must_include_social: true, uploaded_at: "2026-01-02" },
+        { id: "u1", storage_key: "k1", must_include: true, must_include_social: false, uploader_name: "Jordan", uploaded_at: "2026-01-01" },
+        { id: "u2", storage_key: "k2", must_include: false, must_include_social: true, uploader_name: "Guest", uploaded_at: "2026-01-02" },
       ],
       error: null,
     });
@@ -49,8 +49,8 @@ describe("GET /api/events/[eventId]/uploads", () => {
     const json = await res.json();
 
     expect(json.photos).toEqual([
-      { id: "u1", mustInclude: true, mustIncludeSocial: false, url: "https://signed.example/k1" },
-      { id: "u2", mustInclude: false, mustIncludeSocial: true, url: "https://signed.example/k2" },
+      { id: "u1", mustInclude: true, mustIncludeSocial: false, uploaderName: "Jordan", url: "https://signed.example/k1" },
+      { id: "u2", mustInclude: false, mustIncludeSocial: true, uploaderName: "Guest", url: "https://signed.example/k2" },
     ]);
   });
 

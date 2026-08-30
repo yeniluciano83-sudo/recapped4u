@@ -5,10 +5,15 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import { getUploadLimit } from "@/lib/uploadLimits";
 import { captureError } from "@/lib/sentry";
 
-// Generous enough for real phone photos (even large ones) and real guest
-// counts, while closing off a scripted client pushing unbounded fake
-// uploads at a guessed/leaked event link and running up R2 storage cost.
-const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+// Vercel rejects a request body over ~4.5MB with its own 413 before this
+// route ever runs (see the matching comment in both upload pages'
+// uploadOneFile) -- this check used to sit at 25MB, which meant it was
+// dead code for anything between 4.5MB and 25MB: those never made it here
+// to be checked, they just 413'd upstream with a message this route never
+// got to shape. 4MB leaves headroom for multipart overhead so a file that
+// actually reaches this code and trips this check gets our own clear,
+// correctly-scoped error instead of Vercel's opaque one.
+const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024;
 
 export async function POST(req, { params }) {
   const { eventId } = await params;
@@ -96,7 +101,7 @@ export async function POST(req, { params }) {
 
     const oversized = files.find((file) => file.size > MAX_FILE_SIZE_BYTES);
     if (oversized) {
-      return NextResponse.json({ error: "Photos must be under 25MB each.", scope: "file" }, { status: 400 });
+      return NextResponse.json({ error: "This photo is too large to upload. Try a smaller version.", scope: "file" }, { status: 400 });
     }
 
     const { count: existingCount } = await supabase

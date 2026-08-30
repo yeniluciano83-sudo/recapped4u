@@ -107,7 +107,7 @@ describe("POST /api/events/[eventId]/upload -- per-file validation", () => {
 
   it('tags an oversized-file rejection with scope: "file"', async () => {
     sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "collecting" }, error: null });
-    const bigFile = new File([new Uint8Array(25 * 1024 * 1024 + 1)], "huge.jpg", { type: "image/jpeg" });
+    const bigFile = new File([new Uint8Array(4 * 1024 * 1024 + 1)], "huge.jpg", { type: "image/jpeg" });
     const req = makeUploadRequest([bigFile]);
     const res = await POST(req, { params: { eventId: "slug-1" } });
     const json = await res.json();

@@ -38,6 +38,16 @@ async function uploadOneFile(endpoint, uploaderName, file) {
       formData.append("files", file);
       formData.append("clientUploadId", clientUploadIdFor(file));
       const res = await fetch(endpoint, { method: "POST", body: formData });
+      // Vercel itself rejects an oversized request body with a 413 before
+      // our route ever runs (see MAX_FILE_SIZE_BYTES's comment in
+      // app/api/events/[eventId]/upload/route.js) -- one large photo alone
+      // can trip this, not just a big batch. That response never goes
+      // through our NextResponse.json() calls, so it has no {error, scope}
+      // shape to read -- detect it by status instead so it gets scoped to
+      // just this file like our own oversized check does.
+      if (res.status === 413) {
+        return { ok: false, error: "This photo is too large to upload. Try a smaller version.", retryable: false, scope: "file" };
+      }
       const data = await res.json().catch(() => ({}));
       if (res.ok) return { ok: true };
       lastError = data.error || "Upload failed. Please try again.";

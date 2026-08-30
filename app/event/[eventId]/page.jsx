@@ -279,7 +279,7 @@ export default function EventUploadPage() {
         </div>
 
         <p style={{ textAlign: "center", fontSize: "12px", color: "#8a857d", marginTop: "22px", lineHeight: 1.6 }}>
-          Your photos help build the event recap video.<br />No account needed — just this link.
+          Your photos help build the event recap video — the host can star favorites to guarantee they make the cut.<br />No account needed — just this link.
         </p>
         <p style={{ textAlign: "center", marginTop: "18px" }}>
           <a href="/#about" style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>

@@ -13,6 +13,10 @@ import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle, Arro
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 900;
 
+// How often to re-check whether a newer deploy has landed while this tab
+// stays open -- see checkBuildFreshness below.
+const BUILD_CHECK_MS = 60000;
+
 // Stable across every retry of the SAME File object -- the browser never
 // changes a file's name/size/lastModified between attempts, whether the
 // retry is this function's own loop or the host re-tapping the upload
@@ -61,6 +65,7 @@ export default function HostUploadPage() {
   const [uploadError, setUploadError] = useState(null);
   const [eventInfo, setEventInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [staleBuild, setStaleBuild] = useState(false);
 
   const loadEventInfo = useCallback(async () => {
     try {
@@ -77,6 +82,28 @@ export default function HostUploadPage() {
   }, [slug]);
 
   useEffect(() => { if (slug) loadEventInfo(); }, [slug, loadEventInfo]);
+
+  // A host adding their own photos can leave this tab open for a while --
+  // if a fix deploys in the meantime, the tab keeps running whatever JS it
+  // loaded at the start, silently missing it. Comparing the live server's
+  // deploy against the build this tab was loaded with catches that.
+  const checkBuildFreshness = useCallback(async () => {
+    try {
+      const res = await fetch("/api/build-version");
+      const data = await res.json();
+      if (data.sha && data.sha !== "dev" && data.sha !== process.env.NEXT_PUBLIC_BUILD_SHA) {
+        setStaleBuild(true);
+      }
+    } catch (err) {
+      // Best-effort -- never let this block uploads.
+    }
+  }, []);
+
+  useEffect(() => {
+    checkBuildFreshness();
+    const interval = setInterval(checkBuildFreshness, BUILD_CHECK_MS);
+    return () => clearInterval(interval);
+  }, [checkBuildFreshness]);
 
   const handleFiles = (e) => setFiles(Array.from(e.target.files || []));
 
@@ -203,6 +230,12 @@ export default function HostUploadPage() {
             </div>
           ) : (
             <>
+              {staleBuild && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "#FBEEE0", border: "1px solid #C97A3D", marginBottom: "16px", fontSize: "12.5px", color: "#4a4642" }}>
+                  <span>This page has an update available — refresh for the latest fixes.</span>
+                  <button onClick={() => window.location.reload()} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: "8px", border: "1px solid #C97A3D", background: "#FFFFFF", color: "#C97A3D", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Refresh</button>
+                </div>
+              )}
               <label htmlFor="host-name-input" style={{ fontSize: "13px", color: "#4a4642", display: "block", marginBottom: "6px" }}>Your name</label>
               <input id="host-name-input" type="text" value={uploaderName} onChange={(e) => setUploaderName(e.target.value)} placeholder={eventInfo.host_name || "Your name"}
                 style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", marginBottom: "20px", boxSizing: "border-box" }} />

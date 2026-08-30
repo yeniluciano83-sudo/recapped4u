@@ -70,6 +70,7 @@ export default function EventUploadPage() {
   const [justUploaded, setJustUploaded] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [eventInfo, setEventInfo] = useState(null);
+  const [staleBuild, setStaleBuild] = useState(false);
 
   const loadEventInfo = useCallback(async () => {
     try {
@@ -82,7 +83,28 @@ export default function EventUploadPage() {
     }
   }, [eventId]);
 
-  useEffect(() => { if (eventId) loadEventInfo(); }, [eventId, loadEventInfo]);
+  // A guest at a real event often leaves this tab open for the whole
+  // party, uploading in bursts as they take photos -- if a fix deploys
+  // in the meantime, their tab keeps running the JS it loaded at the
+  // start, silently missing it (this is exactly what happened with a
+  // real batch-upload bug: retrying in the same stale tab kept hitting
+  // the old, already-fixed behavior). Comparing the live server's
+  // deploy against the build this tab was loaded with catches that.
+  const checkBuildFreshness = useCallback(async () => {
+    try {
+      const res = await fetch("/api/build-version");
+      const data = await res.json();
+      if (data.sha && data.sha !== "dev" && data.sha !== process.env.NEXT_PUBLIC_BUILD_SHA) {
+        setStaleBuild(true);
+      }
+    } catch (err) {
+      // Best-effort -- never let this block uploads.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (eventId) { loadEventInfo(); checkBuildFreshness(); }
+  }, [eventId, loadEventInfo, checkBuildFreshness]);
 
   // Only poll while status can still change -- delivered/cancelled are
   // terminal, and re-fetching an active upload session (files selected,
@@ -90,9 +112,9 @@ export default function EventUploadPage() {
   const status = eventInfo?.status;
   useEffect(() => {
     if (!eventId || !status || status === "delivered" || status === "cancelled") return;
-    const interval = setInterval(loadEventInfo, STATUS_POLL_MS);
+    const interval = setInterval(() => { loadEventInfo(); checkBuildFreshness(); }, STATUS_POLL_MS);
     return () => clearInterval(interval);
-  }, [eventId, status, loadEventInfo]);
+  }, [eventId, status, loadEventInfo, checkBuildFreshness]);
 
   // Real thumbnails, not just filenames -- a guest recognizes their own
   // photo on sight, not by "IMG_2594.HEIC". Regenerated whenever `files`
@@ -248,6 +270,12 @@ export default function EventUploadPage() {
             </div>
           ) : (
             <>
+              {staleBuild && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "#FBEEE0", border: "1px solid #C97A3D", marginBottom: "16px", fontSize: "12.5px", color: "#4a4642" }}>
+                  <span>This page has an update available — refresh for the latest fixes.</span>
+                  <button onClick={() => window.location.reload()} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: "8px", border: "1px solid #C97A3D", background: "#FFFFFF", color: "#C97A3D", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Refresh</button>
+                </div>
+              )}
               <label htmlFor="name-input" style={{ fontSize: "13px", color: "#4a4642", display: "block", marginBottom: "6px" }}>Your name (so we know who to thank)</label>
               <input id="name-input" type="text" value={uploaderName} onChange={(e) => setUploaderName(e.target.value)} placeholder="e.g. Jordan"
                 style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", marginBottom: "20px", boxSizing: "border-box" }} />

@@ -174,9 +174,13 @@ export default function EventUploadPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>
-      <div style={{ width: "100%", height: "10px", display: "flex", gap: "3px", padding: "0 12px", background: "#F0EAE0" }}>
+      {/* justUploaded (already tracked for the button's "Added -- thank
+          you!" state) doubles as the trigger window for both this glow and
+          the counter bump below -- a guest's contribution visibly landing,
+          not just a silent count update. */}
+      <div className={justUploaded ? "reel-glow" : undefined} style={{ width: "100%", height: "10px", display: "flex", gap: "3px", padding: "0 12px", background: "#F0EAE0" }}>
         {Array.from({ length: 24 }).map((_, i) => (
-          <div key={i} style={{ flex: 1, height: "10px", borderRadius: "1px", background: i < reelSegments ? "#C97A3D" : "#E4DED2", transition: "background 0.4s ease" }} />
+          <div key={i} className={i < reelSegments ? "reel-segment-filled" : undefined} style={{ flex: 1, height: "10px", borderRadius: "1px", background: i < reelSegments ? "#C97A3D" : "#E4DED2", transition: "background 0.4s ease" }} />
         ))}
       </div>
 
@@ -188,13 +192,13 @@ export default function EventUploadPage() {
         </div>
 
         <div style={{ textAlign: "center", marginBottom: "32px", fontSize: "14px", color: "#7A8B76" }}>
-          <strong style={{ color: "#C97A3D", fontSize: "16px" }}>{uploadCount}</strong> {uploadCount === 1 ? "moment" : "moments"} captured so far
+          <strong className={justUploaded ? "count-pop" : undefined} style={{ color: "#C97A3D", fontSize: "16px", display: "inline-block" }}>{uploadCount}</strong> {uploadCount === 1 ? "moment" : "moments"} captured so far
         </div>
 
         <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2" }}>
           {isDelivered ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "16px 8px", textAlign: "center" }}>
-              <Check size={26} color="#7A8B76" />
+              <Check size={26} color="#7A8B76" className="success-pop" />
               <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is ready!</p>
               <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
                 The video and photo gallery have been delivered to the host's inbox.
@@ -274,6 +278,17 @@ export default function EventUploadPage() {
         @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
         .pulse { animation: pulse 1.8s ease-in-out infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+        .success-pop { animation: success-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes success-pop-in { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+        .count-pop { animation: count-pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes count-pop-in { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
+        .reel-glow .reel-segment-filled { animation: reel-segment-glow 0.7s ease-out; }
+        @keyframes reel-segment-glow {
+          0% { box-shadow: 0 0 0 rgba(201,122,61,0); }
+          35% { box-shadow: 0 0 6px 1px rgba(201,122,61,0.85); }
+          100% { box-shadow: 0 0 0 rgba(201,122,61,0); }
+        }
+        @media (prefers-reduced-motion: reduce) { .success-pop, .pulse, .count-pop, .reel-glow .reel-segment-filled { animation: none; } }
       `}</style>
     </main>
   );

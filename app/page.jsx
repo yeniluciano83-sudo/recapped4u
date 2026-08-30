@@ -294,15 +294,6 @@ export default function HomePage() {
           .price-card-breeze { animation: none; }
         }
 
-        .hero-polaroid-photo { animation: photo-develop 0.9s ease-out; }
-        @keyframes photo-develop {
-          0% { filter: sepia(0.55) saturate(0.35) blur(3px) brightness(1.08); opacity: 0.75; }
-          100% { filter: sepia(0) saturate(1) blur(0) brightness(1); opacity: 1; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .hero-polaroid-photo { animation: none; }
-        }
-
         /* The pinned-to-a-corkboard tape mark above each non-highlighted
            pricing card reads fine floating in the gap between cards in a
            multi-column grid, but once the grid collapses to a single
@@ -580,12 +571,7 @@ export default function HomePage() {
           </div>
           <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: "rotate(3deg)" }}>
             <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
-              {/* key={heroPairIndex} forces a remount on every rotation --
-                  a CSS animation doesn't replay just because `src` changed,
-                  it needs a fresh element each time. Mimics an instant photo
-                  actually developing (blurred/desaturated -> sharp), tying
-                  into the polaroid print this already looks like. */}
-              <img key={heroPairIndex} src={SAMPLE_PAIRS[heroPairIndex].polished} alt="The same photo, polished by our pipeline" className="hero-polaroid-photo" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img src={SAMPLE_PAIRS[heroPairIndex].polished} alt="The same photo, polished by our pipeline" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
           </div>

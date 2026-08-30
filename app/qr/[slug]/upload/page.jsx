@@ -37,7 +37,7 @@ async function uploadOneFile(endpoint, uploaderName, file) {
       const data = await res.json().catch(() => ({}));
       if (res.ok) return { ok: true };
       lastError = data.error || "Upload failed. Please try again.";
-      if (res.status >= 400 && res.status < 500) return { ok: false, error: lastError, retryable: false };
+      if (res.status >= 400 && res.status < 500) return { ok: false, error: lastError, retryable: false, scope: data.scope };
     } catch (err) {
       lastError = "Upload failed. Please try again.";
     }
@@ -90,7 +90,8 @@ export default function HostUploadPage() {
     // failing the *entire* batch even though most files were fine.
     const endpoint = `/api/events/${slug}/upload`;
     const name = uploaderName || eventInfo?.host_name || "Host";
-    const stillFailed = [];
+    const stillFailed = [];   // network/5xx -- worth an automatic retry via re-tap
+    const rejected = [];      // this one photo was rejected (wrong type / too large) -- retrying it won't help, doesn't say anything about the rest of the batch
     let uploadedCount = 0;
     let stoppedEarly = null;
     let stoppedAtIndex = -1;
@@ -99,12 +100,13 @@ export default function HostUploadPage() {
       const result = await uploadOneFile(endpoint, name, files[i]);
       if (result.ok) {
         uploadedCount += 1;
+      } else if (result.scope === "file") {
+        rejected.push(result.error);
       } else if (!result.retryable) {
-        // Server rejected the request for a reason retrying won't fix
-        // (uploads closed, event cancelled, a specific file over the size
-        // limit) -- true of every remaining file too (or, for a single
-        // bad file, true of every future retry of THIS file), so stop
-        // here instead of attempting the rest.
+        // Server rejected the request for a reason retrying won't fix and
+        // that's true of every remaining file too (uploads closed, event
+        // cancelled, event's recap already started) -- stop here instead
+        // of attempting the rest.
         stoppedEarly = result.error;
         stoppedAtIndex = i;
         break;
@@ -115,8 +117,12 @@ export default function HostUploadPage() {
 
     setUploadCount((c) => c + uploadedCount);
 
+    const rejectedMsg = rejected.length === 0 ? "" :
+      rejected.length === 1 ? ` 1 photo couldn't be added: ${rejected[0]}` :
+      ` ${rejected.length} photos couldn't be added (wrong file type or too large).`;
+
     if (stoppedEarly) {
-      setUploadError(stoppedEarly);
+      setUploadError(`${stoppedEarly}${rejectedMsg}`);
       // Drop everything up to and including the file that just failed --
       // the ones before it already succeeded (leaving them selected would
       // silently re-upload duplicates on retry), and the one that failed
@@ -124,13 +130,15 @@ export default function HostUploadPage() {
       // change. Whatever's left after it is still untried and worth
       // keeping selected.
       setFiles((prev) => prev.slice(stoppedAtIndex + 1));
-    } else if (stillFailed.length > 0) {
+    } else if (stillFailed.length > 0 || rejected.length > 0) {
       setUploadError(
-        uploadedCount > 0
-          ? `${uploadedCount} of ${files.length} added. ${stillFailed.length} didn't make it after retrying — check your connection and tap "Add to the recap" again to retry just those.`
-          : `Upload failed after retrying. Please check your connection and try again.`
+        (uploadedCount > 0
+          ? `${uploadedCount} of ${files.length} added.`
+          : stillFailed.length > 0 ? `Upload failed after retrying.` : `Upload failed.`
+        ) + rejectedMsg +
+        (stillFailed.length > 0 ? ` ${stillFailed.length} didn't make it after retrying — check your connection and tap "Add to the recap" again to retry just those.` : "")
       );
-      setFiles(stillFailed); // leave only the failed ones selected for an easy retry
+      setFiles(stillFailed); // rejected files are dropped for good; only the network-failed ones stay selected for an easy retry
     } else {
       setJustUploaded(true);
       setFiles([]);

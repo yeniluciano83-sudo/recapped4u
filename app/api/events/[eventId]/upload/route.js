@@ -84,14 +84,19 @@ export async function POST(req, { params }) {
     // Photos only -- the upload pages already restrict file pickers to
     // image/*, but that's a client-side hint, not a guarantee, so it's
     // still enforced here.
+    // scope: "file" tells the client this rejection is about this one photo,
+    // not the event as a whole -- unlike every other 4xx below (uploads
+    // closed, event cancelled, etc.), it shouldn't abort the rest of a
+    // guest's batch, just this file. See uploadOneFile/handleUpload in both
+    // upload pages.
     const nonImage = files.find((file) => !file.type.startsWith("image/"));
     if (nonImage) {
-      return NextResponse.json({ error: "Only photos can be uploaded." }, { status: 400 });
+      return NextResponse.json({ error: "Only photos can be uploaded.", scope: "file" }, { status: 400 });
     }
 
     const oversized = files.find((file) => file.size > MAX_FILE_SIZE_BYTES);
     if (oversized) {
-      return NextResponse.json({ error: "Photos must be under 25MB each." }, { status: 400 });
+      return NextResponse.json({ error: "Photos must be under 25MB each.", scope: "file" }, { status: 400 });
     }
 
     const { count: existingCount } = await supabase

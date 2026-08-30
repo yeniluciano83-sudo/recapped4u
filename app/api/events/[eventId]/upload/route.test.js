@@ -75,3 +75,43 @@ describe("POST /api/events/[eventId]/upload -- status guards", () => {
     expect(res.status).toBe(500);
   });
 });
+
+// Unlike the booking-wide guards above, these two rejections are about one
+// specific photo -- scope: "file" is what tells both upload pages' client
+// loop to skip just this file and keep uploading the rest of the batch,
+// instead of aborting everything after it (the actual bug behind a guest
+// batch that stopped after 1 of 20 photos).
+describe("POST /api/events/[eventId]/upload -- per-file validation", () => {
+  let sb;
+
+  beforeEach(() => {
+    sb = createSupabaseMock();
+    supabase.from.mockImplementation(sb.from);
+  });
+
+  function makeUploadRequest(files) {
+    const formData = new FormData();
+    formData.set("uploaderName", "Guest");
+    for (const f of files) formData.append("files", f);
+    return { headers: { get: () => null }, formData: async () => formData };
+  }
+
+  it('tags a non-image rejection with scope: "file"', async () => {
+    sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "collecting" }, error: null });
+    const req = makeUploadRequest([new File(["clip"], "clip.mp4", { type: "video/mp4" })]);
+    const res = await POST(req, { params: { eventId: "slug-1" } });
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.scope).toBe("file");
+  });
+
+  it('tags an oversized-file rejection with scope: "file"', async () => {
+    sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "collecting" }, error: null });
+    const bigFile = new File([new Uint8Array(25 * 1024 * 1024 + 1)], "huge.jpg", { type: "image/jpeg" });
+    const req = makeUploadRequest([bigFile]);
+    const res = await POST(req, { params: { eventId: "slug-1" } });
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.scope).toBe("file");
+  });
+});

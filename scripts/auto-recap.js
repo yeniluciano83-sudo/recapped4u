@@ -24,7 +24,7 @@
  *      node scripts/auto-recap.js submit <bookingId>   (submit only)
  *      node scripts/auto-recap.js resume <bookingId>   (check/continue once)
  */
-require("dotenv").config({ path: require("path").join(__dirname,"..",".env.local") });
+require("dotenv").config({ path: require("path").join(__dirname,"..",".env.local"), quiet: true });
 const { captureError, flushSentry } = require("../lib/sentry");
 const fs = require("fs");
 const os = require("os");

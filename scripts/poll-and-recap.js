@@ -39,7 +39,7 @@
  *
  * Run manually: node scripts/poll-and-recap.js
  */
-require("dotenv").config({ path: require("path").join(__dirname, "..", ".env.local") });
+require("dotenv").config({ path: require("path").join(__dirname, "..", ".env.local"), quiet: true });
 const path = require("path");
 const { execSync } = require("child_process");
 const { createClient } = require("@supabase/supabase-js");

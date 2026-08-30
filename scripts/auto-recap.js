@@ -36,6 +36,7 @@ const ffmpeg = require("fluent-ffmpeg");
 ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH || require("ffmpeg-static"));
 const { createClient } = require("@supabase/supabase-js");
 const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
+const sharp = require("sharp");
 const { enhancePhoto } = require("../lib/photo-enhance");
 const { assembleSlideshow, extractPosterFrame } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
@@ -292,6 +293,31 @@ async function fetchPhotoUploads(bookingId) {
   return uploads.filter((u) => u.file_type === "photo");
 }
 
+// Claude's vision input only accepts jpeg/png/gif/webp. Guest uploads are
+// only restricted to image/* client-side (see app/api/events/[eventId]/
+// upload/route.js), so anything else -- HEIC/HEIF above all, the default
+// photo format on every iPhone -- has to be actually converted, not just
+// relabeled. Confirmed live: a request declaring raw HEIC bytes as
+// image/jpeg is what produced a real guest-facing "Could not process
+// image" analysis failure.
+const CLAUDE_IMAGE_MEDIA_TYPES = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp" };
+
+async function toClaudeCompatibleImage(buffer, storageKey) {
+  const ext = path.extname(storageKey).toLowerCase();
+  const knownType = CLAUDE_IMAGE_MEDIA_TYPES[ext];
+  if (knownType) return { buffer, mediaType: knownType };
+
+  // HEIC/HEIF (or anything else unrecognized) -- convert to JPEG. This can
+  // still throw for a genuinely undecodable file (confirmed live: some
+  // iPhone Portrait/Live Photo HEIC variants trip up libheif's decoder even
+  // though the file itself isn't corrupt) -- callers already wrap this in
+  // the same try/catch that records a normal analysis failure, so that
+  // case degrades exactly as before, just with an accurate error message
+  // now instead of a silent mislabeled-media-type one.
+  const jpegBuffer = await sharp(buffer).rotate().jpeg({ quality: 92 }).toBuffer();
+  return { buffer: jpegBuffer, mediaType: "image/jpeg" };
+}
+
 // The old, fully synchronous analysis path -- one Claude call per photo,
 // blocking. No longer the default (see submitAnalysisBatch), but kept as
 // the fallback resumeAnalysis reaches for when a booking's batch has been
@@ -305,13 +331,15 @@ async function analyzePhotosSynchronously(bookingId) {
   for (const upload of photoUploads) {
     try {
       const buffer = await downloadFromR2(upload.storage_key);
-      const ext = path.extname(upload.storage_key).toLowerCase();
-      const mediaType = ext === ".png" ? "image/png" : "image/jpeg";
-      const analysis = await analyzePhoto(buffer, mediaType);
+      const claudeImage = await toClaudeCompatibleImage(buffer, upload.storage_key);
+      const analysis = await analyzePhoto(claudeImage.buffer, claudeImage.mediaType);
       if (analysis.flagged) {
         await rejectFlaggedUpload(upload, analysis, "");
         continue;
       }
+      // The ORIGINAL buffer, not the Claude-only JPEG conversion above --
+      // enhancePhoto downstream should work from the real uploaded bytes,
+      // not a copy re-encoded just to satisfy Claude's supported formats.
       analyzed.push({ upload, buffer, analysis });
       console.log(`  ✓ ${upload.storage_key} — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
     } catch (err) {
@@ -343,11 +371,10 @@ async function submitAnalysisBatch(bookingId) {
   for (const upload of photoUploads) {
     try {
       const buffer = await downloadFromR2(upload.storage_key);
-      const ext = path.extname(upload.storage_key).toLowerCase();
-      const mediaType = ext === ".png" ? "image/png" : "image/jpeg";
-      requests.push(buildAnalysisRequest(upload.id, buffer, mediaType));
+      const claudeImage = await toClaudeCompatibleImage(buffer, upload.storage_key);
+      requests.push(buildAnalysisRequest(upload.id, claudeImage.buffer, claudeImage.mediaType));
     } catch (err) {
-      await recordAnalysisFailure(bookingId, upload, `Download failed before batch submission: ${err.message}`);
+      await recordAnalysisFailure(bookingId, upload, `Failed to prepare photo for batch submission: ${err.message}`);
     }
   }
 

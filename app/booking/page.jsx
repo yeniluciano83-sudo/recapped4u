@@ -282,7 +282,7 @@ function BookingFormInner() {
         <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
           <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
             {isSocialCutsFormat
-              ? "Optional — pick one here, or just set a theme on your social cut below, since that's what's actually shown in social-cuts-only delivery. Skip both for a clean, true-to-life default look."
+              ? "Optional — pick a theme for your social cuts. Skip it for a clean, true-to-life default look. Each theme sets the color grade applied to every photo — so it's still worth picking one, even without music."
               : "Optional — pick one if you have a preference. Skip it for a clean, true-to-life default look. Each theme sets the color grade applied to every photo, not just the music — so it's still worth picking one even if you turn the soundtrack off below."}
           </p>
 
@@ -319,17 +319,21 @@ function BookingFormInner() {
             Once guests start uploading, you can star must-include photos to guarantee they make {isSocialCutsFormat ? "your social cuts" : "the video"} — even if our AI's automatic picks would've skipped them. That happens later, from your QR share page.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {STYLES.map((s) => (
-              <div key={s.id} style={{ position: "relative" }}>
-                <button onClick={() => update("style", s.id)} aria-pressed={form.style === s.id} style={{ width: "100%", textAlign: "left", padding: "16px", paddingRight: "48px", borderRadius: "12px", cursor: "pointer", background: form.style === s.id ? "#FBEEE0" : "#FFFFFF", border: form.style === s.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
-                  <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    {form.style === s.id && <Check size={15} color="#C97A3D" strokeWidth={3} />} {s.label}
-                  </div>
-                  <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>{s.desc}</div>
-                </button>
-                <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
-              </div>
-            ))}
+            {(isSocialCutsFormat ? SOCIAL_STYLE_OPTIONS : STYLES).map((s) => {
+              const field = isSocialCutsFormat ? "socialStyle" : "style";
+              const selected = (isSocialCutsFormat ? form.socialStyle : form.style) === s.id;
+              return (
+                <div key={s.id} style={{ position: "relative" }}>
+                  <button onClick={() => update(field, s.id)} aria-pressed={selected} style={{ width: "100%", textAlign: "left", padding: "16px", paddingRight: "48px", borderRadius: "12px", cursor: "pointer", background: selected ? "#FBEEE0" : "#FFFFFF", border: selected ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
+                    <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      {selected && <Check size={15} color="#C97A3D" strokeWidth={3} />} {s.label}
+                    </div>
+                    <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>{s.desc}</div>
+                  </button>
+                  <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
+                </div>
+              );
+            })}
             {!isSocialCutsFormat && (
               <button onClick={() => update("fullVideoNoMusic", !form.fullVideoNoMusic)} aria-pressed={form.fullVideoNoMusic} style={{ width: "100%", textAlign: "left", padding: "16px", borderRadius: "12px", cursor: "pointer", background: form.fullVideoNoMusic ? "#FBEEE0" : "#FFFFFF", border: form.fullVideoNoMusic ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
                 <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -340,7 +344,7 @@ function BookingFormInner() {
             )}
           </div>
 
-          {isSocialCutEligible && !isVideoOnlyFormat && (
+          {isSocialCutEligible && !isVideoOnlyFormat && !isSocialCutsFormat && (
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
               <div style={{ fontWeight: 700, fontSize: "15px" }}>Social cut theme</div>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
@@ -414,7 +418,7 @@ function BookingFormInner() {
           <SummaryRow label="Event" value={`${effectiveEventType} — ${formatDate(form.eventDate)}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
           <SummaryRow label="Style" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label} />
-          {isSocialCutEligible && !isVideoOnlyFormat && form.socialStyle && (
+          {isSocialCutEligible && !isVideoOnlyFormat && !isSocialCutsFormat && form.socialStyle && (
             <SummaryRow label="Social cut theme" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === form.socialStyle)?.label} />
           )}
           {isSocialCutEligible && (

@@ -21,6 +21,15 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const VALID_DELIVERY_FORMATS = ["recap", "video_only", "social_cuts"];
+    // Only Spotlight/Luxe ever choose this -- every other tier only ever
+    // gets a full video, so the UI never shows the picker and there's
+    // nothing to require. This is the actual source of truth (the booking
+    // form's own Continue button is just a UX nicety on top of it).
+    if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) && !VALID_DELIVERY_FORMATS.includes(deliveryFormat)) {
+      return NextResponse.json({ error: "Please choose a delivery format." }, { status: 400 });
+    }
+
     // The full UUID, not a truncated prefix -- this slug is the only thing
     // gating every guest-facing event-management route (upload, close
     // uploads, extend deadline, cancel, reschedule, social style). An
@@ -28,7 +37,7 @@ export async function POST(req) {
     // 122 bits.
     const uploadSlug = randomUUID();
 
-    const effectiveDeliveryFormat = SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) && deliveryFormat === "social_cuts" ? "social_cuts" : "recap";
+    const effectiveDeliveryFormat = SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) ? deliveryFormat : "recap";
     // Roast Reel works on "social cuts of every photo" bookings too --
     // scripts/auto-recap.js generates a separate roast script per social
     // cut in that mode, since there's no full video there to caption.

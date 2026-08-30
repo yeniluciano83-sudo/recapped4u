@@ -58,6 +58,39 @@ describe("POST /api/bookings", () => {
     expect(res.status).toBe(400);
   });
 
+  it("requires a delivery format on a social-cut-eligible tier, without touching the database", async () => {
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium" })); // no deliveryFormat
+    expect(res.status).toBe(400);
+    expect(sb.callLog.length).toBe(0);
+  });
+
+  it("rejects an unrecognized delivery format on a social-cut-eligible tier", async () => {
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "keepsake", deliveryFormat: "bogus" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("doesn't require a delivery format on a tier that never sees the picker", async () => {
+    sb.mockResponse({ data: { id: "booking-standard" }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_std", url: "https://checkout.stripe.com/std" });
+
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "standard" })); // no deliveryFormat
+    expect(res.status).toBe(200);
+    const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+    expect(insertCall.args[0].delivery_format).toBe("recap");
+  });
+
+  it("persists video_only as-is for a social-cut-eligible tier", async () => {
+    sb.mockResponse({ data: { id: "booking-video-only" }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_vo", url: "https://checkout.stripe.com/vo" });
+
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "video_only" }));
+    expect(res.status).toBe(200);
+    const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+    expect(insertCall.args[0].delivery_format).toBe("video_only");
+  });
+
   it("holds a free-tier booking at pending_confirmation, sends the confirm email, and never touches Stripe", async () => {
     sb.mockResponse({ data: { id: "booking-1" }, error: null }); // insert().select().single()
     sb.mockResponse({ data: null, error: null }); // update -> pending_confirmation
@@ -117,7 +150,7 @@ describe("POST /api/bookings", () => {
     sb.mockResponse({ data: null, error: null });
     stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_456", url: "https://checkout.stripe.com/def" });
 
-    await POST(jsonRequest({ ...BASE_BODY, tier: "premium", roastEnabled: true, roastLevel: "hot" }));
+    await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "recap", roastEnabled: true, roastLevel: "hot" }));
 
     const sessionArgs = stripeMocks.sessionsCreate.mock.calls[0][0];
     expect(sessionArgs.line_items).toHaveLength(2);
@@ -129,7 +162,7 @@ describe("POST /api/bookings", () => {
     sb.mockResponse({ data: null, error: null });
     stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_789", url: "https://checkout.stripe.com/ghi" });
 
-    await POST(jsonRequest({ ...BASE_BODY, tier: "keepsake", roastEnabled: true, roastLevel: "hot" }));
+    await POST(jsonRequest({ ...BASE_BODY, tier: "keepsake", deliveryFormat: "recap", roastEnabled: true, roastLevel: "hot" }));
 
     const sessionArgs = stripeMocks.sessionsCreate.mock.calls[0][0];
     expect(sessionArgs.line_items).toHaveLength(1);

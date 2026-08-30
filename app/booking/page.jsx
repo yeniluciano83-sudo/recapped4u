@@ -118,7 +118,11 @@ function BookingFormInner() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", deliveryFormat: "recap", fullVideoNoMusic: false });
+  // deliveryFormat starts unset (not "recap") so a Spotlight/Luxe host has
+  // to make an actual choice on step 3 -- canProceed() below blocks
+  // Continue until they do, rather than silently defaulting to "recap"
+  // the way this used to work.
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", deliveryFormat: "", fullVideoNoMusic: false });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -149,6 +153,7 @@ function BookingFormInner() {
   const effectiveRoastLevel = isRoastFullLevelEligible ? form.roastLevel : "light";
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
+  const isVideoOnlyFormat = isSocialCutEligible && form.deliveryFormat === "video_only";
   // Style is optional everywhere, not just social-cuts-only -- the backend
   // already defaults gracefully with no style set (documentary
   // color grade, documentary soundtrack; see enhancePhoto's default param
@@ -164,6 +169,9 @@ function BookingFormInner() {
   const canProceed = () => {
     if (step === 1) return form.hostName && form.email && form.eventType && (form.eventType !== "Other" || form.eventTypeOther.trim()) && form.eventDate;
     if (step === 2) return form.tier;
+    // Only Spotlight/Luxe see the delivery-format picker at all -- every
+    // other tier only ever gets a full video, so there's nothing to require.
+    if (step === 3) return !isSocialCutEligible || form.deliveryFormat;
     return true;
   };
 
@@ -279,17 +287,18 @@ function BookingFormInner() {
           </p>
 
           {isSocialCutEligible && (
-            <div style={{ marginBottom: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
-              <div style={{ fontWeight: 700, fontSize: "15px" }}>Delivery format</div>
+            <div style={{ marginBottom: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: form.deliveryFormat ? "1px solid #E4DED2" : "1.5px solid #C97A3D" }}>
+              <div style={{ fontWeight: 700, fontSize: "15px" }}>Delivery format <span style={{ fontWeight: 600, fontSize: "11px", color: "#C97A3D", textTransform: "uppercase", letterSpacing: "0.04em" }}>Required</span></div>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
-                Choose one — a curated full recap video plus your social cut(s), or skip the full video for social cuts covering every photo guests upload.
+                Choose one — a curated full recap video with or without social cuts, or skip the full video for social cuts covering every photo guests upload.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {[
-                  { id: "recap", label: "Full recap video", desc: "A curated highlight video, plus your social cut(s)." },
+                  { id: "recap", label: "Full recap video + social cuts", desc: "A curated highlight video, plus your social cut(s)." },
+                  { id: "video_only", label: "Full video only", desc: "Just your full recap video — no social cuts generated at all." },
                   { id: "social_cuts", label: "Social cuts of every photo", desc: "No full video — as many social cuts as it takes to cover every photo that gets uploaded." },
                 ].map((opt) => (
-                  <button key={opt.id} onClick={() => update("deliveryFormat", opt.id)} aria-pressed={form.deliveryFormat === opt.id}
+                  <button key={opt.id} onClick={() => setForm((f) => ({ ...f, deliveryFormat: opt.id, socialStyle: opt.id === "video_only" ? "" : f.socialStyle }))} aria-pressed={form.deliveryFormat === opt.id}
                     style={{
                       textAlign: "left", padding: "12px 14px", borderRadius: "10px", cursor: "pointer",
                       background: form.deliveryFormat === opt.id ? "#FBEEE0" : "#FAF7F2",
@@ -323,12 +332,12 @@ function BookingFormInner() {
                 <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
                   {form.fullVideoNoMusic && <Check size={15} color="#C97A3D" strokeWidth={3} />} No music
                 </div>
-                <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>Skip the soundtrack on your full recap video{isSocialCutEligible ? " (your social cut keeps its music)" : ""} — keeps whichever theme above you picked for the edit and color grade.</div>
+                <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>Skip the soundtrack on your full recap video{isSocialCutEligible && !isVideoOnlyFormat ? " (your social cut keeps its music)" : ""} — keeps whichever theme above you picked for the edit and color grade.</div>
               </button>
             )}
           </div>
 
-          {isSocialCutEligible && (
+          {isSocialCutEligible && !isVideoOnlyFormat && (
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
               <div style={{ fontWeight: 700, fontSize: "15px" }}>Social cut theme</div>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
@@ -402,11 +411,11 @@ function BookingFormInner() {
           <SummaryRow label="Event" value={`${effectiveEventType} — ${formatDate(form.eventDate)}`} />
           <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
           <SummaryRow label="Style" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label} />
-          {isSocialCutEligible && form.socialStyle && (
+          {isSocialCutEligible && !isVideoOnlyFormat && form.socialStyle && (
             <SummaryRow label="Social cut theme" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === form.socialStyle)?.label} />
           )}
           {isSocialCutEligible && (
-            <SummaryRow label="Delivery format" value={isSocialCutsFormat ? "Social cuts of every photo" : "Full recap video"} />
+            <SummaryRow label="Delivery format" value={isSocialCutsFormat ? "Social cuts of every photo" : isVideoOnlyFormat ? "Full video only" : "Full recap video + social cuts"} />
           )}
           {!isSocialCutsFormat && form.fullVideoNoMusic && <SummaryRow label="Full video music" value="Off" />}
           {isRoastEligible && form.roastEnabled && (

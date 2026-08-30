@@ -618,7 +618,13 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // didn't make the main shortlist -- upload the whole selection under its
   // own R2 prefix now, so a reprocess survives it: finalizeDelivery recovers
   // it by listing rather than needing anything still in memory from this run.
-  if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier)) {
+  //
+  // "video_only" delivery format skips this entirely -- no social-*-photo-*
+  // files ever get uploaded, so finalizeDelivery's own listDeliverableFiles
+  // loop (the only other place that looks at social cuts) finds nothing on
+  // its very first prefix and stops immediately, naturally producing zero
+  // social cuts without needing a second check there.
+  if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier) && booking.delivery_format !== "video_only") {
     const socialCutsCount = useAllPhotoSocialCuts ? Infinity : (SOCIAL_CUTS_COUNT[booking.tier] || 1);
     const socialSelections = buildSocialSelections(analyzed, socialCutsCount);
     console.log(`Uploading photos for ${socialSelections.length} social cut selection(s)...`);

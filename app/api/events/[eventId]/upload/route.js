@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { uploadFile, buildStorageKey, deleteFile } from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getUploadLimit } from "@/lib/uploadLimits";
+import { captureError } from "@/lib/sentry";
 
 // Generous enough for real phone photos (even large ones) and real guest
 // counts, while closing off a scripted client pushing unbounded fake
@@ -197,6 +198,7 @@ export async function POST(req, { params }) {
         // purge job, which both key off the `uploads` row) while the guest
         // was never told anything went wrong.
         console.error(`Upload row insert failed for booking ${booking.id}, key ${key}:`, insertError.message);
+        captureError(insertError, { tags: { route: "events.upload" }, extra: { bookingId: booking.id, key } });
         try {
           await deleteFile(key);
         } catch (cleanupErr) {
@@ -224,6 +226,7 @@ export async function POST(req, { params }) {
     return NextResponse.json({ uploaded: results.length });
   } catch (err) {
     console.error(`Upload failed for booking ${booking.id}:`, err);
+    captureError(err, { tags: { route: "events.upload" }, extra: { bookingId: booking.id } });
     return NextResponse.json({ error: `Upload failed: ${err.message}` }, { status: 500 });
   }
 }

@@ -17,7 +17,18 @@ jobs:
     # install waiting on an interactive prompt with no terminal attached,
     # see below) should fail fast and free up Actions minutes rather than
     # sit there for hours.
-    timeout-minutes: 20
+    #
+    # 20 minutes wasn't enough: confirmed live, a Spotlight-tier booking
+    # with Roast Reel got silently killed mid-"editing" by this exact
+    # timeout -- not because of a large photo count, but because Spotlight
+    # renders a full recap video *and* up to 5 social cuts, each in a roast
+    # and no-roast pair (10+ separate ffmpeg encodes in one job run), which
+    # a shared CI runner can't necessarily finish in 20 minutes. A hard
+    # timeout kill bypasses every catch block, so the booking was left
+    # stuck with no error anywhere until the pipeline's own 1.5h stale-
+    # recovery (see STALE_EDITING_HOURS in scripts/poll-and-recap.js)
+    # reverted it back to "collecting" to start over from scratch.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 

@@ -290,7 +290,7 @@ function BookingFormInner() {
             <div style={{ marginBottom: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: form.deliveryFormat ? "1px solid #E4DED2" : "1.5px solid #C97A3D" }}>
               <div style={{ fontWeight: 700, fontSize: "15px" }}>Delivery format <span style={{ fontWeight: 600, fontSize: "11px", color: "#C97A3D", textTransform: "uppercase", letterSpacing: "0.04em" }}>Required</span></div>
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "4px 0 12px", lineHeight: 1.5 }}>
-                Choose one — a curated full recap video with or without social cuts, or skip the full video for social cuts covering every photo guests upload.
+                Choose one — a curated full recap video with or without social cuts, or skip the full video for social cuts covering every photo guests upload. Every option still includes your full polished photo gallery.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {[

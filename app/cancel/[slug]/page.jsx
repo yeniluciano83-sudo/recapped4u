@@ -75,7 +75,7 @@ export default function CancelBookingPage() {
     const refunded = result ? result.refunded : booking.stripe_payment_status === "refunded";
     return (
       <PageShell>
-        <CheckCircle2 size={32} color="#7A8B76" style={{ marginBottom: 14 }} />
+        <CheckCircle2 size={32} color="#7A8B76" className="success-pop" style={{ marginBottom: 14 }} />
         <h1 style={{ fontFamily: "Georgia, serif", fontSize: "24px", margin: "0 0 10px" }}>Booking cancelled</h1>
         <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
           {refunded
@@ -145,6 +145,11 @@ export default function CancelBookingPage() {
 function PageShell({ children }) {
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+      <style>{`
+        .success-pop { animation: success-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes success-pop-in { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+        @media (prefers-reduced-motion: reduce) { .success-pop { animation: none; } }
+      `}</style>
       <div style={{ maxWidth: "420px", textAlign: "center" }}>{children}</div>
     </main>
   );

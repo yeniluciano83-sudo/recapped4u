@@ -154,14 +154,14 @@ function BookingFormInner() {
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
   const isVideoOnlyFormat = isSocialCutEligible && form.deliveryFormat === "video_only";
-  // Style is optional everywhere, not just social-cuts-only -- the backend
-  // already defaults gracefully with no style set (documentary
-  // color grade, documentary soundtrack; see enhancePhoto's default param
-  // and the STYLE_MUSIC fallback in scripts/auto-recap.js), so there's
-  // nothing for step 3 to actually require. In social-cuts-only mode,
-  // still prefer a chosen social cut theme over leaving it fully blank,
-  // since that's the only style picker with anything left to visually
-  // apply to in that mode.
+  // Style is optional in recap/video_only mode -- the backend already
+  // defaults gracefully with no style set (documentary color grade,
+  // documentary soundtrack; see enhancePhoto's default param and the
+  // STYLE_MUSIC fallback in scripts/auto-recap.js). In social-cuts-only
+  // mode it's the *only* style picker on the page, so canProceed() below
+  // requires a deliberate choice -- a real theme or the explicit "No
+  // theme (no music)" option -- rather than silently letting it fall
+  // through to that same default unset.
   const effectiveStyle = form.style || (isSocialCutsFormat ? form.socialStyle : "");
   const effectiveEventType = form.eventType === "Other" && form.eventTypeOther.trim()
     ? form.eventTypeOther.trim()
@@ -171,7 +171,10 @@ function BookingFormInner() {
     if (step === 2) return form.tier;
     // Only Spotlight/Luxe see the delivery-format picker at all -- every
     // other tier only ever gets a full video, so there's nothing to require.
-    if (step === 3) return !isSocialCutEligible || form.deliveryFormat;
+    // Social-cuts-only additionally requires a theme choice (a real theme
+    // or the explicit "No theme" option) since that's the only style
+    // picker shown in that mode.
+    if (step === 3) return (!isSocialCutEligible || form.deliveryFormat) && (!isSocialCutsFormat || form.socialStyle);
     return true;
   };
 
@@ -282,7 +285,7 @@ function BookingFormInner() {
         <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
           <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
             {isSocialCutsFormat
-              ? "Optional — pick a theme for your social cuts. Skip it for a clean, true-to-life default look. Each theme sets the color grade applied to every photo — so it's still worth picking one, even without music."
+              ? "Choose a theme for your social cuts, or pick \"No theme (no music)\" for a clean, true-to-life default look — one of the two is required, since this is the only style picker for social-cuts-only delivery."
               : "Optional — pick one if you have a preference. Skip it for a clean, true-to-life default look. Each theme sets the color grade applied to every photo, not just the music — so it's still worth picking one even if you turn the soundtrack off below."}
           </p>
 
@@ -314,7 +317,10 @@ function BookingFormInner() {
             </div>
           )}
 
-          <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>{isSocialCutsFormat ? "Pick your editing theme" : "Pick your full recap video theme"}</div>
+          <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>
+            {isSocialCutsFormat ? "Pick your editing theme" : "Pick your full recap video theme"}
+            {isSocialCutsFormat && <span style={{ fontWeight: 600, fontSize: "11px", color: "#C97A3D", textTransform: "uppercase", letterSpacing: "0.04em", marginLeft: "8px" }}>Required</span>}
+          </div>
           <p style={{ fontSize: "12.5px", color: "#6b655c", margin: "0 0 10px", lineHeight: 1.5 }}>
             Once guests start uploading, you can star must-include photos to guarantee they make {isSocialCutsFormat ? "your social cuts" : "the video"} — even if our AI's automatic picks would've skipped them. That happens later, from your QR share page.
           </p>

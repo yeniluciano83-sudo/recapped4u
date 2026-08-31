@@ -177,6 +177,20 @@ export default function EventUploadPage() {
 
     setUploadCount((c) => c + uploadedCount);
 
+    // Best-effort telemetry, not part of the guest's flow -- a photo that
+    // failed even after every retry means something's actually wrong
+    // (an R2/Supabase blip, a bad deploy), unlike a per-file rejection or
+    // an expected booking-state stop. Lets that reach Sentry the moment it
+    // happens instead of only surfacing once someone notices a booking
+    // stalled at a low photo count.
+    if (stillFailed.length > 0) {
+      fetch(`/api/events/${eventId}/upload-batch-issue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uploadedCount, totalCount: files.length, failedCount: stillFailed.length }),
+      }).catch(() => {});
+    }
+
     const rejectedMsg = rejected.length === 0 ? "" :
       rejected.length === 1 ? ` 1 photo couldn't be added: ${rejected[0]}` :
       ` ${rejected.length} photos couldn't be added (wrong file type or too large).`;

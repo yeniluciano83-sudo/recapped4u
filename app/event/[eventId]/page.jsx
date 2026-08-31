@@ -24,9 +24,9 @@ const RETRY_DELAY_MS = 900;
 // retry is this function's own loop or the guest re-tapping the upload
 // button with the same still-selected file. Lets the server recognize a
 // repeat and skip re-inserting it (see app/api/events/[eventId]/upload
-// /route.js) instead of creating a duplicate row when a request actually
-// succeeded but its response got lost -- confirmed live at a real event,
-// not just a theoretical race.
+// /confirm/route.js) instead of creating a duplicate row when a request
+// actually succeeded but its response got lost -- confirmed live at a real
+// event, not just a theoretical race.
 function clientUploadIdFor(file) {
   return `${file.name}_${file.size}_${file.lastModified}`;
 }
@@ -37,29 +37,59 @@ function formatDate(dateStr) {
   catch { return dateStr; }
 }
 
-async function uploadOneFile(endpoint, uploaderName, file) {
+// Classifies a JSON error response from our own presign/confirm routes the
+// same way regardless of which one it came from: scope: "file" means this
+// rejection is about this one photo (skip and continue), anything else
+// non-retryable means the whole event stopped accepting uploads (abort the
+// rest of the batch). See handleUpload below.
+async function classifyJsonError(res) {
+  const data = await res.json().catch(() => ({}));
+  const error = data.error || "Upload failed. Please try again.";
+  if (res.status >= 400 && res.status < 500) return { ok: false, error, retryable: false, scope: data.scope };
+  return null; // 5xx -- caller falls through to its retry loop
+}
+
+// Uploads go straight from the browser to R2 (see getSignedUploadUrl in
+// lib/storage.js) -- our own API routes only ever see small JSON payloads,
+// never the actual photo bytes. This is what fixed a real incident: Vercel
+// rejects any request body over ~4.5MB with its own 413 before a route
+// even runs, so routing raw photo bytes through our function meant one
+// large phone photo alone could fail to upload, no matter how generous our
+// own size check claimed to be.
+async function uploadOneFile(eventId, uploaderName, file) {
   let lastError = "Upload failed. Please try again.";
+  const clientUploadId = clientUploadIdFor(file);
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const formData = new FormData();
-      formData.append("uploaderName", uploaderName);
-      formData.append("files", file);
-      formData.append("clientUploadId", clientUploadIdFor(file));
-      const res = await fetch(endpoint, { method: "POST", body: formData });
-      // Vercel itself rejects an oversized request body with a 413 before
-      // our route ever runs (see MAX_FILE_SIZE_BYTES's comment in
-      // app/api/events/[eventId]/upload/route.js) -- one large phone photo
-      // alone can trip this, not just a big batch. That response never
-      // goes through our NextResponse.json() calls, so it has no
-      // {error, scope} shape to read -- detect it by status instead so it
-      // gets scoped to just this file like our own oversized check does.
-      if (res.status === 413) {
-        return { ok: false, error: "This photo is too large to upload. Try a smaller version.", retryable: false, scope: "file" };
+      const presignRes = await fetch(`/api/events/${eventId}/upload/presign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, contentType: file.type, fileSize: file.size, clientUploadId }),
+      });
+      if (!presignRes.ok) {
+        const classified = await classifyJsonError(presignRes);
+        if (classified) return classified;
+        lastError = "Upload failed. Please try again.";
+      } else {
+        const presignData = await presignRes.json().catch(() => ({}));
+        if (presignData.alreadyUploaded) {
+          return { ok: true };
+        }
+        const putRes = await fetch(presignData.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+        if (putRes.ok) {
+          const confirmRes = await fetch(`/api/events/${eventId}/upload/confirm`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: presignData.key, clientUploadId, uploaderName }),
+          });
+          if (confirmRes.ok) return { ok: true };
+          const classified = await classifyJsonError(confirmRes);
+          if (classified) return classified;
+          lastError = "Upload failed. Please try again.";
+        } else {
+          lastError = "Upload failed. Please try again.";
+        }
       }
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) return { ok: true };
-      lastError = data.error || "Upload failed. Please try again.";
-      if (res.status >= 400 && res.status < 500) return { ok: false, error: lastError, retryable: false, scope: data.scope };
     } catch (err) {
       lastError = "Upload failed. Please try again.";
     }
@@ -144,11 +174,8 @@ export default function EventUploadPage() {
     if (files.length === 0) return;
     setUploading(true);
     setUploadError(null);
-    // One request per file -- a single request bundling several real
-    // phone photos easily exceeds Vercel's ~4.5MB request body limit and
-    // gets rejected with a 413 before our code even runs, failing the
-    // *entire* batch even though most files were fine.
-    const endpoint = `/api/events/${eventId}/upload`;
+    // One upload sequence (presign -> direct PUT to R2 -> confirm) per
+    // file -- see uploadOneFile above.
     const name = uploaderName || "Guest";
     const stillFailed = [];   // network/5xx -- worth an automatic retry via re-tap
     const rejected = [];      // this one photo was rejected (wrong type / too large) -- retrying it won't help, doesn't say anything about the rest of the batch
@@ -157,7 +184,7 @@ export default function EventUploadPage() {
     let stoppedAtIndex = -1;
 
     for (let i = 0; i < files.length; i++) {
-      const result = await uploadOneFile(endpoint, name, files[i]);
+      const result = await uploadOneFile(eventId, name, files[i]);
       if (result.ok) {
         uploadedCount += 1;
       } else if (result.scope === "file") {

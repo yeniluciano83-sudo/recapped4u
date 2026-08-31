@@ -78,6 +78,62 @@ const STYLE_MUSIC = {
   highlight: path.join(__dirname, "..", "public", "music", "highlight.mp3"),
 };
 
+// The actual *edit* per style -- transition, pacing, grain -- passed through
+// to assembleSlideshow's styleConfig (lib/video-assemble.js). Previously
+// style only changed the color grade (STYLE_ADJUSTMENTS in
+// lib/photo-enhance.js) and the music track above; every style rendered
+// with an identical 0.6s fade at an identical 4s pace regardless of which
+// one a host picked. transitionSeconds here also feeds the duration-solving
+// math below (fullCutSlotSeconds, and the social cut's slotSeconds) -- it
+// must be the actual value passed to assembleSlideshow for a given style,
+// or the rendered video's real length silently drifts from its target.
+const STYLE_VIDEO_CONFIG = {
+  cinematic: { transitionType: "fade", transitionSeconds: 0.6, slotSeconds: 4, grain: false },
+  // Faster pace + a snappier slide (vs. a fade) reads as "fast cuts, high energy" -- true audio beat-sync would be a much bigger feature on its own.
+  upbeat: { transitionType: "slideleft", transitionSeconds: 0.25, slotSeconds: 2.5, grain: false },
+  // A near-instant fade reads as a hard cut -- "minimal, candid, true to the moment" gets the least stylized transition of any of them.
+  documentary: { transitionType: "fade", transitionSeconds: 0.15, slotSeconds: 4, grain: false },
+  retro: { transitionType: "dissolve", transitionSeconds: 0.9, slotSeconds: 4, grain: true },
+  highlight: { transitionType: "circleopen", transitionSeconds: 0.3, slotSeconds: 2.5, grain: false },
+};
+
+function styleVideoConfigFor(style) {
+  return STYLE_VIDEO_CONFIG[style] || STYLE_VIDEO_CONFIG.documentary;
+}
+
+// Highlight Reel's "bold text call-outs" -- reuses the moment_type every
+// photo already got from its Claude analysis (ANALYSIS_PROMPT in
+// lib/batchAnalysis.js), otherwise unused after shortlisting. No new
+// Claude call needed. Uppercased/truncated for a punchy, sports-broadcast-
+// style label rather than a full sentence.
+const MAX_CALLOUT_CHARS = 28;
+function highlightCallout(momentType) {
+  if (!momentType) return null;
+  const upper = momentType.toUpperCase();
+  return upper.length > MAX_CALLOUT_CHARS ? `${upper.slice(0, MAX_CALLOUT_CHARS - 1)}…` : upper;
+}
+
+// Builds the overlayLines array assembleSlideshow expects (parallel to the
+// photo list) for whichever style is in play -- null for every style but
+// Highlight Reel (a call-out per photo, top-center) and Retro (a single
+// vintage event-type label on the first photo only, top-left). Every other
+// style gets an array of nulls, which assembleSlideshow treats as "no
+// overlay" the same as passing null itself.
+function buildOverlayLines(style, entries, eventType) {
+  if (style === "highlight") {
+    return entries.map((e) => {
+      const text = highlightCallout(e.analysis && e.analysis.moment_type);
+      return text ? { text, position: "top-center", fontColor: "white", boxColor: "black@0.6" } : null;
+    });
+  }
+  if (style === "retro" && entries.length > 0) {
+    return entries.map((_, i) =>
+      i === 0 ? { text: `— ${eventType.toUpperCase()} —`, position: "top-left", fontColor: "#F4E8D8", boxColor: "#3B2A1A@0.65" } : null
+    );
+  }
+  return entries.map(() => null);
+}
+
 // Spotlight/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 const TARGET_SOCIAL_SECONDS = 75; // middle of the advertised 60-90s range
@@ -617,16 +673,23 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // The social cut's photo selection can include host-starred photos that
   // didn't make the main shortlist -- upload the whole selection under its
   // own R2 prefix now, so a reprocess survives it: finalizeDelivery recovers
-  // it by listing rather than needing anything still in memory from this run.
+  // the actual PHOTO BYTES by listing rather than needing anything still in
+  // memory from this run. socialSelections itself (each entry's .analysis,
+  // used for Highlight Reel's overlay text -- see buildOverlayLines) is
+  // still passed through directly below: it's only ever built once per
+  // continuePipelineWithAnalysis call, immediately before the upload it
+  // describes, so it can't drift out of sync with what actually landed in
+  // R2 the way relying on stale in-memory state across separate runs could.
   //
   // "video_only" delivery format skips this entirely -- no social-*-photo-*
   // files ever get uploaded, so finalizeDelivery's own listDeliverableFiles
   // loop (the only other place that looks at social cuts) finds nothing on
   // its very first prefix and stops immediately, naturally producing zero
   // social cuts without needing a second check there.
+  let socialSelections = [];
   if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier) && booking.delivery_format !== "video_only") {
     const socialCutsCount = useAllPhotoSocialCuts ? Infinity : (SOCIAL_CUTS_COUNT[booking.tier] || 1);
-    const socialSelections = buildSocialSelections(analyzed, socialCutsCount);
+    socialSelections = buildSocialSelections(analyzed, socialCutsCount);
     console.log(`Uploading photos for ${socialSelections.length} social cut selection(s)...`);
     for (let cutIndex = 0; cutIndex < socialSelections.length; cutIndex++) {
       for (let i = 0; i < socialSelections[cutIndex].length; i++) {
@@ -675,15 +738,19 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // matching enhancePhoto's own documentary default for the color grade.
   const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.documentary;
   const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.documentary;
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections);
   currentTmpDir = null;
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "") {
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "documentary", socialStyle = "", videoShortlist = [], socialSelections = []) {
   let videoKey = null;
   let noRoastVideoKey = null;
   let videoPosterKey = null;
   let noRoastVideoPosterKey = null;
+
+  const styleConfigForVideo = styleVideoConfigFor(style);
+  const effectiveSocialStyle = socialStyle || style;
+  const socialStyleConfig = styleVideoConfigFor(effectiveSocialStyle);
 
   // "Social cuts of every photo" delivery format has no full video at all --
   // see useAllPhotoSocialCuts in continuePipelineWithAnalysis, the only
@@ -695,11 +762,18 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     // Free's highlight video targets a duration (like the social cut) rather
     // than the other tiers' fixed per-photo pacing that scales with however
     // many photos made the shortlist. Same duration-solving math as the
-    // social cut; see the comment further down for the formula itself.
+    // social cut; see the comment further down for the formula itself. Uses
+    // this style's actual transitionSeconds, not a hardcoded 0.6 -- using
+    // the wrong value here would land the rendered video's real length
+    // short or long of fullCutTarget, since assembleSlideshow below is
+    // given that same styleConfigForVideo.transitionSeconds to render with.
     const fullCutTarget = FULL_CUT_TARGET_SECONDS[tier];
-    const fullCutSlotSeconds = fullCutTarget ? (fullCutTarget + (localPaths.length - 1) * 0.6) / localPaths.length : undefined;
+    const fullCutSlotSeconds = fullCutTarget
+      ? (fullCutTarget + (localPaths.length - 1) * styleConfigForVideo.transitionSeconds) / localPaths.length
+      : styleConfigForVideo.slotSeconds;
 
-    await assembleSlideshow(localPaths, [], videoLocalPath, musicPath, roastLines, fullCutSlotSeconds);
+    const overlayLines = buildOverlayLines(style, videoShortlist, eventType);
+    await assembleSlideshow(localPaths, [], videoLocalPath, musicPath, roastLines, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines });
     const videoBuffer = fs.readFileSync(videoLocalPath);
     videoKey = `deliverable/${bookingId}/full-cut.mp4`;
     await uploadToR2(videoKey, videoBuffer, "video/mp4");
@@ -708,11 +782,13 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     // Roast Reel bookings previously only ever got the captioned cut -- render
     // a second, caption-free twin of the exact same shortlist/pacing so hosts
     // can also share a version without the roast lines. Skipped for non-roast
-    // bookings, where this would just be a duplicate of videoKey.
+    // bookings, where this would just be a duplicate of videoKey. Still
+    // carries the style's own overlay (Highlight callouts / Retro title) --
+    // only the roast captions are dropped, not the style's own treatment.
     if (roastLines) {
       console.log("Roast Reel enabled -- also assembling a caption-free version of the same cut...");
       const noRoastVideoLocalPath = path.join(tmpDir, "recap-no-roast.mp4");
-      await assembleSlideshow(localPaths, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds);
+      await assembleSlideshow(localPaths, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines });
       const noRoastVideoBuffer = fs.readFileSync(noRoastVideoLocalPath);
       noRoastVideoKey = `deliverable/${bookingId}/full-cut-no-roast.mp4`;
       await uploadToR2(noRoastVideoKey, noRoastVideoBuffer, "video/mp4");
@@ -776,13 +852,16 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 
       // Solve for the per-slot duration that lands the whole crossfaded
       // sequence at TARGET_SOCIAL_SECONDS: total = n*d - (n-1)*transition,
-      // so d = (target + (n-1)*transition) / n. 0.6 here must match
-      // TRANSITION_SECONDS in lib/video-assemble.js (not exported -- it's
-      // a small, stable constant, not worth an export for one call site).
-      const CROSSFADE_TRANSITION_SECONDS = 0.6;
-      const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * CROSSFADE_TRANSITION_SECONDS) / socialLocalPaths.length;
+      // so d = (target + (n-1)*transition) / n. Must use this style's
+      // actual transitionSeconds (socialStyleConfig, computed above from
+      // socialStyle || style, matching STYLE_MUSIC's own fallback) rather
+      // than a hardcoded value -- using the wrong number here would land
+      // the rendered cut's real length off of TARGET_SOCIAL_SECONDS, since
+      // assembleSlideshow below renders with that same transitionSeconds.
+      const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * socialStyleConfig.transitionSeconds) / socialLocalPaths.length;
+      const cutOverlayLines = buildOverlayLines(effectiveSocialStyle, socialSelections[cutIndex] || [], eventType);
       const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
-      await assembleSlideshow(socialLocalPaths, [], socialVideoLocalPath, socialMusicPath, cutRoastLines, slotSeconds);
+      await assembleSlideshow(socialLocalPaths, [], socialVideoLocalPath, socialMusicPath, cutRoastLines, slotSeconds, { ...socialStyleConfig, overlayLines: cutOverlayLines });
       const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
@@ -792,7 +871,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       if (cutRoastLines) {
         console.log(`Roast Reel enabled -- also assembling a caption-free version of social cut ${cutIndex + 1}...`);
         const noRoastLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-no-roast.mp4`);
-        await assembleSlideshow(socialLocalPaths, [], noRoastLocalPath, socialMusicPath, null, slotSeconds);
+        await assembleSlideshow(socialLocalPaths, [], noRoastLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, overlayLines: cutOverlayLines });
         const noRoastBuffer = fs.readFileSync(noRoastLocalPath);
         const noRoastKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast.mp4`;
         await uploadToR2(noRoastKey, noRoastBuffer, "video/mp4");

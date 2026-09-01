@@ -102,6 +102,17 @@ function styleVideoConfigFor(style) {
   return STYLE_VIDEO_CONFIG[style] || STYLE_VIDEO_CONFIG.documentary;
 }
 
+// Social cuts are made for Reels/TikTok/Shorts, all vertical natively --
+// unlike the full video (a different product: downloaded, watched on a TV
+// or laptop, attached to an email), a social cut shared as-is at the full
+// video's landscape framing shows up pillarboxed on every one of those
+// platforms. 1080x1920 is the standard vertical delivery resolution across
+// all three. Spread into assembleSlideshow's styleConfig alongside
+// socialStyleConfig at both social-cut call sites below -- the full
+// video's calls never receive this, so they keep assembleSlideshow's
+// landscape defaults untouched.
+const SOCIAL_CUT_OUTPUT = { outputWidth: 1080, outputHeight: 1920 };
+
 // Highlight Reel's "bold text call-outs" -- reuses the moment_type every
 // photo already got from its Claude analysis (ANALYSIS_PROMPT in
 // lib/batchAnalysis.js), otherwise unused after shortlisting. No new
@@ -946,7 +957,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       // occupies index 0.
       const shiftedCutRoastLines = cutRoastLines ? [null, ...cutRoastLines] : null;
       const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
-      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, shiftedCutRoastLines, slotSeconds, { ...socialStyleConfig, overlayLines: cutOverlayLines });
+      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, shiftedCutRoastLines, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines });
       const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
@@ -956,7 +967,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       if (cutRoastLines) {
         console.log(`Roast Reel enabled -- also assembling a caption-free version of social cut ${cutIndex + 1}...`);
         const noRoastLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-no-roast.mp4`);
-        await assembleSlideshow(socialLocalPathsWithCards, [], noRoastLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, overlayLines: cutOverlayLines });
+        await assembleSlideshow(socialLocalPathsWithCards, [], noRoastLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines });
         const noRoastBuffer = fs.readFileSync(noRoastLocalPath);
         const noRoastKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast.mp4`;
         await uploadToR2(noRoastKey, noRoastBuffer, "video/mp4");

@@ -178,6 +178,10 @@ export default function GalleryDeliveryPage() {
   // stops at the first non-digit character, so the trailing suffix doesn't
   // break the index extraction below.
   const socialIndex = videoLength.startsWith("social-") ? parseInt(videoLength.slice(7), 10) : -1;
+  // Social cuts render vertically (9:16, native Reels/TikTok/Shorts framing
+  // -- see SOCIAL_CUT_OUTPUT in scripts/auto-recap.js); the full cut stays
+  // landscape. Drives the preview box's aspect ratio below.
+  const isSocialSelected = socialIndex >= 0;
   const isSocialNoRoast = socialIndex >= 0 && videoLength.endsWith("-no_roast");
   const isRoastCut = (videoLength === "full" && hasNoRoastCut) || (socialIndex >= 0 && !isSocialNoRoast && Boolean(socialNoRoastUrls[socialIndex]));
   const activeVideoUrl =
@@ -250,7 +254,9 @@ export default function GalleryDeliveryPage() {
 
         <div style={{ background: "#FFFFFF", borderRadius: "18px", border: "1px solid #E4DED2", overflow: "hidden", marginBottom: "16px" }}>
           <div style={{
-              aspectRatio: "16/9",
+              aspectRatio: isSocialSelected ? "9/16" : "16/9",
+              width: isSocialSelected ? "min(360px, 60vw)" : "100%",
+              margin: isSocialSelected ? "0 auto" : 0,
               background: activeVideoPosterUrl ? `#000 url(${activeVideoPosterUrl}) center / cover no-repeat` : "linear-gradient(135deg, #FBEEE0, #FAF7F2)",
               display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer",
             }}

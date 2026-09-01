@@ -17,7 +17,7 @@ export async function PATCH(req, { params }) {
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
-    .select("id, tier")
+    .select("id, tier, delivery_format")
     .eq("upload_slug", eventId)
     .single();
 
@@ -35,7 +35,14 @@ export async function PATCH(req, { params }) {
     updates.must_include = Boolean(body.mustInclude);
   }
   if (Object.prototype.hasOwnProperty.call(body, "mustIncludeSocial")) {
-    if (!SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier)) {
+    // Tier alone isn't enough -- a Spotlight/Luxe booking can still be
+    // delivery_format "video_only", which skips social cuts entirely
+    // regardless of tier (see finalizeDelivery's own check in
+    // scripts/auto-recap.js). The host share page already hides this
+    // toggle for that case (app/qr/[slug]/page.jsx), but this is the real
+    // source of truth -- a stale page or a direct request shouldn't be
+    // able to set a flag that'll just be silently ignored.
+    if (!SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier) || booking.delivery_format === "video_only") {
       return NextResponse.json({ error: "Social cuts aren't available on this tier" }, { status: 400 });
     }
     updates.must_include_social = Boolean(body.mustIncludeSocial);

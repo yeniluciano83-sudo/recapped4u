@@ -61,6 +61,14 @@ describe("PATCH /api/events/[eventId]/uploads/[uploadId]", () => {
     }
   });
 
+  it("rejects mustIncludeSocial on a Spotlight/Luxe booking set to video_only", async () => {
+    sb.mockResponse({ data: { id: "b1", tier: "premium", delivery_format: "video_only" }, error: null });
+    const res = await PATCH(jsonRequest({ mustIncludeSocial: true }), { params: { eventId: "slug-1", uploadId: "u1" } });
+    expect(res.status).toBe(400);
+    // No uploads table call should have been attempted -- only the booking select.
+    expect(sb.callLog.length).toBe(1);
+  });
+
   it("scopes the update to the upload's own booking, not just its id", async () => {
     sb.mockResponse({ data: { id: "b1", tier: "free" }, error: null });
     sb.mockResponse({ data: { must_include: true, must_include_social: false }, error: null });

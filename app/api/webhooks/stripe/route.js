@@ -59,6 +59,7 @@ export async function POST(req) {
             roastEnabled: booking.roast_enabled,
             uploadUrl,
             uploadSlug: booking.upload_slug,
+            deliveryFormat: booking.delivery_format,
           });
         } catch (err) {
           console.error(`Confirmation email failed for booking ${bookingId}:`, err.message);

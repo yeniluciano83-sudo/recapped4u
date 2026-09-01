@@ -98,8 +98,12 @@ const STYLE_VIDEO_CONFIG = {
   highlight: { transitionType: "circleopen", transitionSeconds: 0.3, slotSeconds: 2.5, grain: false },
 };
 
+// Falls back to cinematic, not documentary -- see the same reasoning in
+// enhancePhoto's own fallback comment (lib/photo-enhance.js): documentary
+// is the least stylized treatment on purpose, which is a poor silent
+// default for a host who never expressed a preference.
 function styleVideoConfigFor(style) {
-  return STYLE_VIDEO_CONFIG[style] || STYLE_VIDEO_CONFIG.documentary;
+  return STYLE_VIDEO_CONFIG[style] || STYLE_VIDEO_CONFIG.cinematic;
 }
 
 // Social cuts are made for Reels/TikTok/Shorts, all vertical natively --
@@ -784,15 +788,17 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
 
   // Style is optional at booking time (see app/booking/page.jsx) -- an
   // unset style still needs *some* soundtrack rather than silently
-  // shipping a music-less video, so it falls back to documentary's track,
-  // matching enhancePhoto's own documentary default for the color grade.
-  const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.documentary;
-  const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.documentary;
+  // shipping a music-less video, so it falls back to cinematic's track,
+  // matching enhancePhoto's own cinematic default for the color grade
+  // (see that function's fallback comment for why cinematic, not
+  // documentary, is the right silent default).
+  const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.cinematic;
+  const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.cinematic;
   await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections, galleryCaptions);
   currentTmpDir = null;
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "documentary", socialStyle = "", videoShortlist = [], socialSelections = [], galleryCaptions = []) {
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "cinematic", socialStyle = "", videoShortlist = [], socialSelections = [], galleryCaptions = []) {
   let videoKey = null;
   let noRoastVideoKey = null;
   let videoPosterKey = null;

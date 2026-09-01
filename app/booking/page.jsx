@@ -155,8 +155,8 @@ function BookingFormInner() {
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
   const isVideoOnlyFormat = isSocialCutEligible && form.deliveryFormat === "video_only";
   // Style is optional in recap/video_only mode -- the backend already
-  // defaults gracefully with no style set (documentary color grade,
-  // documentary soundtrack; see enhancePhoto's default param and the
+  // defaults gracefully with no style set (cinematic color grade,
+  // cinematic soundtrack; see enhancePhoto's default param and the
   // STYLE_MUSIC fallback in scripts/auto-recap.js). In social-cuts-only
   // mode it's the *only* style picker on the page, so canProceed() below
   // requires a deliberate choice -- a real theme or the explicit "No

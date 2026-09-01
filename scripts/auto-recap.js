@@ -40,6 +40,7 @@ const sharp = require("sharp");
 const { enhancePhoto } = require("../lib/photo-enhance");
 const { assembleSlideshow, extractPosterFrame } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
+const { buildOutroBackground } = require("../lib/outro-card");
 const { buildSocialSelections } = require("../lib/socialSelections");
 const { computeGalleryExpiry } = require("../lib/galleryExpiry");
 const {
@@ -113,6 +114,18 @@ function highlightCallout(momentType) {
   return upper.length > MAX_CALLOUT_CHARS ? `${upper.slice(0, MAX_CALLOUT_CHARS - 1)}…` : upper;
 }
 
+// Same moment_type reuse for the gallery page's per-photo caption -- Title
+// Case rather than highlightCallout's all-caps (a caption sits next to real
+// photos in a browsing UI, not burned into video as a broadcast-style
+// graphic), and a longer cap since a gallery caption isn't fighting for
+// space over the photo itself the way an on-screen overlay is.
+const MAX_GALLERY_CAPTION_CHARS = 40;
+function formatGalleryCaption(momentType) {
+  if (!momentType) return null;
+  const titleCased = momentType.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  return titleCased.length > MAX_GALLERY_CAPTION_CHARS ? `${titleCased.slice(0, MAX_GALLERY_CAPTION_CHARS - 1)}…` : titleCased;
+}
+
 // Builds the overlayLines array assembleSlideshow expects (parallel to the
 // photo list) for whichever style is in play -- null for every style but
 // Highlight Reel (a call-out per photo, top-center) and Retro (a single
@@ -132,6 +145,16 @@ function buildOverlayLines(style, entries, eventType) {
     );
   }
   return entries.map(() => null);
+}
+
+// The closing card's sign-off line -- same for every style (this is a
+// universal polish item, not a per-style stylistic choice, unlike
+// highlightCallout/the retro title above). Rendered centered on its own
+// dedicated backdrop (see buildOutroBackground in lib/outro-card.js), not
+// squeezed onto the last real photo, so it never has to compete with a
+// roast line or a style's own overlay for space.
+function outroOverlayText(hostName, eventType) {
+  return `Thank you for celebrating ${hostName}'s ${eventType}`;
 }
 
 // Spotlight/Luxe only, matching what those tiers actually advertise.
@@ -645,6 +668,7 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // reuse these already-enhanced buffers instead of enhancing twice.
   console.log("Auto-enhancing all uploaded photos for the gallery...");
   const gallerySelection = buildGallerySelection(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
+  const galleryCaptions = gallerySelection.map((s) => formatGalleryCaption(s.analysis && s.analysis.moment_type));
   const enhancedKeys = [];
   const enhancedByUploadId = new Map();
   const enhancedKeyByUploadId = new Map();
@@ -738,11 +762,11 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // matching enhancePhoto's own documentary default for the color grade.
   const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.documentary;
   const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.documentary;
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections, galleryCaptions);
   currentTmpDir = null;
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "documentary", socialStyle = "", videoShortlist = [], socialSelections = []) {
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "documentary", socialStyle = "", videoShortlist = [], socialSelections = [], galleryCaptions = []) {
   let videoKey = null;
   let noRoastVideoKey = null;
   let videoPosterKey = null;
@@ -759,21 +783,38 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     console.log("Assembling automated slideshow video...");
     const videoLocalPath = path.join(tmpDir, "recap.mp4");
 
+    // Closing card, appended as one more slot after the real photos -- see
+    // lib/outro-card.js. A local variable, not a mutation of the localPaths
+    // parameter, so anything else that might still read localPaths (there
+    // is nothing left that does at this point, but keeping it untouched is
+    // one less thing to reason about) is unaffected.
+    const outroBackground = await buildOutroBackground(fs.readFileSync(localPaths[localPaths.length - 1]));
+    const outroPath = path.join(tmpDir, "outro-card.jpg");
+    fs.writeFileSync(outroPath, outroBackground);
+    const localPathsWithOutro = [...localPaths, outroPath];
+
     // Free's highlight video targets a duration (like the social cut) rather
     // than the other tiers' fixed per-photo pacing that scales with however
-    // many photos made the shortlist. Same duration-solving math as the
-    // social cut; see the comment further down for the formula itself. Uses
-    // this style's actual transitionSeconds, not a hardcoded 0.6 -- using
-    // the wrong value here would land the rendered video's real length
-    // short or long of fullCutTarget, since assembleSlideshow below is
-    // given that same styleConfigForVideo.transitionSeconds to render with.
+    // many photos made the shortlist (now including the outro card, so it
+    // counts as one of the slots the target duration is solved across,
+    // rather than pushing the video past its target). Same duration-solving
+    // math as the social cut; see the comment further down for the formula
+    // itself. Uses this style's actual transitionSeconds, not a hardcoded
+    // 0.6 -- using the wrong value here would land the rendered video's
+    // real length short or long of fullCutTarget, since assembleSlideshow
+    // below is given that same styleConfigForVideo.transitionSeconds to
+    // render with.
     const fullCutTarget = FULL_CUT_TARGET_SECONDS[tier];
     const fullCutSlotSeconds = fullCutTarget
-      ? (fullCutTarget + (localPaths.length - 1) * styleConfigForVideo.transitionSeconds) / localPaths.length
+      ? (fullCutTarget + (localPathsWithOutro.length - 1) * styleConfigForVideo.transitionSeconds) / localPathsWithOutro.length
       : styleConfigForVideo.slotSeconds;
 
-    const overlayLines = buildOverlayLines(style, videoShortlist, eventType);
-    await assembleSlideshow(localPaths, [], videoLocalPath, musicPath, roastLines, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines });
+    // buildOverlayLines only returns one entry per REAL photo (videoShortlist's
+    // length) -- extending it here, rather than there, keeps that function's
+    // contract simple (one style's overlay per photo) and the outro's own
+    // sign-off separate from any per-style callout/title logic.
+    const overlayLines = [...buildOverlayLines(style, videoShortlist, eventType), { text: outroOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" }];
+    await assembleSlideshow(localPathsWithOutro, [], videoLocalPath, musicPath, roastLines, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines });
     const videoBuffer = fs.readFileSync(videoLocalPath);
     videoKey = `deliverable/${bookingId}/full-cut.mp4`;
     await uploadToR2(videoKey, videoBuffer, "video/mp4");
@@ -783,12 +824,12 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     // a second, caption-free twin of the exact same shortlist/pacing so hosts
     // can also share a version without the roast lines. Skipped for non-roast
     // bookings, where this would just be a duplicate of videoKey. Still
-    // carries the style's own overlay (Highlight callouts / Retro title) --
-    // only the roast captions are dropped, not the style's own treatment.
+    // carries the style's own overlay (Highlight callouts / Retro title) and
+    // the outro card -- only the roast captions are dropped, not those.
     if (roastLines) {
       console.log("Roast Reel enabled -- also assembling a caption-free version of the same cut...");
       const noRoastVideoLocalPath = path.join(tmpDir, "recap-no-roast.mp4");
-      await assembleSlideshow(localPaths, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines });
+      await assembleSlideshow(localPathsWithOutro, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines });
       const noRoastVideoBuffer = fs.readFileSync(noRoastVideoLocalPath);
       noRoastVideoKey = `deliverable/${bookingId}/full-cut-no-roast.mp4`;
       await uploadToR2(noRoastVideoKey, noRoastVideoBuffer, "video/mp4");
@@ -850,6 +891,14 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
         await saveRoastLines(bookingId, eventType, roastLevel || "light", cutRoastLines);
       }
 
+      // Closing card, same as the full video's -- appended after this cut's
+      // real photos, counted as one more slot in the TARGET_SOCIAL_SECONDS
+      // solve below rather than pushing the cut past its target.
+      const socialOutroBackground = await buildOutroBackground(fs.readFileSync(socialLocalPaths[socialLocalPaths.length - 1]));
+      const socialOutroPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-outro.jpg`);
+      fs.writeFileSync(socialOutroPath, socialOutroBackground);
+      const socialLocalPathsWithOutro = [...socialLocalPaths, socialOutroPath];
+
       // Solve for the per-slot duration that lands the whole crossfaded
       // sequence at TARGET_SOCIAL_SECONDS: total = n*d - (n-1)*transition,
       // so d = (target + (n-1)*transition) / n. Must use this style's
@@ -858,10 +907,10 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       // than a hardcoded value -- using the wrong number here would land
       // the rendered cut's real length off of TARGET_SOCIAL_SECONDS, since
       // assembleSlideshow below renders with that same transitionSeconds.
-      const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * socialStyleConfig.transitionSeconds) / socialLocalPaths.length;
-      const cutOverlayLines = buildOverlayLines(effectiveSocialStyle, socialSelections[cutIndex] || [], eventType);
+      const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPathsWithOutro.length - 1) * socialStyleConfig.transitionSeconds) / socialLocalPathsWithOutro.length;
+      const cutOverlayLines = [...buildOverlayLines(effectiveSocialStyle, socialSelections[cutIndex] || [], eventType), { text: outroOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" }];
       const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
-      await assembleSlideshow(socialLocalPaths, [], socialVideoLocalPath, socialMusicPath, cutRoastLines, slotSeconds, { ...socialStyleConfig, overlayLines: cutOverlayLines });
+      await assembleSlideshow(socialLocalPathsWithOutro, [], socialVideoLocalPath, socialMusicPath, cutRoastLines, slotSeconds, { ...socialStyleConfig, overlayLines: cutOverlayLines });
       const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
@@ -871,7 +920,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       if (cutRoastLines) {
         console.log(`Roast Reel enabled -- also assembling a caption-free version of social cut ${cutIndex + 1}...`);
         const noRoastLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-no-roast.mp4`);
-        await assembleSlideshow(socialLocalPaths, [], noRoastLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, overlayLines: cutOverlayLines });
+        await assembleSlideshow(socialLocalPathsWithOutro, [], noRoastLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, overlayLines: cutOverlayLines });
         const noRoastBuffer = fs.readFileSync(noRoastLocalPath);
         const noRoastKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast.mp4`;
         await uploadToR2(noRoastKey, noRoastBuffer, "video/mp4");
@@ -903,6 +952,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       social_video_poster_keys: socialVideoPosterKeys,
       social_video_no_roast_poster_keys: socialVideoNoRoastPosterKeys,
       gallery_photo_keys: enhancedKeys,
+      gallery_photo_captions: galleryCaptions,
       delivered_at: new Date().toISOString(),
     },
     { onConflict: "booking_id" }

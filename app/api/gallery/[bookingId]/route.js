@@ -92,5 +92,6 @@ export async function GET(req, { params }) {
     },
     photos: photoUrls,
     photo_download_urls: photoDownloadUrls,
+    photo_captions: deliverable.gallery_photo_captions || [],
   });
 }

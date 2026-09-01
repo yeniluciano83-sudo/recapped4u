@@ -155,6 +155,7 @@ export default function GalleryDeliveryPage() {
 
   const booking = data?.booking || {};
   const photos = data?.photos || [];
+  const captions = data?.photo_captions || [];
   // .trim() guards against legacy rows predating the trim-at-booking-time
   // validation in app/api/bookings/route.js -- an untrimmed host_name here
   // renders as a visible double space before "'s" (confirmed live).
@@ -337,10 +338,10 @@ export default function GalleryDeliveryPage() {
           </div>
         ) : (
           <div style={{ marginBottom: "36px" }}>
-            {template === "grid" && <GridLayout photos={photos} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
-            {template === "masonry" && <MasonryLayout photos={photos} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
-            {template === "slideshow" && <SlideshowLayout photos={photos} index={slideIndex} setIndex={setSlideIndex} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
-            {template === "polaroid" && <PolaroidLayout photos={photos} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
+            {template === "grid" && <GridLayout photos={photos} captions={captions} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
+            {template === "masonry" && <MasonryLayout photos={photos} captions={captions} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
+            {template === "slideshow" && <SlideshowLayout photos={photos} captions={captions} index={slideIndex} setIndex={setSlideIndex} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
+            {template === "polaroid" && <PolaroidLayout photos={photos} captions={captions} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
           </div>
         )}
 
@@ -387,15 +388,16 @@ export default function GalleryDeliveryPage() {
       </div>
 
       {lightbox !== null && (
-        <Lightbox photos={photos} index={lightbox} onClose={() => setLightbox(null)} />
+        <Lightbox photos={photos} captions={captions} index={lightbox} onClose={() => setLightbox(null)} />
       )}
     </main>
   );
 }
 
-function Lightbox({ photos, index, onClose }) {
+function Lightbox({ photos, captions, index, onClose }) {
   const containerRef = useRef(null);
   useModalDialog(containerRef, onClose);
+  const caption = captions?.[index];
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 50, overflowY: "auto", padding: "24px" }}>
@@ -416,8 +418,9 @@ function Lightbox({ photos, index, onClose }) {
             way to reach the clipped part. Applies to every gallery
             template (Grid, Masonry, Polaroid, Slideshow) since they all
             open this same lightbox. */}
-        <div style={{ minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
           <img src={photos[index]} alt={`Photo ${index + 1} of ${photos.length}`} style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }} />
+          {caption && <p style={{ color: "#FFFFFF", fontSize: "13.5px", marginTop: "12px", opacity: 0.85 }}>{caption}</p>}
         </div>
       </div>
     </div>
@@ -435,7 +438,20 @@ function SelectBadge({ selected }) {
   );
 }
 
-function GridLayout({ photos, selectMode, selected, onSelect }) {
+// Small bottom-overlay caption, same visual language DownloadOnlyLayout's
+// own bottom bar already uses -- only rendered when this photo actually
+// has one (older deliverable rows predating migration 029, or a photo
+// whose analysis had no moment_type, both just show nothing here).
+function CaptionOverlay({ text }) {
+  if (!text) return null;
+  return (
+    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "5px 8px", background: "rgba(0,0,0,0.55)", color: "#FFFFFF", fontSize: "11.5px", fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      {text}
+    </div>
+  );
+}
+
+function GridLayout({ photos, captions, selectMode, selected, onSelect }) {
   return (
     <div className="gallery-grid" style={{ display: "grid", gap: "8px" }}>
       {photos.map((url, i) => (
@@ -447,13 +463,14 @@ function GridLayout({ photos, selectMode, selected, onSelect }) {
               "button" for every one of up to 2000 photos on a Luxe gallery. */}
           <img src={url} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
+          <CaptionOverlay text={captions?.[i]} />
         </button>
       ))}
     </div>
   );
 }
 
-function MasonryLayout({ photos, selectMode, selected, onSelect }) {
+function MasonryLayout({ photos, captions, selectMode, selected, onSelect }) {
   return (
     <div className="gallery-masonry" style={{ columnGap: "8px" }}>
       {photos.map((url, i) => (
@@ -461,16 +478,18 @@ function MasonryLayout({ photos, selectMode, selected, onSelect }) {
           style={{ position: "relative", display: "block", width: "100%", marginBottom: "8px", borderRadius: "8px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", breakInside: "avoid", padding: 0, background: "none" }}>
           <img src={url} alt="" loading="lazy" style={{ width: "100%", borderRadius: "6px", display: "block" }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
+          <CaptionOverlay text={captions?.[i]} />
         </button>
       ))}
     </div>
   );
 }
 
-function SlideshowLayout({ photos, index, setIndex, selectMode, selected, onSelect }) {
+function SlideshowLayout({ photos, captions, index, setIndex, selectMode, selected, onSelect }) {
   if (photos.length === 0) return null;
   const clampedIndex = Math.min(index, photos.length - 1);
   const current = photos[clampedIndex];
+  const caption = captions?.[clampedIndex];
   return (
     <div>
       <div style={{ position: "relative", borderRadius: "16px", overflow: "hidden", background: "#FFFFFF", border: "1px solid #E4DED2" }}>
@@ -486,7 +505,8 @@ function SlideshowLayout({ photos, index, setIndex, selectMode, selected, onSele
           </button>
         )}
       </div>
-      <p style={{ textAlign: "center", fontSize: "12.5px", color: "#6b655c", marginTop: "10px" }}>{index + 1} / {photos.length}</p>
+      {caption && <p style={{ textAlign: "center", fontSize: "13px", color: "#4a4642", fontWeight: 600, marginTop: "10px", marginBottom: 0 }}>{caption}</p>}
+      <p style={{ textAlign: "center", fontSize: "12.5px", color: "#6b655c", marginTop: "6px" }}>{index + 1} / {photos.length}</p>
     </div>
   );
 }
@@ -507,15 +527,24 @@ function DownloadOnlyLayout({ photos, downloadUrls }) {
   );
 }
 
-function PolaroidLayout({ photos, selectMode, selected, onSelect }) {
+function PolaroidLayout({ photos, captions, selectMode, selected, onSelect }) {
   const rotations = [-3, 2, -1.5, 3, -2, 1.5];
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", justifyContent: "center", padding: "10px 0" }}>
       {photos.map((url, i) => (
         <button key={i} onClick={() => onSelect(i)} aria-label={selectMode ? `${selected?.has(i) ? "Deselect" : "Select"} photo ${i + 1} of ${photos.length}` : `View photo ${i + 1} of ${photos.length}`}
-          style={{ position: "relative", background: "#FFFFFF", padding: "10px 10px 24px", borderRadius: "4px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.15)", width: "150px" }}>
+          style={{ position: "relative", background: "#FFFFFF", padding: "10px 10px 14px", borderRadius: "4px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.15)", width: "150px" }}>
           <img src={url} alt="" loading="lazy" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block" }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
+          {/* The blank strip under a real polaroid's photo is where you'd
+              write a caption by hand -- this is that strip, always
+              reserved (padding above) whether or not a caption exists, so
+              a photo without one still looks like a proper polaroid. */}
+          {captions?.[i] && (
+            <div style={{ fontSize: "11px", color: "#4a4642", textAlign: "center", marginTop: "8px", fontFamily: "Georgia, serif", fontStyle: "italic", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {captions[i]}
+            </div>
+          )}
         </button>
       ))}
     </div>

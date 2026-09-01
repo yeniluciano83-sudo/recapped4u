@@ -113,6 +113,14 @@ function styleVideoConfigFor(style) {
 // landscape defaults untouched.
 const SOCIAL_CUT_OUTPUT = { outputWidth: 1080, outputHeight: 1920 };
 
+// The first real photo in a social cut always lands at imagePaths index 1
+// (index 0 is the intro card -- see socialLocalPathsWithCards below). Giving
+// that one slot a punch-in zoom (lib/video-assemble.js's heroZoomIndex)
+// creates a mini "hook" right as the intro card hands off, which matters
+// for social retention in a way it doesn't for the full video (never given
+// a hero slot -- it's watched start-to-finish already, not scrolled past).
+const SOCIAL_CUT_HERO_ZOOM_INDEX = 1;
+
 // Highlight Reel's "bold text call-outs" -- reuses the moment_type every
 // photo already got from its Claude analysis (ANALYSIS_PROMPT in
 // lib/batchAnalysis.js), otherwise unused after shortlisting. No new
@@ -933,9 +941,17 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       const socialIntroBackground = await buildCardBackground(fs.readFileSync(socialLocalPaths[0]));
       const socialIntroPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-intro.jpg`);
       fs.writeFileSync(socialIntroPath, socialIntroBackground);
-      const socialOutroBackground = await buildCardBackground(fs.readFileSync(socialLocalPaths[socialLocalPaths.length - 1]));
+      // Loop-friendly ending: reuse the exact same blurred backdrop for the
+      // outro as the intro (rather than building a fresh one from the
+      // cut's last photo) so a viewer replaying the cut -- Reels/TikTok/
+      // Shorts all auto-loop -- lands back on a visually matching frame
+      // instead of a jarring cut to an unrelated photo. Only the burned-on
+      // text differs (introOverlayText vs outroOverlayText below), so the
+      // bookend still reads as open/close. Full-video cards keep their
+      // original first-photo/last-photo pairing -- it isn't watched on
+      // loop, so there's nothing to smooth over.
       const socialOutroPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-outro.jpg`);
-      fs.writeFileSync(socialOutroPath, socialOutroBackground);
+      fs.writeFileSync(socialOutroPath, socialIntroBackground);
       const socialLocalPathsWithCards = [socialIntroPath, ...socialLocalPaths, socialOutroPath];
 
       // Solve for the per-slot duration that lands the whole crossfaded
@@ -957,7 +973,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       // occupies index 0.
       const shiftedCutRoastLines = cutRoastLines ? [null, ...cutRoastLines] : null;
       const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
-      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, shiftedCutRoastLines, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines });
+      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, shiftedCutRoastLines, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines, heroZoomIndex: SOCIAL_CUT_HERO_ZOOM_INDEX });
       const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
@@ -967,7 +983,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       if (cutRoastLines) {
         console.log(`Roast Reel enabled -- also assembling a caption-free version of social cut ${cutIndex + 1}...`);
         const noRoastLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-no-roast.mp4`);
-        await assembleSlideshow(socialLocalPathsWithCards, [], noRoastLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines });
+        await assembleSlideshow(socialLocalPathsWithCards, [], noRoastLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines, heroZoomIndex: SOCIAL_CUT_HERO_ZOOM_INDEX });
         const noRoastBuffer = fs.readFileSync(noRoastLocalPath);
         const noRoastKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast.mp4`;
         await uploadToR2(noRoastKey, noRoastBuffer, "video/mp4");

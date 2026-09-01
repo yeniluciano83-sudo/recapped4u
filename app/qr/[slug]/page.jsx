@@ -91,7 +91,14 @@ export default function QrSharePage() {
 
   useEffect(() => { if (slug) load(); }, [slug, load]);
 
-  const isSocialCutEligible = eventInfo && SOCIAL_CUT_ELIGIBLE_TIERS.includes(eventInfo.tier);
+  // Tier alone isn't enough -- Spotlight/Luxe can still opt into "video_only"
+  // delivery (booking.delivery_format), and the pipeline honors that by
+  // skipping social cuts entirely regardless of tier (see finalizeDelivery's
+  // own delivery_format !== "video_only" gate in scripts/auto-recap.js).
+  // Showing this section anyway would let a video_only host pick a social
+  // cut theme and star photos for a cut that will never render.
+  const isSocialCutEligible =
+    eventInfo && SOCIAL_CUT_ELIGIBLE_TIERS.includes(eventInfo.tier) && eventInfo.delivery_format !== "video_only";
 
   useEffect(() => {
     if (!slug || eventInfo?.status !== "collecting") return;

@@ -26,6 +26,7 @@ const BOOKING = {
   social_style: null,
   deadline_extension_hours: 0,
   processing_started_at: null,
+  delivery_format: "recap",
 };
 
 describe("GET /api/events/[eventId]", () => {

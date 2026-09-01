@@ -112,30 +112,4 @@ describe("GET /api/gallery/[bookingId]", () => {
     expect(json.deliverable.full_video_poster_url).toBeNull();
     expect(json.deliverable.social_video_poster_urls).toEqual([]);
   });
-
-  it("returns gallery photo captions parallel to the photo list", async () => {
-    sb.mockResponse({ data: BOOKING, error: null });
-    sb.mockResponse({
-      data: { gallery_photo_keys: ["p1.jpg", "p2.jpg"], gallery_photo_captions: ["Cake Cutting", "Group Photo"] },
-      error: null,
-    });
-
-    const res = await GET({}, { params: { bookingId: "b1" } });
-    const json = await res.json();
-
-    expect(json.photo_captions).toEqual(["Cake Cutting", "Group Photo"]);
-  });
-
-  it("defaults captions to an empty array for a deliverable predating migration 029", async () => {
-    sb.mockResponse({ data: BOOKING, error: null });
-    sb.mockResponse({
-      data: { gallery_photo_keys: ["p1.jpg"] },
-      error: null,
-    });
-
-    const res = await GET({}, { params: { bookingId: "b1" } });
-    const json = await res.json();
-
-    expect(json.photo_captions).toEqual([]);
-  });
 });

@@ -137,18 +137,6 @@ function highlightCallout(momentType) {
   return upper.length > MAX_CALLOUT_CHARS ? `${upper.slice(0, MAX_CALLOUT_CHARS - 1)}…` : upper;
 }
 
-// Same moment_type reuse for the gallery page's per-photo caption -- Title
-// Case rather than highlightCallout's all-caps (a caption sits next to real
-// photos in a browsing UI, not burned into video as a broadcast-style
-// graphic), and a longer cap since a gallery caption isn't fighting for
-// space over the photo itself the way an on-screen overlay is.
-const MAX_GALLERY_CAPTION_CHARS = 40;
-function formatGalleryCaption(momentType) {
-  if (!momentType) return null;
-  const titleCased = momentType.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-  return titleCased.length > MAX_GALLERY_CAPTION_CHARS ? `${titleCased.slice(0, MAX_GALLERY_CAPTION_CHARS - 1)}…` : titleCased;
-}
-
 // Builds the overlayLines array assembleSlideshow expects (parallel to the
 // photo list) for whichever style is in play -- null for every style but
 // Highlight Reel (a call-out per photo, top-center) and Retro (a single
@@ -698,7 +686,6 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // reuse these already-enhanced buffers instead of enhancing twice.
   console.log("Auto-enhancing all uploaded photos for the gallery...");
   const gallerySelection = buildGallerySelection(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
-  const galleryCaptions = gallerySelection.map((s) => formatGalleryCaption(s.analysis && s.analysis.moment_type));
   const enhancedKeys = [];
   const enhancedByUploadId = new Map();
   const enhancedKeyByUploadId = new Map();
@@ -794,11 +781,11 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // documentary, is the right silent default).
   const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.cinematic;
   const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.cinematic;
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections, galleryCaptions);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections);
   currentTmpDir = null;
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "cinematic", socialStyle = "", videoShortlist = [], socialSelections = [], galleryCaptions = []) {
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "cinematic", socialStyle = "", videoShortlist = [], socialSelections = []) {
   let videoKey = null;
   let noRoastVideoKey = null;
   let videoPosterKey = null;
@@ -1021,7 +1008,6 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       social_video_poster_keys: socialVideoPosterKeys,
       social_video_no_roast_poster_keys: socialVideoNoRoastPosterKeys,
       gallery_photo_keys: enhancedKeys,
-      gallery_photo_captions: galleryCaptions,
       delivered_at: new Date().toISOString(),
     },
     { onConflict: "booking_id" }

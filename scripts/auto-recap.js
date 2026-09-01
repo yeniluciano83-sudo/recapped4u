@@ -854,7 +854,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     // still lines up correctly now that the intro card occupies index 0.
     const shiftedRoastLines = roastLines ? [null, ...roastLines] : null;
 
-    await assembleSlideshow(localPathsWithCards, [], videoLocalPath, musicPath, shiftedRoastLines, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines });
+    await assembleSlideshow(localPathsWithCards, [], videoLocalPath, musicPath, shiftedRoastLines, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines, kenBurns: true });
     const videoBuffer = fs.readFileSync(videoLocalPath);
     videoKey = `deliverable/${bookingId}/full-cut.mp4`;
     await uploadToR2(videoKey, videoBuffer, "video/mp4");
@@ -872,7 +872,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     if (roastLines) {
       console.log("Roast Reel enabled -- also assembling a caption-free version of the same cut...");
       const noRoastVideoLocalPath = path.join(tmpDir, "recap-no-roast.mp4");
-      await assembleSlideshow(localPathsWithCards, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines });
+      await assembleSlideshow(localPathsWithCards, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines, kenBurns: true });
       const noRoastVideoBuffer = fs.readFileSync(noRoastVideoLocalPath);
       noRoastVideoKey = `deliverable/${bookingId}/full-cut-no-roast.mp4`;
       await uploadToR2(noRoastVideoKey, noRoastVideoBuffer, "video/mp4");

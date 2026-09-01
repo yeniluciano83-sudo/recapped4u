@@ -107,7 +107,7 @@ const FAQ_JSON_LD = JSON.stringify({
 // Real output from the actual pipeline (Claude photo scoring, enhancePhoto,
 // generateRoastScript, assembleSlideshow) on a real booking's uploads --
 // nothing here is mocked or hand-edited. See public/samples/.
-const SAMPLE_PAIRS = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
+const SAMPLE_PAIRS = [1, 2, 3, 4, 5, 6].map((n) => ({
   raw: `/samples/pair-${n}-raw.jpg`,
   polished: `/samples/pair-${n}-polished.jpg`,
 }));

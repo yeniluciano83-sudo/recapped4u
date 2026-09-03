@@ -125,36 +125,18 @@ const SOCIAL_CUT_OUTPUT = { outputWidth: 1080, outputHeight: 1920 };
 // a hero slot -- it's watched start-to-finish already, not scrolled past).
 const SOCIAL_CUT_HERO_ZOOM_INDEX = 1;
 
-// Highlight Reel's "bold text call-outs" -- reuses the moment_type every
-// photo already got from its Claude analysis (ANALYSIS_PROMPT in
-// lib/batchAnalysis.js), otherwise unused after shortlisting. No new
-// Claude call needed. Uppercased/truncated for a punchy, sports-broadcast-
-// style label rather than a full sentence.
-const MAX_CALLOUT_CHARS = 28;
-function highlightCallout(momentType) {
-  if (!momentType) return null;
-  const upper = momentType.toUpperCase();
-  return upper.length > MAX_CALLOUT_CHARS ? `${upper.slice(0, MAX_CALLOUT_CHARS - 1)}…` : upper;
-}
-
-// Builds the overlayLines array assembleSlideshow expects (parallel to the
-// photo list) for whichever style is in play -- null for every style but
-// Highlight Reel (a call-out per photo, top-center) and Retro (a single
-// vintage event-type label on the first photo only, top-left). Every other
-// style gets an array of nulls, which assembleSlideshow treats as "no
-// overlay" the same as passing null itself.
-function buildOverlayLines(style, entries, eventType) {
-  if (style === "highlight") {
-    return entries.map((e) => {
-      const text = highlightCallout(e.analysis && e.analysis.moment_type);
-      return text ? { text, position: "top-center", fontColor: "white", boxColor: "black@0.6" } : null;
-    });
-  }
-  if (style === "retro" && entries.length > 0) {
-    return entries.map((_, i) =>
-      i === 0 ? { text: `— ${eventType.toUpperCase()} —`, position: "top-left", fontColor: "#F4E8D8", boxColor: "#3B2A1A@0.65" } : null
-    );
-  }
+// Per-photo overlay text is switched off: nothing is burned onto the
+// actual photos in either the full video or the social cuts, for any
+// style. This used to add Highlight Reel's uppercase moment_type call-outs
+// (top-center, one per photo) and Retro's single vintage event-type label
+// on the first photo -- both removed by request, on the same reasoning as
+// dropping the roast captions from social cuts: a label box on top of the
+// photo covers more than it's worth. The intro/outro title CARDS (their
+// own dedicated backdrop slots, not photos) keep their text -- see
+// introOverlayText/outroOverlayText below, added to the overlayLines
+// array separately from this. Returns an all-null array of the caller's
+// length, which assembleSlideshow treats as "no overlay".
+function buildOverlayLines(entries) {
   return entries.map(() => null);
 }
 
@@ -839,7 +821,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     // text separate from any per-style callout/title logic.
     const overlayLines = [
       { text: introOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
-      ...buildOverlayLines(style, videoShortlist, eventType),
+      ...buildOverlayLines(videoShortlist),
       { text: outroOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
     ];
     // roastLines is indexed against the real photos only (0..n-1) -- shift
@@ -956,7 +938,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPathsWithCards.length - 1) * socialStyleConfig.transitionSeconds) / socialLocalPathsWithCards.length;
       const cutOverlayLines = [
         { text: introOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
-        ...buildOverlayLines(effectiveSocialStyle, socialSelections[cutIndex] || [], eventType),
+        ...buildOverlayLines(socialSelections[cutIndex] || []),
         { text: outroOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
       ];
       const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);

@@ -28,7 +28,21 @@ jobs:
     # stuck with no error anywhere until the pipeline's own 1.5h stale-
     # recovery (see STALE_EDITING_HOURS in scripts/poll-and-recap.js)
     # reverted it back to "collecting" to start over from scratch.
-    timeout-minutes: 45
+    #
+    # 45 minutes wasn't enough either: confirmed live, a Luxe-tier booking
+    # (80 photos, Roast Reel, full video + up to 10 social cuts -- most
+    # real bookings are this size or larger, not an outlier) still hit this
+    # timeout even after the render itself became memory-bounded (see
+    # MAX_SLOTS_PER_CHUNK in lib/video-assemble.js) -- there's simply a lot
+    # of ffmpeg encoding to do in one job run for a booking this size,
+    # regardless of memory. Raised to comfortably cover that, while staying
+    # under two other ceilings on purpose: STALE_EDITING_HOURS (90 minutes)
+    # above, so a genuinely hung job still gets killed by *this* timeout
+    # before the separate stale-recovery pass would also try to intervene
+    # on the same booking from a different process; and the 3-hour (180
+    # minute) cron cadence above, so one run is guaranteed to finish before
+    # the next one starts.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v5
 

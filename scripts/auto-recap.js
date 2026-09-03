@@ -175,6 +175,14 @@ const SOCIAL_CUTS_COUNT = { premium: 5, keepsake: 10 };
 const SHORTLIST_CAP = { free: 20 };
 const FULL_CUT_TARGET_SECONDS = { free: 75 }; // middle of the advertised 60-90s range
 
+// Only this top fraction of the shortlist (by emotional_strength +
+// technical_quality) gets a Roast Reel line; the rest play captionless at
+// the normal pace. A roast-captioned slot runs 2.5x longer
+// (ROAST_SLOT_SECONDS in lib/video-assemble.js), so captioning every photo
+// balloons both the runtime and the render time of a large booking --
+// captioning ~the best third keeps the reel punchy and the render bounded.
+const ROAST_FRACTION = 0.35;
+
 const s3 = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -795,8 +803,20 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
   // whether two people are sisters or friends (it's told not to guess).
   let roastLines = null;
   if (booking.roast_enabled && !useAllPhotoSocialCuts) {
-    console.log("Roast Reel add-on enabled -- generating full-video script...");
-    const roastPhotos = localPaths.map((p, i) => ({ buffer: fs.readFileSync(p), storageKey: videoStorageKeys[i] }));
+    // Roast only the best-scored ROAST_FRACTION of the shortlist. roastIdx
+    // holds those photos' positions in videoShortlist (kept in ascending
+    // order so the lines still map back positionally), scored by the same
+    // emotional_strength + technical_quality sum buildShortlist ranks on.
+    const scoreOf = (e) => (e.analysis.emotional_strength || 0) + (e.analysis.technical_quality || 0);
+    const roastCount = Math.max(1, Math.ceil(videoShortlist.length * ROAST_FRACTION));
+    const roastIdx = videoShortlist
+      .map((e, i) => ({ i, s: scoreOf(e) }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, roastCount)
+      .map((x) => x.i)
+      .sort((a, b) => a - b);
+    console.log(`Roast Reel add-on enabled -- generating lines for the top ${roastIdx.length} of ${videoShortlist.length} shortlisted photos...`);
+    const roastPhotos = roastIdx.map((i) => ({ buffer: fs.readFileSync(localPaths[i]), storageKey: videoStorageKeys[i] }));
     const recentLines = await fetchRecentRoastLines();
     const script = await generateRoastScript(roastPhotos, {
       eventType: booking.event_type,
@@ -804,8 +824,13 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
       recentLines,
       hostContext: hostContext || booking.notes || undefined,
     });
-    roastLines = script.map((line) => line.line);
-    await saveRoastLines(bookingId, booking.event_type, booking.roast_level || "light", roastLines);
+    // Scatter the k generated lines back onto a full-shortlist-length array;
+    // every non-roasted slot stays null, which assembleSlideshow already
+    // treats as "no caption, normal duration". script entries are validated
+    // as a 0..k-1 permutation, so photo_index indexes roastIdx directly.
+    roastLines = new Array(videoShortlist.length).fill(null);
+    for (const entry of script) roastLines[roastIdx[entry.photo_index]] = entry.line;
+    await saveRoastLines(bookingId, booking.event_type, booking.roast_level || "light", roastLines.filter(Boolean));
   }
 
   // Style is optional at booking time (see app/booking/page.jsx) -- an

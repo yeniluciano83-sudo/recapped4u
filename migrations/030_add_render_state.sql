@@ -1,0 +1,13 @@
+-- Video rendering for a large booking (hundreds of 4K photo slots, roast +
+-- no-roast full cuts) can take longer than a single scheduled job's time
+-- budget (see .github/workflows/recap-scheduler.yml). render_state lets the
+-- render resume across scheduled runs instead of restarting: it records the
+-- render plan (photo/card R2 keys in video order, roast lines, style
+-- params), how many chunks each full cut needs, how many are done, whether
+-- each has been merged, and how far social-cut rendering has got. A booking
+-- stays "editing" with a non-"done" render_state between runs;
+-- poll-and-recap.js's continue-render phase advances it each tick, and
+-- stale-recovery leaves it alone while render_state.updated_at keeps moving.
+-- Null for every booking delivered before this existed, and cleared back to
+-- null once a render finishes and its intermediate chunk files are purged.
+alter table deliverables add column render_state jsonb;

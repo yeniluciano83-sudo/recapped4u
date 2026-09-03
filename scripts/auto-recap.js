@@ -1,5 +1,5 @@
-/**
- * Recapped For You — Fully Automated Recap Pipeline
+﻿/**
+ * Recapped For You â€” Fully Automated Recap Pipeline
  * ----------------------------------------------------
  * Given a booking ID, this script does everything end-to-end with no
  * human editing step. Photos only -- guests upload photos, never video
@@ -65,7 +65,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // same process.
 let currentTmpDir = null;
 
-// Royalty-free tracks (Pixabay Content License — free for commercial use,
+// Royalty-free tracks (Pixabay Content License â€” free for commercial use,
 // no attribution required), one per editing style, matching the mood
 // described for that style on the booking page. Living under public/
 // (rather than lib/) so the same files double as browser-playable style
@@ -348,7 +348,7 @@ async function fetchBatchResults(resultsUrl) {
 // shortlist -- so they don't linger in storage or get a second look. Used
 // by both the synchronous and batch-result analysis paths.
 async function rejectFlaggedUpload(upload, analysis, label) {
-  console.log(`  ⚠ ${upload.storage_key}${label} — flagged (${analysis.flag_reason || "inappropriate content"}), removing`);
+  console.log(`  âš  ${upload.storage_key}${label} â€” flagged (${analysis.flag_reason || "inappropriate content"}), removing`);
   try {
     await deleteFromR2(upload.storage_key);
   } catch (err) {
@@ -358,7 +358,7 @@ async function rejectFlaggedUpload(upload, analysis, label) {
 }
 
 async function recordAnalysisFailure(bookingId, upload, errorMessage) {
-  console.error(`  ✗ ${upload.storage_key} — analysis failed: ${errorMessage}`);
+  console.error(`  âœ— ${upload.storage_key} â€” analysis failed: ${errorMessage}`);
   // Best-effort: a failure logging the failure shouldn't crash the
   // per-photo loop itself -- the console.error above is the fallback.
   try {
@@ -428,7 +428,7 @@ async function analyzePhotosSynchronously(bookingId) {
       // enhancePhoto downstream should work from the real uploaded bytes,
       // not a copy re-encoded just to satisfy Claude's supported formats.
       analyzed.push({ upload, buffer, analysis });
-      console.log(`  ✓ ${upload.storage_key} — quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
+      console.log(`  âœ“ ${upload.storage_key} â€” quality ${analysis.technical_quality}, emotion ${analysis.emotional_strength}`);
     } catch (err) {
       await recordAnalysisFailure(bookingId, upload, err.message);
     }
@@ -493,7 +493,7 @@ async function buildAnalyzedFromBatchResults(bookingId, resultsUrl) {
       // Every photo submitted in the batch gets exactly one custom_id-
       // matched result, even on failure -- shouldn't happen, but skip
       // rather than crash the whole booking if it ever does.
-      console.error(`  ✗ ${upload.storage_key} — no batch result found, skipping`);
+      console.error(`  âœ— ${upload.storage_key} â€” no batch result found, skipping`);
       continue;
     }
     if (result.error) {
@@ -507,7 +507,7 @@ async function buildAnalyzedFromBatchResults(bookingId, resultsUrl) {
     try {
       const buffer = await downloadFromR2(upload.storage_key);
       analyzed.push({ upload, buffer, analysis: result.analysis });
-      console.log(`  ✓ ${upload.storage_key} — quality ${result.analysis.technical_quality}, emotion ${result.analysis.emotional_strength}`);
+      console.log(`  âœ“ ${upload.storage_key} â€” quality ${result.analysis.technical_quality}, emotion ${result.analysis.emotional_strength}`);
     } catch (err) {
       await recordAnalysisFailure(bookingId, upload, `Download failed after batch analysis: ${err.message}`);
     }
@@ -740,6 +740,12 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
   }
 
   const localPaths = [];
+  // R2 key per shortlist photo, in shortlist order -- the render spec's
+  // slotKeys. For a normal delivery these are the gallery's own
+  // deliverable/<id>/photo-N.jpg (already uploaded above). For a
+  // full-video-only re-render the gallery photos exist but in gallery order,
+  // so the enhanced shortlist is parked under _render/ instead (cleaned up
+  // when the render finishes).
   const videoStorageKeys = [];
   for (let i = 0; i < videoShortlist.length; i++) {
     const { upload } = videoShortlist[i];
@@ -747,7 +753,13 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
     const localPath = path.join(tmpDir, `video-photo-${i + 1}.jpg`);
     fs.writeFileSync(localPath, enhanced);
     localPaths.push(localPath);
-    videoStorageKeys.push(enhancedKeyByUploadId.get(upload.id) || upload.storage_key);
+    if (fullVideoOnly) {
+      const k = `deliverable/${bookingId}/_render/photo-${i + 1}.jpg`;
+      await uploadToR2(k, enhanced, "image/jpeg");
+      videoStorageKeys.push(k);
+    } else {
+      videoStorageKeys.push(enhancedKeyByUploadId.get(upload.id));
+    }
   }
 
   // The social cut's photo selection can include host-starred photos that
@@ -833,296 +845,383 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
     await saveRoastLines(bookingId, booking.event_type, booking.roast_level || "light", roastLines.filter(Boolean));
   }
 
-  // Style is optional at booking time (see app/booking/page.jsx) -- an
-  // unset style still needs *some* soundtrack rather than silently
-  // shipping a music-less video, so it falls back to cinematic's track,
-  // matching enhancePhoto's own cinematic default for the color grade
-  // (see that function's fallback comment for why cinematic, not
-  // documentary, is the right silent default).
-  const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.cinematic;
-  const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.cinematic;
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections, { fullVideoOnly });
+  // Hand off to the resumable renderer: build the render spec (everything a
+  // later scheduled run needs with nothing left in memory) and kick off the
+  // first pass. See startRender / driveRender below.
+  const styleConfigForVideo = styleVideoConfigFor(booking.style);
+  const socialCutCount =
+    !SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier) || booking.delivery_format === "video_only"
+      ? 0
+      : useAllPhotoSocialCuts
+      ? Infinity
+      : SOCIAL_CUTS_COUNT[booking.tier] || 1;
+
+  let spec;
+  if (useAllPhotoSocialCuts) {
+    // "Social cuts of every photo" -- no full recap video at all.
+    spec = {
+      skipFullVideo: true,
+      slotKeys: [],
+      roastLines: null,
+      style: booking.style,
+      socialStyle: booking.social_style,
+      tier: booking.tier,
+      noMusic: booking.full_video_no_music,
+      socialNoMusic: booking.social_style === "none",
+      hostName: booking.host_name,
+      hostEmail: booking.email,
+      eventType: booking.event_type,
+      galleryPhotoKeys: enhancedKeys,
+      socialCutCount,
+    };
+  } else {
+    const { introKey, outroKey } = await buildAndUploadCards(
+      bookingId,
+      fs.readFileSync(localPaths[0]),
+      fs.readFileSync(localPaths[localPaths.length - 1])
+    );
+    const slotKeys = [introKey, ...videoStorageKeys, outroKey];
+    // Free's highlight video targets a total duration; every other tier uses
+    // fixed per-photo pacing. Same solve as the social cut. Cards count as
+    // slots so they don't push the video past its target.
+    const fullCutTarget = FULL_CUT_TARGET_SECONDS[booking.tier];
+    const fullCutSlotSeconds = fullCutTarget
+      ? (fullCutTarget + (slotKeys.length - 1) * styleConfigForVideo.transitionSeconds) / slotKeys.length
+      : styleConfigForVideo.slotSeconds;
+    spec = {
+      slotKeys,
+      // Parallel to slotKeys: a leading null for the intro card, a trailing
+      // null for the outro card, roastLines (already sparse, ~35% filled) in
+      // between -- matches the old shiftedRoastLines shift.
+      roastLines: roastLines ? [null, ...roastLines, null] : null,
+      style: booking.style,
+      socialStyle: booking.social_style,
+      tier: booking.tier,
+      fullCutSlotSeconds,
+      noMusic: booking.full_video_no_music,
+      socialNoMusic: booking.social_style === "none",
+      hostName: booking.host_name,
+      hostEmail: booking.email,
+      eventType: booking.event_type,
+      galleryPhotoKeys: enhancedKeys,
+      socialCutCount,
+    };
+  }
+
+  fs.rmSync(tmpDir, { recursive: true, force: true });
   currentTmpDir = null;
+  await startRender(bookingId, spec, {
+    finalize: fullVideoOnly ? "video-only" : "full",
+    // A manual full-video re-render has no job clock; a scheduled first
+    // delivery run has already spent time on analysis + enhancement +
+    // roast, so it gets a reduced first slice and continuation runs pick up
+    // the rest.
+    budgetMs: fullVideoOnly ? Infinity : FIRST_RENDER_BUDGET_MS,
+  });
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "cinematic", socialStyle = "", videoShortlist = [], socialSelections = [], { fullVideoOnly = false } = {}) {
-  let videoKey = null;
-  let noRoastVideoKey = null;
-  let videoPosterKey = null;
-  let noRoastVideoPosterKey = null;
+const RENDER_BUDGET_MS = 35 * 60 * 1000; // per continuation run
+const FIRST_RENDER_BUDGET_MS = 20 * 60 * 1000; // run 1 already spent time on analysis/enhance/roast
 
-  const styleConfigForVideo = styleVideoConfigFor(style);
-  const effectiveSocialStyle = socialStyle || style;
-  const socialStyleConfig = styleVideoConfigFor(effectiveSocialStyle);
+// Builds and R2-parks the intro/outro title cards (from the first and last
+// shortlisted photo) so a resume run can fetch them like any other slot.
+async function buildAndUploadCards(bookingId, firstPhotoBuffer, lastPhotoBuffer) {
+  const introKey = `deliverable/${bookingId}/_render/intro-card.jpg`;
+  const outroKey = `deliverable/${bookingId}/_render/outro-card.jpg`;
+  await uploadToR2(introKey, await buildCardBackground(firstPhotoBuffer), "image/jpeg");
+  await uploadToR2(outroKey, await buildCardBackground(lastPhotoBuffer), "image/jpeg");
+  return { introKey, outroKey };
+}
 
-  // "Social cuts of every photo" delivery format has no full video at all --
-  // see useAllPhotoSocialCuts in continuePipelineWithAnalysis, the only
-  // caller that ever passes skipFullVideo = true.
-  if (!skipFullVideo) {
-    console.log("Assembling automated slideshow video...");
-    const videoLocalPath = path.join(tmpDir, "recap.mp4");
+async function persistRenderState(bookingId, renderState) {
+  renderState.updated_at = new Date().toISOString();
+  const { error } = await supabase.from("deliverables").update({ render_state: renderState }).eq("booking_id", bookingId);
+  if (error) throw error;
+}
 
-    // Opening and closing cards, prepended/appended as their own slots
-    // around the real photos -- see lib/card-background.js (buildCardBackground
-    // doubles as the intro's backdrop builder too; the blur/dim treatment
-    // is identical, only which photo feeds it differs -- first vs. last
-    // shortlisted). Local variables, not a mutation of the localPaths
-    // parameter, so anything else that might still read localPaths (there
-    // is nothing left that does at this point, but keeping it untouched is
-    // one less thing to reason about) is unaffected.
-    const introBackground = await buildCardBackground(fs.readFileSync(localPaths[0]));
-    const introPath = path.join(tmpDir, "intro-card.jpg");
-    fs.writeFileSync(introPath, introBackground);
-    const outroBackground = await buildCardBackground(fs.readFileSync(localPaths[localPaths.length - 1]));
-    const outroPath = path.join(tmpDir, "outro-card.jpg");
-    fs.writeFileSync(outroPath, outroBackground);
-    const localPathsWithCards = [introPath, ...localPaths, outroPath];
+// Writes the initial render_state and runs the first driveRender pass.
+// finalize: "full" = normal delivery (full cut[s] + social cuts + deliverable
+// row + status + email); "video-only" = re-render just the full cut of an
+// already-delivered booking, overwriting only its full_video_* keys.
+async function startRender(bookingId, spec, { finalize, budgetMs = RENDER_BUDGET_MS }) {
+  const hasRoast = Array.isArray(spec.roastLines) && spec.roastLines.some(Boolean);
+  const totalChunks = spec.skipFullVideo ? 0 : planChunks(spec.slotKeys.length, 0).length;
 
-    // Free's highlight video targets a duration (like the social cut) rather
-    // than the other tiers' fixed per-photo pacing that scales with however
-    // many photos made the shortlist (now including both cards, so they
-    // count as slots the target duration is solved across, rather than
-    // pushing the video past its target). Same duration-solving math as the
-    // social cut; see the comment further down for the formula itself. Uses
-    // this style's actual transitionSeconds, not a hardcoded 0.6 -- using
-    // the wrong value here would land the rendered video's real length
-    // short or long of fullCutTarget, since assembleSlideshow below is
-    // given that same styleConfigForVideo.transitionSeconds to render with.
-    const fullCutTarget = FULL_CUT_TARGET_SECONDS[tier];
-    const fullCutSlotSeconds = fullCutTarget
-      ? (fullCutTarget + (localPathsWithCards.length - 1) * styleConfigForVideo.transitionSeconds) / localPathsWithCards.length
-      : styleConfigForVideo.slotSeconds;
+  const renderState = {
+    v: 1,
+    finalize,
+    phase: spec.skipFullVideo ? "social" : "full",
+    updated_at: new Date().toISOString(),
+    spec,
+    full: spec.skipFullVideo
+      ? null
+      : {
+          main: { totalChunks, done: [], merged: false },
+          noRoast: hasRoast ? { totalChunks, done: [], merged: false } : null,
+        },
+    social: { done: 0, total: spec.socialCutCount === Infinity ? null : spec.socialCutCount },
+  };
 
-    // buildOverlayLines only returns one entry per REAL photo (videoShortlist's
-    // length) -- extending it here, rather than there, keeps that function's
-    // contract simple (one style's overlay per photo) and the cards' own
-    // text separate from any per-style callout/title logic.
-    const overlayLines = [
-      { text: introOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
-      ...buildOverlayLines(videoShortlist),
-      { text: outroOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
-    ];
-    // roastLines is indexed against the real photos only (0..n-1) -- shift
-    // it by one slot (a leading null, meaning "no roast line here") so it
-    // still lines up correctly now that the intro card occupies index 0.
-    const shiftedRoastLines = roastLines ? [null, ...roastLines] : null;
+  // A deliverable row must exist for persistRenderState's .update() to land.
+  // "full" first delivery: created here, partial -- the gallery route treats
+  // a row with render_state set and no delivered_at as not-ready.
+  // "video-only": the row already exists from the prior delivery.
+  await supabase.from("deliverables").upsert(
+    { booking_id: bookingId, render_state: renderState, ...(finalize === "full" ? { gallery_photo_keys: spec.galleryPhotoKeys } : {}) },
+    { onConflict: "booking_id" }
+  );
 
-    await assembleSlideshow(localPathsWithCards, [], videoLocalPath, musicPath, shiftedRoastLines, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines, kenBurns: true, photoBackground: "black" });
-    const videoBuffer = fs.readFileSync(videoLocalPath);
-    videoKey = `deliverable/${bookingId}/full-cut.mp4`;
-    await uploadToR2(videoKey, videoBuffer, "video/mp4");
-    // Grabs a frame 1.5s into whatever's playing at that timestamp (see
-    // extractPosterFrame) -- offset by the intro card's own duration so
-    // the poster still shows a real photo, not the intro card itself.
-    videoPosterKey = await uploadPosterFor(videoLocalPath, tmpDir, `deliverable/${bookingId}/full-cut-poster.jpg`, fullCutSlotSeconds + 1.5);
+  await driveRender(bookingId, { budgetMs });
+}
 
-    // Roast Reel bookings previously only ever got the captioned cut -- render
-    // a second, caption-free twin of the exact same shortlist/pacing so hosts
-    // can also share a version without the roast lines. Skipped for non-roast
-    // bookings, where this would just be a duplicate of videoKey. Still
-    // carries both title cards -- only the roast captions are dropped.
-    if (roastLines) {
-      console.log("Roast Reel enabled -- also assembling a caption-free version of the same cut...");
-      const noRoastVideoLocalPath = path.join(tmpDir, "recap-no-roast.mp4");
-      await assembleSlideshow(localPathsWithCards, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines, kenBurns: true, photoBackground: "black" });
-      const noRoastVideoBuffer = fs.readFileSync(noRoastVideoLocalPath);
-      noRoastVideoKey = `deliverable/${bookingId}/full-cut-no-roast.mp4`;
-      await uploadToR2(noRoastVideoKey, noRoastVideoBuffer, "video/mp4");
-      noRoastVideoPosterKey = await uploadPosterFor(noRoastVideoLocalPath, tmpDir, `deliverable/${bookingId}/full-cut-no-roast-poster.jpg`, fullCutSlotSeconds + 1.5);
-    }
-  } else {
-    console.log("Delivery format is social cuts of every photo -- skipping the full recap video.");
-  }
+// Called by poll-and-recap.js's continue-render phase, once per tick, for
+// every "editing" booking whose render_state isn't "done" yet.
+async function continueRender(bookingId) {
+  await driveRender(bookingId, { budgetMs: RENDER_BUDGET_MS });
+}
 
-  // Full-video-only re-render of an already-delivered booking: overwrite
-  // just the full-cut video/poster keys on the existing deliverable row and
-  // stop here. No social cuts, no gallery_photo_keys change, no status
-  // change, no delivery email -- everything else stays as the original
-  // delivery produced it.
-  if (fullVideoOnly) {
-    const { error: updErr } = await supabase
-      .from("deliverables")
-      .update({
-        full_video_key: videoKey,
-        full_video_no_roast_key: noRoastVideoKey,
-        full_video_poster_key: videoPosterKey,
-        full_video_no_roast_poster_key: noRoastVideoPosterKey,
-      })
-      .eq("booking_id", bookingId);
-    if (updErr) throw updErr;
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-    console.log(`Done. Re-rendered the full video for booking ${bookingId} (roast + caption-free). Social cuts, gallery, status and delivery email untouched.`);
+// Advances a booking's render as far as budgetMs of wall time allows,
+// persisting render_state after every chunk, social cut, and phase change.
+// Re-entrant: it resumes from render_state.phase and the per-unit done sets,
+// so a job killed mid-render loses at most the chunk in flight.
+async function driveRender(bookingId, { budgetMs }) {
+  const { data: row } = await supabase.from("deliverables").select("render_state").eq("booking_id", bookingId).maybeSingle();
+  const rs = row && row.render_state;
+  if (!rs || rs.phase === "done") {
+    console.log(`Booking ${bookingId}: no active render to continue.`);
     return;
   }
+  const spec = rs.spec;
+  const deadline = Date.now() + budgetMs;
+  const overBudget = () => Date.now() >= deadline;
 
-  // The social cut(s)' photo selections were already uploaded to R2 in
-  // continuePipelineWithAnalysis -- recover them here rather than needing
-  // anything still in memory from that run. If Roast Reel is enabled, each
-  // cut gets its own roast script generated from its own photo selection
-  // (cuts don't share a selection with each other or with the full video,
-  // so the full-video script above can't just be reused/sliced), plus a
-  // caption-free twin of that same cut, same as full_video_no_roast_key
-  // already does for the full video. roast_enabled is a single
-  // booking-level flag, not per-cut, so socialVideoNoRoastKeys always ends
-  // up either fully populated (one entry per cut) or left empty -- never
-  // partially populated -- which is what lets the gallery route zip it
-  // against socialVideoKeys by index without needing to know which cuts
-  // have one. Duration is hit by solving for a per-slot length that lands
-  // each cut's sequence near TARGET_SOCIAL_SECONDS, rather than using the
-  // full cut's fixed pacing -- note that a roast-captioned slot still
-  // overrides this to ROAST_SLOT_SECONDS (lib/video-assemble.js), same
-  // trade-off the full video already makes, so a heavily-roasted cut can
-  // run past the advertised 60-90s.
-  const socialVideoKeys = [];
-  const socialVideoNoRoastKeys = [];
-  const socialVideoPosterKeys = [];
-  const socialVideoNoRoastPosterKeys = [];
-  if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier)) {
-    // skipFullVideo (all-photos social cuts mode) has no fixed cut count --
-    // keep rendering cuts until a prefix comes up empty, rather than
-    // stopping at SOCIAL_CUTS_COUNT[tier].
-    const cutsForTier = skipFullVideo ? Infinity : (SOCIAL_CUTS_COUNT[tier] || 1);
-    for (let cutIndex = 0; cutIndex < cutsForTier; cutIndex++) {
-      const socialKeys = await listDeliverableFiles(bookingId, `social-${cutIndex + 1}-photo-`);
-      if (socialKeys.length === 0) break; // ran out of photos for a further cut -- stop, don't render empty ones
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "render-"));
+  currentTmpDir = tmpDir;
+  const musicPath = spec.noMusic ? null : STYLE_MUSIC[spec.style] || STYLE_MUSIC.cinematic;
 
-      console.log(`Assembling social cut ${cutIndex + 1} from ${socialKeys.length} photo(s)...`);
-      const socialLocalPaths = [];
-      for (const key of socialKeys) {
-        const buffer = await downloadFromR2(key);
-        const localPath = path.join(tmpDir, path.basename(key));
-        fs.writeFileSync(localPath, buffer);
-        socialLocalPaths.push(localPath);
+  try {
+    if (rs.phase === "full") {
+      const slotDir = path.join(tmpDir, "slots");
+      fs.mkdirSync(slotDir, { recursive: true });
+      const slotPath = (i) => path.join(slotDir, `slot-${String(i).padStart(4, "0")}.jpg`);
+      const ensureSlot = async (i) => {
+        if (!fs.existsSync(slotPath(i))) fs.writeFileSync(slotPath(i), await downloadFromR2(spec.slotKeys[i]));
+      };
+
+      // The only burned-on text on the full video is the two title cards
+      // (per-photo callouts were dropped -- see buildOverlayLines). Parallel
+      // to slotKeys: card text at the ends, null for every photo between.
+      const cardOverlays = [
+        { text: introOverlayText(spec.hostName, spec.eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
+        ...Array(Math.max(0, spec.slotKeys.length - 2)).fill(null),
+        { text: outroOverlayText(spec.hostName, spec.eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
+      ];
+
+      for (const unitName of ["main", "noRoast"]) {
+        const unit = rs.full[unitName];
+        if (!unit || unit.merged) continue;
+
+        const plan = planChunks(spec.slotKeys.length, 0);
+        const doneSet = new Set(unit.done);
+        for (let c = 0; c < plan.length; c++) {
+          if (doneSet.has(c)) continue;
+          for (let i = plan[c].start; i < plan[c].end; i++) await ensureSlot(i);
+        }
+        const imagePaths = spec.slotKeys.map((_, i) => slotPath(i));
+        const unitDir = path.join(tmpDir, unitName);
+        fs.mkdirSync(unitDir, { recursive: true });
+
+        const res = await renderFullVideoChunks(imagePaths, [], unitName === "main" ? spec.roastLines : null, cardOverlays, unitDir, {
+          baseSlotSeconds: spec.fullCutSlotSeconds,
+          styleConfig: { ...styleVideoConfigFor(spec.style), kenBurns: true, photoBackground: "black" },
+          doneChunks: doneSet,
+          budgetMs: deadline - Date.now(),
+          onChunkRendered: async (idx, chunkPath) => {
+            await uploadToR2(`deliverable/${bookingId}/_render/${unitName}-chunk-${idx}.mp4`, fs.readFileSync(chunkPath), "video/mp4");
+            unit.done = [...new Set([...unit.done, idx])].sort((a, b) => a - b);
+            await persistRenderState(bookingId, rs);
+          },
+        });
+
+        if (!res.complete) {
+          console.log(`Booking ${bookingId}: ${unitName} cut at ${unit.done.length}/${unit.totalChunks} chunks, out of time -- continuing next run.`);
+          return;
+        }
+
+        const mergeDir = path.join(tmpDir, `${unitName}-merge`);
+        fs.mkdirSync(mergeDir, { recursive: true });
+        const chunkPaths = [];
+        for (let i = 0; i < plan.length; i++) {
+          const cp = path.join(mergeDir, `chunk-${i}.mp4`);
+          fs.writeFileSync(cp, await downloadFromR2(`deliverable/${bookingId}/_render/${unitName}-chunk-${i}.mp4`));
+          chunkPaths.push(cp);
+        }
+        const isMain = unitName === "main";
+        const finalKey = `deliverable/${bookingId}/${isMain ? "full-cut.mp4" : "full-cut-no-roast.mp4"}`;
+        const posterKey = `deliverable/${bookingId}/${isMain ? "full-cut-poster.jpg" : "full-cut-no-roast-poster.jpg"}`;
+        const mergedPath = path.join(mergeDir, "merged.mp4");
+        await mergeFullVideoChunks(chunkPaths, mergedPath, musicPath);
+        await uploadToR2(finalKey, fs.readFileSync(mergedPath), "video/mp4");
+        await uploadPosterFor(mergedPath, mergeDir, posterKey, spec.fullCutSlotSeconds + 1.5);
+        unit.merged = true;
+        unit.finalKey = finalKey;
+        unit.posterKey = posterKey;
+        await persistRenderState(bookingId, rs);
+        for (let i = 0; i < plan.length; i++) {
+          await deleteFromR2(`deliverable/${bookingId}/_render/${unitName}-chunk-${i}.mp4`).catch(() => {});
+        }
       }
 
-      // Social cuts are always caption-free, even when the booking has the
-      // Roast Reel add-on: on a vertical Reels/TikTok/Shorts frame a burned-in
-      // bottom caption box covers too much of the photo to be worth it. The
-      // roast lines still play on the full video (roast + no-roast pair, see
-      // finalizeDelivery above) -- that's the surface built to be watched
-      // start-to-finish where there's room for them. So no generateRoastScript
-      // call here, and no second no-roast render below: socialVideoNoRoastKeys
-      // stays empty, exactly as it already does for a non-roast booking, and
-      // the gallery route/page handle that case unchanged.
-
-      // Opening and closing cards, same as the full video's -- prepended/
-      // appended around this cut's real photos, counted as slots in the
-      // TARGET_SOCIAL_SECONDS solve below rather than pushing the cut past
-      // its target.
-      const socialIntroBackground = await buildCardBackground(fs.readFileSync(socialLocalPaths[0]));
-      const socialIntroPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-intro.jpg`);
-      fs.writeFileSync(socialIntroPath, socialIntroBackground);
-      // Loop-friendly ending: reuse the exact same blurred backdrop for the
-      // outro as the intro (rather than building a fresh one from the
-      // cut's last photo) so a viewer replaying the cut -- Reels/TikTok/
-      // Shorts all auto-loop -- lands back on a visually matching frame
-      // instead of a jarring cut to an unrelated photo. Only the burned-on
-      // text differs (introOverlayText vs outroOverlayText below), so the
-      // bookend still reads as open/close. Full-video cards keep their
-      // original first-photo/last-photo pairing -- it isn't watched on
-      // loop, so there's nothing to smooth over.
-      const socialOutroPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-outro.jpg`);
-      fs.writeFileSync(socialOutroPath, socialIntroBackground);
-      const socialLocalPathsWithCards = [socialIntroPath, ...socialLocalPaths, socialOutroPath];
-
-      // Solve for the per-slot duration that lands the whole crossfaded
-      // sequence at TARGET_SOCIAL_SECONDS: total = n*d - (n-1)*transition,
-      // so d = (target + (n-1)*transition) / n. Must use this style's
-      // actual transitionSeconds (socialStyleConfig, computed above from
-      // socialStyle || style, matching STYLE_MUSIC's own fallback) rather
-      // than a hardcoded value -- using the wrong number here would land
-      // the rendered cut's real length off of TARGET_SOCIAL_SECONDS, since
-      // assembleSlideshow below renders with that same transitionSeconds.
-      const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPathsWithCards.length - 1) * socialStyleConfig.transitionSeconds) / socialLocalPathsWithCards.length;
-      const cutOverlayLines = [
-        { text: introOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
-        ...buildOverlayLines(socialSelections[cutIndex] || []),
-        { text: outroOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
-      ];
-      const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
-      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines, heroZoomIndex: SOCIAL_CUT_HERO_ZOOM_INDEX });
-      const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
-      const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
-      await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
-      socialVideoKeys.push(socialVideoKey);
-      socialVideoPosterKeys.push(await uploadPosterFor(socialVideoLocalPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`, slotSeconds + 1.5));
+      rs.phase = rs.finalize === "video-only" ? "finalize" : "social";
+      await persistRenderState(bookingId, rs);
+      if (overBudget()) return;
     }
-  }
 
-  console.log("Writing deliverable record...");
-  // Upsert on booking_id, not a blind insert -- a manual reprocess of an
-  // already-delivered booking (this pipeline is explicitly designed to
-  // survive that, see the comments above) would otherwise leave two rows
-  // per booking, since booking_id had no uniqueness guard until the
-  // deliverables_booking_id_key constraint (migration 017).
+    if (rs.phase === "social") {
+      let renderedThisRun = 0;
+      for (let cutIndex = rs.social.done; ; cutIndex++) {
+        if (spec.socialCutCount !== Infinity && cutIndex >= spec.socialCutCount) break;
+        if (renderedThisRun > 0 && overBudget()) return;
+        const socialKeys = await listDeliverableFiles(bookingId, `social-${cutIndex + 1}-photo-`);
+        if (socialKeys.length === 0) {
+          rs.social.total = cutIndex;
+          break;
+        }
+        await renderOneSocialCut(bookingId, cutIndex, socialKeys, spec, tmpDir);
+        renderedThisRun++;
+        rs.social.done = cutIndex + 1;
+        await persistRenderState(bookingId, rs);
+      }
+      rs.phase = "finalize";
+      await persistRenderState(bookingId, rs);
+      if (overBudget()) return;
+    }
+
+    if (rs.phase === "finalize") {
+      if (rs.finalize === "video-only") {
+        const noRoast = rs.full.noRoast;
+        await supabase
+          .from("deliverables")
+          .update({
+            full_video_key: rs.full.main.finalKey,
+            full_video_no_roast_key: noRoast ? noRoast.finalKey : null,
+            full_video_poster_key: rs.full.main.posterKey,
+            full_video_no_roast_poster_key: noRoast ? noRoast.posterKey : null,
+            render_state: null,
+          })
+          .eq("booking_id", bookingId);
+        console.log(`Booking ${bookingId}: full video re-rendered; social cuts, gallery, status and email untouched.`);
+      } else {
+        await finalizeFullDelivery(bookingId, rs);
+      }
+      await cleanupRenderArtifacts(bookingId);
+      rs.phase = "done";
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    currentTmpDir = null;
+  }
+}
+
+// One social cut, rendered whole (they're small -- vertical 1080, <=15
+// slots) and checkpointed by the caller after it lands in R2. Caption-free,
+// always (see the buildOverlayLines comment).
+async function renderOneSocialCut(bookingId, cutIndex, socialKeys, spec, tmpDir) {
+  const socialStyleConfig = styleVideoConfigFor(spec.socialStyle || spec.style);
+  console.log(`Assembling social cut ${cutIndex + 1} from ${socialKeys.length} photo(s)...`);
+  const socialLocalPaths = [];
+  for (const key of socialKeys) {
+    const lp = path.join(tmpDir, path.basename(key));
+    fs.writeFileSync(lp, await downloadFromR2(key));
+    socialLocalPaths.push(lp);
+  }
+  // Same blurred backdrop for both bookends so a looped replay lands on a
+  // matching frame (see the original comment).
+  const cardBg = await buildCardBackground(fs.readFileSync(socialLocalPaths[0]));
+  const introPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-intro.jpg`);
+  const outroPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-outro.jpg`);
+  fs.writeFileSync(introPath, cardBg);
+  fs.writeFileSync(outroPath, cardBg);
+  const withCards = [introPath, ...socialLocalPaths, outroPath];
+  const slotSeconds = (TARGET_SOCIAL_SECONDS + (withCards.length - 1) * socialStyleConfig.transitionSeconds) / withCards.length;
+  const cutOverlayLines = [
+    { text: introOverlayText(spec.hostName, spec.eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
+    ...buildOverlayLines(socialLocalPaths),
+    { text: outroOverlayText(spec.hostName, spec.eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
+  ];
+  const outPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
+  const socialMusicPath = spec.socialNoMusic ? null : STYLE_MUSIC[spec.socialStyle || spec.style] || STYLE_MUSIC.cinematic;
+  await assembleSlideshow(withCards, [], outPath, socialMusicPath, null, slotSeconds, {
+    ...socialStyleConfig,
+    ...SOCIAL_CUT_OUTPUT,
+    overlayLines: cutOverlayLines,
+    heroZoomIndex: SOCIAL_CUT_HERO_ZOOM_INDEX,
+  });
+  await uploadToR2(`deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`, fs.readFileSync(outPath), "video/mp4");
+  await uploadPosterFor(outPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`, slotSeconds + 1.5);
+}
+
+// The deliverable row + status flip + delivery email, once every video for a
+// "full" render is in R2. Split out of driveRender's finalize phase; mirrors
+// what the old inline finalizeDelivery tail did.
+async function finalizeFullDelivery(bookingId, rs) {
+  const spec = rs.spec;
+  const socialVideoKeys = [];
+  const socialVideoPosterKeys = [];
+  for (let i = 1; i <= rs.social.done; i++) {
+    socialVideoKeys.push(`deliverable/${bookingId}/social-cut-${i}.mp4`);
+    socialVideoPosterKeys.push(`deliverable/${bookingId}/social-cut-${i}-poster.jpg`);
+  }
+  const noRoast = rs.full && rs.full.noRoast;
+
   const { error: deliverableError } = await supabase.from("deliverables").upsert(
     {
       booking_id: bookingId,
-      full_video_key: videoKey,
-      full_video_no_roast_key: noRoastVideoKey,
-      full_video_poster_key: videoPosterKey,
-      full_video_no_roast_poster_key: noRoastVideoPosterKey,
+      full_video_key: rs.full ? rs.full.main.finalKey : null,
+      full_video_no_roast_key: noRoast ? noRoast.finalKey : null,
+      full_video_poster_key: rs.full ? rs.full.main.posterKey : null,
+      full_video_no_roast_poster_key: noRoast ? noRoast.posterKey : null,
       // social_video_key (singular) kept in sync with the first cut for
-      // anything still reading it (e.g. poll-and-recap.js's purge step);
-      // social_video_keys is the real, complete list.
+      // anything still reading it (poll-and-recap.js's purge step).
       social_video_key: socialVideoKeys[0] || null,
       social_video_keys: socialVideoKeys,
-      social_video_no_roast_keys: socialVideoNoRoastKeys,
+      social_video_no_roast_keys: [],
       social_video_poster_keys: socialVideoPosterKeys,
-      social_video_no_roast_poster_keys: socialVideoNoRoastPosterKeys,
-      gallery_photo_keys: enhancedKeys,
+      social_video_no_roast_poster_keys: [],
+      gallery_photo_keys: spec.galleryPhotoKeys,
       delivered_at: new Date().toISOString(),
+      render_state: null,
     },
     { onConflict: "booking_id" }
   );
-  // Without this, a failed upsert still falls through to marking the
-  // booking "delivered" below with no actual deliverable row -- the
-  // gallery page would then show "this gallery's window has ended and
-  // everything's been removed" for a booking that was never delivered
-  // at all.
   if (deliverableError) throw deliverableError;
 
-  const expiresAt = computeGalleryExpiry(tier);
-
-  // Every tier's finished gallery/video is deleted once its own retention
-  // window passes (7 days Free, 2/4/6 months Highlight/Spotlight/Luxe -- see
-  // lib/galleryExpiry.js), matching what the Privacy Policy/FAQ promise.
-  // See purgeExpiredGalleries() in scripts/poll-and-recap.js, which reads this.
-  const galleryPurgeAt = expiresAt.toISOString();
-
-  // Guarded on status still being "editing": the cancel/reschedule routes
-  // block themselves once a booking reaches "editing", but only check status
-  // at the start of their own request -- a cancellation that lands in the
-  // narrow window between that check and their own update could otherwise
-  // still race past it, and this unconditional update would then deliver
-  // (and email) a booking the host just cancelled and got refunded for.
+  const expiresAt = computeGalleryExpiry(spec.tier);
+  // Guarded on status still being "editing" -- see the original comment: a
+  // cancellation racing this update must win.
   const { data: delivered } = await supabase
     .from("bookings")
-    .update({ status: "delivered", delivered_at: new Date().toISOString(), gallery_expires_at: expiresAt.toISOString(), gallery_purge_at: galleryPurgeAt })
+    .update({ status: "delivered", delivered_at: new Date().toISOString(), gallery_expires_at: expiresAt.toISOString(), gallery_purge_at: expiresAt.toISOString() })
     .eq("id", bookingId)
     .eq("status", "editing")
     .select("id")
     .maybeSingle();
 
   if (!delivered) {
-    console.log(`Booking ${bookingId} is no longer "editing" (cancelled mid-run?) -- skipping delivery email and upload purge scheduling.`);
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    console.log(`Booking ${bookingId} is no longer "editing" (cancelled mid-render?) -- skipping delivery email + purge scheduling.`);
     return;
   }
 
-  // Raw guest uploads get permanently deleted 30 days from here -- see
-  // purgeExpiredUploads() in scripts/poll-and-recap.js, which reads this.
-  const purgeAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  await supabase.from("uploads").update({ purge_at: purgeAt }).eq("booking_id", bookingId);
+  await supabase
+    .from("uploads")
+    .update({ purge_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() })
+    .eq("booking_id", bookingId);
 
-  // Same reasoning as the roast approval email: the deliverable and the
-  // "delivered" status are already saved at this point, so a missing
-  // RESEND_API_KEY/APP_URL should be a warning, not a crash.
   try {
     const { sendDeliveryNotification } = require("../lib/email");
     await sendDeliveryNotification({
-      to: hostEmail,
-      hostName,
+      to: spec.hostEmail,
+      hostName: spec.hostName,
       galleryUrl: `${process.env.APP_URL}/gallery/${bookingId}`,
       expiresDate: expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
     });
@@ -1131,14 +1230,19 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     captureError(err, { tags: { script: "auto-recap", email: "delivery-notification" }, extra: { bookingId } });
   }
 
-  fs.rmSync(tmpDir, { recursive: true, force: true });
+  console.log(`Done. Booking ${bookingId} delivered: full cut + ${rs.social.done} social cut(s).`);
+}
 
-  console.log(`Done. Booking ${bookingId} marked delivered with ${enhancedKeys.length} photos${skipFullVideo ? "" : ", a full-cut video,"} and ${socialVideoKeys.length} social cut(s).`);
+// Removes the _render/ scratch prefix (parked title cards, and any chunk
+// files a failed merge left behind) once a render reaches "done".
+async function cleanupRenderArtifacts(bookingId) {
+  const stragglers = await listDeliverableFiles(bookingId, "_render/");
+  for (const key of stragglers) await deleteFromR2(key).catch(() => {});
 }
 
 if (require.main === module) {
   const [arg1, arg2, arg3, ...rest] = process.argv.slice(2);
-  const isSubcommand = arg1 === "submit" || arg1 === "resume" || arg1 === "full-video";
+  const isSubcommand = arg1 === "submit" || arg1 === "resume" || arg1 === "full-video" || arg1 === "continue-render";
   const bookingId = isSubcommand ? arg2 : arg1;
   // For `full-video`: everything after <batchId> is the optional host-context
   // string for the roast -- quote it as one arg, or leave it unquoted and the
@@ -1150,6 +1254,7 @@ if (require.main === module) {
     console.log("       node scripts/auto-recap.js submit <bookingId>                          (submit the analysis batch only)");
     console.log("       node scripts/auto-recap.js resume <bookingId>                          (check/continue after a submitted batch)");
     console.log('       node scripts/auto-recap.js full-video <bookingId> <batchId> ["context"]  (re-render only the full video of a delivered booking)');
+    console.log("       node scripts/auto-recap.js continue-render <bookingId>                  (advance a render in progress -- called by the scheduler)");
     process.exit(1);
   }
 
@@ -1157,6 +1262,7 @@ if (require.main === module) {
     arg1 === "submit" ? runSubmitOnly
     : arg1 === "resume" ? runResumeOnly
     : arg1 === "full-video" ? (id) => regenerateFullVideo(id, arg3, fullVideoHostContext)
+    : arg1 === "continue-render" ? continueRender
     : runAutoRecap;
 
   run(bookingId)
@@ -1175,4 +1281,4 @@ if (require.main === module) {
     .then((exitCode) => flushSentry().then(() => process.exit(exitCode)));
 }
 
-module.exports = { runAutoRecap, runSubmitOnly, runResumeOnly, regenerateFullVideo };
+module.exports = { runAutoRecap, runSubmitOnly, runResumeOnly, regenerateFullVideo, continueRender };

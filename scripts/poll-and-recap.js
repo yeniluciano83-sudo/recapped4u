@@ -74,6 +74,13 @@ function runResumeAnalysis(bookingId) {
   });
 }
 
+function runContinueRender(bookingId) {
+  execSync(`node "${path.join(__dirname, "auto-recap.js")}" continue-render ${bookingId}`, {
+    stdio: "inherit",
+    cwd: path.join(__dirname, ".."),
+  });
+}
+
 // See lib/processingPriority.js for hoursSinceEvent/sortByProcessingPriority
 // -- the queue-ordering logic (Luxe's advertised "24-hour priority
 // turnaround") that this script uses below.
@@ -230,6 +237,43 @@ async function processAnalyzingBookings(failures) {
   }
 }
 
+// Every "editing" booking with a non-"done" render_state has a 4K render
+// part-way through (see driveRender in auto-recap.js) -- a large one
+// legitimately spans several of these runs. Give each one another slice of
+// wall time per tick. A failure here does NOT revert the booking: the
+// render_state is the checkpoint, so the next run just resumes from it;
+// recoverStaleBookings only steps in if render_state itself stops advancing.
+async function processRenderingBookings(failures) {
+  const { data: editing, error } = await supabase.from("bookings").select("id, host_name").eq("status", "editing");
+  if (error) {
+    console.error("Failed to query editing bookings:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-editing" } });
+    return;
+  }
+  if (!editing || editing.length === 0) return;
+
+  const { data: dels } = await supabase
+    .from("deliverables")
+    .select("booking_id, render_state")
+    .in("booking_id", editing.map((b) => b.id));
+  const inProgress = editing.filter((b) => {
+    const rs = (dels || []).find((d) => d.booking_id === b.id)?.render_state;
+    return rs && rs.phase !== "done";
+  });
+  if (inProgress.length === 0) return;
+
+  console.log(`\nAdvancing ${inProgress.length} in-progress render(s)...`);
+  for (const booking of inProgress) {
+    try {
+      runContinueRender(booking.id);
+    } catch (err) {
+      console.error(`Continuing render for booking ${booking.id} failed:`, err.message);
+      captureError(err, { tags: { script: "poll-and-recap", step: "continue-render" }, extra: { bookingId: booking.id } });
+      failures.push({ bookingId: booking.id, error: `Render step failed (will resume from its checkpoint next run): ${err.message}` });
+    }
+  }
+}
+
 // A real synchronous run (photo analysis + video encoding for a handful of
 // bookings) finishes in minutes. If a booking is still "editing" after this
 // long, the process that claimed it was killed before reaching its own
@@ -268,8 +312,28 @@ async function recoverStaleBookingsInStatus(failures, status, staleHours) {
   }
   if (!stale || stale.length === 0) return;
 
-  console.log(`\nFound ${stale.length} booking(s) stuck in "${status}" for over ${staleHours}h -- recovering...`);
-  for (const booking of stale) {
+  // An "editing" booking with an active render_state isn't hung just because
+  // processing_started_at is old -- a large 4K render legitimately spans
+  // several runs (see driveRender in auto-recap.js). It's only stale if its
+  // render_state stopped advancing too (the continue-render process keeps
+  // dying), or there's no render_state at all (killed the old way, before
+  // this mechanism, or before the first checkpoint landed).
+  let candidates = stale;
+  if (status === "editing") {
+    const { data: dels } = await supabase
+      .from("deliverables")
+      .select("booking_id, render_state")
+      .in("booking_id", stale.map((b) => b.id));
+    const byId = new Map((dels || []).map((d) => [d.booking_id, d.render_state]));
+    candidates = stale.filter((b) => {
+      const rsUpdated = byId.get(b.id)?.updated_at;
+      return !rsUpdated || rsUpdated < staleCutoff;
+    });
+    if (candidates.length === 0) return;
+  }
+
+  console.log(`\nFound ${candidates.length} booking(s) stuck in "${status}" for over ${staleHours}h -- recovering...`);
+  for (const booking of candidates) {
     // Guarded the same way as the claim above: only revert if it's still
     // in this status right now, so this can't clobber a run that finishes
     // (or gets cancelled) in the moment between the query above and this
@@ -359,9 +423,11 @@ async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
   const failures = [];
   await recoverStaleBookings(failures);
-  // Resume already-in-flight batches before submitting new ones, so
-  // finishing existing work is prioritized if this run is ever tight on
-  // its 20-minute budget.
+  // Finish existing work before taking on new work, so a run that's tight on
+  // its time budget prioritizes deliveries already in flight: advance
+  // in-progress 4K renders first, then resume analysis batches, then submit
+  // new ones.
+  await processRenderingBookings(failures);
   await processAnalyzingBookings(failures);
   await processCollectingBookings(failures);
   await purgeExpiredUploads(failures);

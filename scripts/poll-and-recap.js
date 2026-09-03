@@ -251,29 +251,43 @@ async function processAnalyzingBookings(failures) {
   }
 }
 
-// Every "editing" booking with a non-"done" render_state has a 4K render
-// part-way through (see driveRender in auto-recap.js) -- a large one
-// legitimately spans several of these runs. Give each one another slice of
-// wall time per tick. A failure here does NOT revert the booking: the
-// render_state is the checkpoint, so the next run just resumes from it;
-// recoverStaleBookings only steps in if render_state itself stops advancing.
+// A non-null render_state (on the deliverable row) always means a 4K render
+// is part-way through -- driveRender in auto-recap.js nulls it the moment
+// it finishes. A large render legitimately spans several of these runs;
+// give each one another slice of wall time per tick. Two booking statuses
+// carry a resumable render: "editing" (a normal first delivery) and
+// "delivered" (a manual `full-video` re-render that got killed mid-run).
+// Any other status with a leftover render_state is dead work -- clear it
+// and sweep its scratch prefix. A failure advancing a render does NOT
+// revert the booking: render_state is the checkpoint, the next run resumes.
 async function processRenderingBookings(failures) {
-  const { data: editing, error } = await supabase.from("bookings").select("id, host_name, render_lock_at").eq("status", "editing");
+  const { deleteByPrefix } = require("../lib/storage");
+
+  const { data: dels, error } = await supabase.from("deliverables").select("booking_id").not("render_state", "is", null);
   if (error) {
-    console.error("Failed to query editing bookings:", error.message);
-    captureError(error, { tags: { script: "poll-and-recap", step: "query-editing" } });
+    console.error("Failed to query in-progress renders:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-renders" } });
     return;
   }
-  if (!editing || editing.length === 0) return;
+  if (!dels || dels.length === 0) return;
 
-  const { data: dels } = await supabase
-    .from("deliverables")
-    .select("booking_id, render_state")
-    .in("booking_id", editing.map((b) => b.id));
-  const inProgress = editing.filter((b) => {
-    const rs = (dels || []).find((d) => d.booking_id === b.id)?.render_state;
-    return rs && rs.phase !== "done";
-  });
+  const { data: bookings } = await supabase
+    .from("bookings")
+    .select("id, host_name, status, render_lock_at")
+    .in("id", dels.map((d) => d.booking_id));
+
+  const inProgress = [];
+  for (const b of bookings || []) {
+    if (b.status === "editing" || b.status === "delivered") {
+      inProgress.push(b);
+    } else {
+      // Cancelled (or otherwise abandoned) mid-render -- nothing will ever
+      // resume it. Drop the checkpoint and the scratch files.
+      console.log(`Booking ${b.id} is "${b.status}" with a leftover render_state -- clearing it and its _render/ scratch.`);
+      await supabase.from("deliverables").update({ render_state: null }).eq("booking_id", b.id);
+      await deleteByPrefix(`deliverable/${b.id}/_render/`).catch((e) => console.error(`  _render/ sweep failed for ${b.id}: ${e.message}`));
+    }
+  }
   if (inProgress.length === 0) return;
 
   console.log(`\n${inProgress.length} render(s) in progress -- advancing within a ${Math.round(RENDER_PHASE_BUDGET_MS / 60000)}m shared budget...`);
@@ -296,9 +310,11 @@ async function processRenderingBookings(failures) {
       continue;
     }
 
-    // Atomic compare-and-swap on the exact lock value we just read: if a
-    // concurrent run claimed it in between, our update matches no row.
-    let claim = supabase.from("bookings").update({ render_lock_at: new Date().toISOString() }).eq("id", booking.id).eq("status", "editing");
+    // Atomic compare-and-swap on the exact lock value we just read, guarded
+    // on the status we read too: if a concurrent run claimed it (or the
+    // booking's status moved) in between, our update matches no row.
+    const myLock = new Date().toISOString();
+    let claim = supabase.from("bookings").update({ render_lock_at: myLock }).eq("id", booking.id).eq("status", booking.status);
     claim = booking.render_lock_at == null ? claim.is("render_lock_at", null) : claim.eq("render_lock_at", booking.render_lock_at);
     const { data: claimed } = await claim.select("id").maybeSingle();
     if (!claimed) {
@@ -313,10 +329,10 @@ async function processRenderingBookings(failures) {
       captureError(err, { tags: { script: "poll-and-recap", step: "continue-render" }, extra: { bookingId: booking.id } });
       failures.push({ bookingId: booking.id, error: `Render step failed (will resume from its checkpoint next run): ${err.message}` });
     } finally {
-      // Release the lock unless the render finished (status flipped to
-      // "delivered", so this update matches nothing) -- lets the next run
-      // pick it straight up rather than waiting out the TTL.
-      await supabase.from("bookings").update({ render_lock_at: null }).eq("id", booking.id).eq("status", "editing");
+      // Release only our own lock -- lets the next run pick it straight up
+      // rather than waiting out the TTL. Matched on myLock so we never
+      // clobber a lock a subsequent run has already taken.
+      await supabase.from("bookings").update({ render_lock_at: null }).eq("id", booking.id).eq("render_lock_at", myLock);
     }
   }
 }
@@ -446,7 +462,7 @@ async function purgeExpiredGalleries(failures) {
   if (!expired || expired.length === 0) return;
 
   console.log(`\nPurging ${expired.length} gallery/video past their retention window...`);
-  const { deleteFile } = require("../lib/storage");
+  const { deleteFile, deleteByPrefix } = require("../lib/storage");
   for (const booking of expired) {
     try {
       const { data: deliverables } = await supabase.from("deliverables").select("id, full_video_key, full_video_no_roast_key, full_video_poster_key, full_video_no_roast_poster_key, social_video_key, social_video_keys, social_video_no_roast_keys, social_video_poster_keys, social_video_no_roast_poster_keys, gallery_photo_keys").eq("booking_id", booking.id);
@@ -457,6 +473,11 @@ async function purgeExpiredGalleries(failures) {
         }
         await supabase.from("deliverables").delete().eq("id", deliverable.id);
       }
+      // Backstop for the resumable renderer's scratch area: a render that
+      // died in the narrow window between nulling render_state and running
+      // its own cleanup would otherwise leave the parked title cards here
+      // forever (nothing else scans _render/).
+      await deleteByPrefix(`deliverable/${booking.id}/_render/`);
       await supabase.from("bookings").update({ gallery_purge_at: null }).eq("id", booking.id);
     } catch (err) {
       console.error(`Failed to purge gallery for booking ${booking.id}:`, err.message);

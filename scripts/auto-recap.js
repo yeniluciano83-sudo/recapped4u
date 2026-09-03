@@ -908,24 +908,22 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 
       console.log(`Assembling social cut ${cutIndex + 1} from ${socialKeys.length} photo(s)...`);
       const socialLocalPaths = [];
-      const socialBuffers = [];
       for (const key of socialKeys) {
         const buffer = await downloadFromR2(key);
         const localPath = path.join(tmpDir, path.basename(key));
         fs.writeFileSync(localPath, buffer);
         socialLocalPaths.push(localPath);
-        socialBuffers.push(buffer);
       }
 
-      let cutRoastLines = null;
-      if (roastEnabled) {
-        console.log(`Roast Reel add-on enabled -- generating script for social cut ${cutIndex + 1}...`);
-        const roastPhotos = socialBuffers.map((buffer, i) => ({ buffer, storageKey: socialKeys[i] }));
-        const recentLines = await fetchRecentRoastLines();
-        const script = await generateRoastScript(roastPhotos, { eventType, roastLevel: roastLevel || "light", recentLines });
-        cutRoastLines = script.map((line) => line.line);
-        await saveRoastLines(bookingId, eventType, roastLevel || "light", cutRoastLines);
-      }
+      // Social cuts are always caption-free, even when the booking has the
+      // Roast Reel add-on: on a vertical Reels/TikTok/Shorts frame a burned-in
+      // bottom caption box covers too much of the photo to be worth it. The
+      // roast lines still play on the full video (roast + no-roast pair, see
+      // finalizeDelivery above) -- that's the surface built to be watched
+      // start-to-finish where there's room for them. So no generateRoastScript
+      // call here, and no second no-roast render below: socialVideoNoRoastKeys
+      // stays empty, exactly as it already does for a non-roast booking, and
+      // the gallery route/page handle that case unchanged.
 
       // Opening and closing cards, same as the full video's -- prepended/
       // appended around this cut's real photos, counted as slots in the
@@ -961,28 +959,13 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
         ...buildOverlayLines(effectiveSocialStyle, socialSelections[cutIndex] || [], eventType),
         { text: outroOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
       ];
-      // cutRoastLines is indexed against this cut's real photos only --
-      // shift it by one slot so it still lines up now that the intro card
-      // occupies index 0.
-      const shiftedCutRoastLines = cutRoastLines ? [null, ...cutRoastLines] : null;
       const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
-      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, shiftedCutRoastLines, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines, heroZoomIndex: SOCIAL_CUT_HERO_ZOOM_INDEX });
+      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines, heroZoomIndex: SOCIAL_CUT_HERO_ZOOM_INDEX });
       const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
       socialVideoKeys.push(socialVideoKey);
       socialVideoPosterKeys.push(await uploadPosterFor(socialVideoLocalPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`, slotSeconds + 1.5));
-
-      if (cutRoastLines) {
-        console.log(`Roast Reel enabled -- also assembling a caption-free version of social cut ${cutIndex + 1}...`);
-        const noRoastLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-no-roast.mp4`);
-        await assembleSlideshow(socialLocalPathsWithCards, [], noRoastLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines, heroZoomIndex: SOCIAL_CUT_HERO_ZOOM_INDEX });
-        const noRoastBuffer = fs.readFileSync(noRoastLocalPath);
-        const noRoastKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast.mp4`;
-        await uploadToR2(noRoastKey, noRoastBuffer, "video/mp4");
-        socialVideoNoRoastKeys.push(noRoastKey);
-        socialVideoNoRoastPosterKeys.push(await uploadPosterFor(noRoastLocalPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-no-roast-poster.jpg`, slotSeconds + 1.5));
-      }
     }
   }
 

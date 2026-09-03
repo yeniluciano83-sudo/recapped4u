@@ -829,7 +829,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     // still lines up correctly now that the intro card occupies index 0.
     const shiftedRoastLines = roastLines ? [null, ...roastLines] : null;
 
-    await assembleSlideshow(localPathsWithCards, [], videoLocalPath, musicPath, shiftedRoastLines, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines, kenBurns: true });
+    await assembleSlideshow(localPathsWithCards, [], videoLocalPath, musicPath, shiftedRoastLines, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines, kenBurns: true, photoBackground: "black" });
     const videoBuffer = fs.readFileSync(videoLocalPath);
     videoKey = `deliverable/${bookingId}/full-cut.mp4`;
     await uploadToR2(videoKey, videoBuffer, "video/mp4");
@@ -842,12 +842,11 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     // a second, caption-free twin of the exact same shortlist/pacing so hosts
     // can also share a version without the roast lines. Skipped for non-roast
     // bookings, where this would just be a duplicate of videoKey. Still
-    // carries the style's own overlay (Highlight callouts / Retro title) and
-    // both cards -- only the roast captions are dropped, not those.
+    // carries both title cards -- only the roast captions are dropped.
     if (roastLines) {
       console.log("Roast Reel enabled -- also assembling a caption-free version of the same cut...");
       const noRoastVideoLocalPath = path.join(tmpDir, "recap-no-roast.mp4");
-      await assembleSlideshow(localPathsWithCards, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines, kenBurns: true });
+      await assembleSlideshow(localPathsWithCards, [], noRoastVideoLocalPath, musicPath, null, fullCutSlotSeconds, { ...styleConfigForVideo, overlayLines, kenBurns: true, photoBackground: "black" });
       const noRoastVideoBuffer = fs.readFileSync(noRoastVideoLocalPath);
       noRoastVideoKey = `deliverable/${bookingId}/full-cut-no-roast.mp4`;
       await uploadToR2(noRoastVideoKey, noRoastVideoBuffer, "video/mp4");

@@ -628,11 +628,49 @@ async function runResumeOnly(bookingId) {
   return withStatusRevertOnFailure(bookingId, () => resumeAnalysis(bookingId));
 }
 
+// Operator tool: re-render ONLY the full recap video for a booking that's
+// already been delivered, on the current rendering code, without disturbing
+// anything else about the delivery. Rebuilds the exact same analysis from
+// the original photo-analysis batch (so buildShortlist picks the same
+// photos in the same order), then runs the pipeline's back half in
+// fullVideoOnly mode -- see continuePipelineWithAnalysis. The batch id is
+// required and explicit rather than looked up, because a delivered
+// booking's batch_id has already been cleared. Not wrapped in
+// withStatusRevertOnFailure: the booking stays "delivered" throughout, and
+// a failure just leaves the previous full video in place.
+async function regenerateFullVideo(bookingId, batchId) {
+  if (!batchId) {
+    throw new Error("full-video needs the analysis batch id: node scripts/auto-recap.js full-video <bookingId> <batchId>");
+  }
+  const { data: booking, error } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
+  if (error || !booking) throw new Error("Booking not found");
+  if (booking.status !== "delivered") {
+    throw new Error(
+      `Booking ${bookingId} is "${booking.status}", not "delivered" -- full-video re-render is only for an already-delivered booking. Use the normal pipeline for one that hasn't shipped yet.`
+    );
+  }
+  const batch = await getBatch(batchId);
+  if (batch.processing_status !== "ended") {
+    throw new Error(`Analysis batch ${batchId} is "${batch.processing_status}", not "ended"`);
+  }
+  console.log(`Rebuilding analysis for booking ${bookingId} from batch ${batchId}...`);
+  const analyzed = await buildAnalyzedFromBatchResults(bookingId, batch.results_url);
+  if (analyzed.length === 0) throw new Error(`No usable analyzed photos from batch ${batchId}`);
+  await continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly: true });
+}
+
 // The back half of the pipeline -- everything that happens once a photo's
 // analysis is known, regardless of whether it came from a finished batch
 // or the synchronous fallback. Unchanged in behavior from before the Batch
 // API was wired in; only the analysis step above it changed.
-async function continuePipelineWithAnalysis(booking, analyzed) {
+// fullVideoOnly: re-render just the full recap video for a booking that has
+// ALREADY been delivered, reusing the exact same analysis (so the same
+// shortlist, in the same order) but the current rendering code. It enhances
+// only the shortlisted photos, in memory, and -- via finalizeDelivery --
+// overwrites only full-cut.mp4 / full-cut-no-roast.mp4 and their posters.
+// The gallery photos, every social cut, the booking status, and the
+// delivery email are all left exactly as the original delivery left them.
+async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly = false } = {}) {
   const bookingId = booking.id;
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-"));
   currentTmpDir = tmpDir;
@@ -666,20 +704,30 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // buildGallerySelection. This is a superset of videoShortlist (which stays
   // quality-gated for the actual video), so the video's local files below
   // reuse these already-enhanced buffers instead of enhancing twice.
-  console.log("Auto-enhancing all uploaded photos for the gallery...");
-  const gallerySelection = buildGallerySelection(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
   const enhancedKeys = [];
   const enhancedByUploadId = new Map();
   const enhancedKeyByUploadId = new Map();
 
-  for (let i = 0; i < gallerySelection.length; i++) {
-    const { buffer, upload } = gallerySelection[i];
-    const enhanced = await enhancePhoto(buffer, booking.style);
-    const key = `deliverable/${bookingId}/photo-${i + 1}.jpg`;
-    await uploadToR2(key, enhanced, "image/jpeg");
-    enhancedKeys.push(key);
-    enhancedByUploadId.set(upload.id, enhanced);
-    enhancedKeyByUploadId.set(upload.id, key);
+  if (fullVideoOnly) {
+    // Only the shortlisted photos are needed, and only in memory -- no R2
+    // writes, so the gallery's own deliverable/<id>/photo-N.jpg files stay
+    // untouched.
+    console.log(`Full-video re-render -- enhancing ${videoShortlist.length} shortlisted photo(s)...`);
+    for (const { buffer, upload } of videoShortlist) {
+      enhancedByUploadId.set(upload.id, await enhancePhoto(buffer, booking.style));
+    }
+  } else {
+    console.log("Auto-enhancing all uploaded photos for the gallery...");
+    const gallerySelection = buildGallerySelection(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
+    for (let i = 0; i < gallerySelection.length; i++) {
+      const { buffer, upload } = gallerySelection[i];
+      const enhanced = await enhancePhoto(buffer, booking.style);
+      const key = `deliverable/${bookingId}/photo-${i + 1}.jpg`;
+      await uploadToR2(key, enhanced, "image/jpeg");
+      enhancedKeys.push(key);
+      enhancedByUploadId.set(upload.id, enhanced);
+      enhancedKeyByUploadId.set(upload.id, key);
+    }
   }
 
   const localPaths = [];
@@ -690,7 +738,7 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
     const localPath = path.join(tmpDir, `video-photo-${i + 1}.jpg`);
     fs.writeFileSync(localPath, enhanced);
     localPaths.push(localPath);
-    videoStorageKeys.push(enhancedKeyByUploadId.get(upload.id));
+    videoStorageKeys.push(enhancedKeyByUploadId.get(upload.id) || upload.storage_key);
   }
 
   // The social cut's photo selection can include host-starred photos that
@@ -710,7 +758,7 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // its very first prefix and stops immediately, naturally producing zero
   // social cuts without needing a second check there.
   let socialSelections = [];
-  if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier) && booking.delivery_format !== "video_only") {
+  if (!fullVideoOnly && SOCIAL_CUT_ELIGIBLE_TIERS.includes(booking.tier) && booking.delivery_format !== "video_only") {
     const socialCutsCount = useAllPhotoSocialCuts ? Infinity : (SOCIAL_CUTS_COUNT[booking.tier] || 1);
     socialSelections = buildSocialSelections(analyzed, socialCutsCount);
     console.log(`Uploading photos for ${socialSelections.length} social cut selection(s)...`);
@@ -763,11 +811,11 @@ async function continuePipelineWithAnalysis(booking, analyzed) {
   // documentary, is the right silent default).
   const musicPath = booking.full_video_no_music ? null : STYLE_MUSIC[booking.style] || STYLE_MUSIC.cinematic;
   const socialMusicPath = booking.social_style === "none" ? null : STYLE_MUSIC[booking.social_style || booking.style] || STYLE_MUSIC.cinematic;
-  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections);
+  await finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, booking.email, booking.host_name, booking.tier, socialMusicPath, useAllPhotoSocialCuts, booking.roast_enabled, booking.roast_level, booking.event_type, booking.style, booking.social_style, videoShortlist, socialSelections, { fullVideoOnly });
   currentTmpDir = null;
 }
 
-async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "cinematic", socialStyle = "", videoShortlist = [], socialSelections = []) {
+async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, musicPath, roastLines, hostEmail, hostName, tier, socialMusicPath, skipFullVideo = false, roastEnabled = false, roastLevel = "light", eventType = "", style = "cinematic", socialStyle = "", videoShortlist = [], socialSelections = [], { fullVideoOnly = false } = {}) {
   let videoKey = null;
   let noRoastVideoKey = null;
   let videoPosterKey = null;
@@ -854,6 +902,27 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     }
   } else {
     console.log("Delivery format is social cuts of every photo -- skipping the full recap video.");
+  }
+
+  // Full-video-only re-render of an already-delivered booking: overwrite
+  // just the full-cut video/poster keys on the existing deliverable row and
+  // stop here. No social cuts, no gallery_photo_keys change, no status
+  // change, no delivery email -- everything else stays as the original
+  // delivery produced it.
+  if (fullVideoOnly) {
+    const { error: updErr } = await supabase
+      .from("deliverables")
+      .update({
+        full_video_key: videoKey,
+        full_video_no_roast_key: noRoastVideoKey,
+        full_video_poster_key: videoPosterKey,
+        full_video_no_roast_poster_key: noRoastVideoPosterKey,
+      })
+      .eq("booking_id", bookingId);
+    if (updErr) throw updErr;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    console.log(`Done. Re-rendered the full video for booking ${bookingId} (roast + caption-free). Social cuts, gallery, status and delivery email untouched.`);
+    return;
   }
 
   // The social cut(s)' photo selections were already uploaded to R2 in
@@ -1038,18 +1107,23 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 }
 
 if (require.main === module) {
-  const [arg1, arg2] = process.argv.slice(2);
-  const isSubcommand = arg1 === "submit" || arg1 === "resume";
+  const [arg1, arg2, arg3] = process.argv.slice(2);
+  const isSubcommand = arg1 === "submit" || arg1 === "resume" || arg1 === "full-video";
   const bookingId = isSubcommand ? arg2 : arg1;
 
   if (!bookingId) {
     console.log("Usage: node scripts/auto-recap.js <bookingId>");
-    console.log("       node scripts/auto-recap.js submit <bookingId>  (submit the analysis batch only)");
-    console.log("       node scripts/auto-recap.js resume <bookingId>  (check/continue after a submitted batch)");
+    console.log("       node scripts/auto-recap.js submit <bookingId>              (submit the analysis batch only)");
+    console.log("       node scripts/auto-recap.js resume <bookingId>              (check/continue after a submitted batch)");
+    console.log("       node scripts/auto-recap.js full-video <bookingId> <batchId>  (re-render only the full video of an already-delivered booking)");
     process.exit(1);
   }
 
-  const run = arg1 === "submit" ? runSubmitOnly : arg1 === "resume" ? runResumeOnly : runAutoRecap;
+  const run =
+    arg1 === "submit" ? runSubmitOnly
+    : arg1 === "resume" ? runResumeOnly
+    : arg1 === "full-video" ? (id) => regenerateFullVideo(id, arg3)
+    : runAutoRecap;
 
   run(bookingId)
     .then(
@@ -1067,4 +1141,4 @@ if (require.main === module) {
     .then((exitCode) => flushSentry().then(() => process.exit(exitCode)));
 }
 
-module.exports = { runAutoRecap, runSubmitOnly, runResumeOnly };
+module.exports = { runAutoRecap, runSubmitOnly, runResumeOnly, regenerateFullVideo };

@@ -546,7 +546,14 @@ async function resumeAnalysis(bookingId) {
     return false;
   }
 
-  await supabase.from("bookings").update({ status: "editing", processing_started_at: new Date().toISOString(), batch_id: null }).eq("id", bookingId);
+  // render_lock_at is claimed here (not just in poll-and-recap.js's
+  // continue-render loop) so a concurrent poll run can't start a second
+  // render on this booking while this first pass is still going. Released in
+  // continuePipelineWithAnalysis once the first driveRender pass returns.
+  await supabase
+    .from("bookings")
+    .update({ status: "editing", processing_started_at: new Date().toISOString(), batch_id: null, render_lock_at: new Date().toISOString() })
+    .eq("id", bookingId);
   await continuePipelineWithAnalysis(booking, analyzed);
   return true;
 }
@@ -610,8 +617,13 @@ async function withStatusRevertOnFailure(bookingId, fn) {
     // happened for another reason mid-run (e.g. continuePipelineWithAnalysis's
     // own zero-shortlist case already reverts to "collecting" itself, or the
     // host cancelled the booking while this was running).
-    await supabase.from("bookings").update({ status: "collecting", processing_started_at: null, batch_id: null }).eq("id", bookingId).eq("status", "analyzing");
-    await supabase.from("bookings").update({ status: "collecting", processing_started_at: null }).eq("id", bookingId).eq("status", "editing");
+    await supabase.from("bookings").update({ status: "collecting", processing_started_at: null, batch_id: null, render_lock_at: null }).eq("id", bookingId).eq("status", "analyzing");
+    // Only reached for a failure between the analyzing->editing flip and the
+    // render_state upsert (enhancement/roast/card-upload) -- startRender
+    // swallows driveRender errors past that point so the booking stays
+    // "editing" to resume. render_lock_at (claimed at the flip) is cleared
+    // here too.
+    await supabase.from("bookings").update({ status: "collecting", processing_started_at: null, render_lock_at: null }).eq("id", bookingId).eq("status", "editing");
     if (currentTmpDir) {
       fs.rmSync(currentTmpDir, { recursive: true, force: true });
       currentTmpDir = null;
@@ -918,6 +930,10 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
     // the rest.
     budgetMs: fullVideoOnly ? Infinity : FIRST_RENDER_BUDGET_MS,
   });
+  // Release the render lock claimed at the analyzing->editing flip (or, for a
+  // full-video re-render, never claimed -- this is a harmless no-op then).
+  // If the render finished, status is "delivered" and this matches nothing.
+  await supabase.from("bookings").update({ render_lock_at: null }).eq("id", bookingId).eq("status", "editing");
 }
 
 const RENDER_BUDGET_MS = 35 * 60 * 1000; // per continuation run
@@ -971,13 +987,34 @@ async function startRender(bookingId, spec, { finalize, budgetMs = RENDER_BUDGET
     { onConflict: "booking_id" }
   );
 
-  await driveRender(bookingId, { budgetMs });
+  // For a "full" delivery, past this point render_state is the checkpoint: a
+  // failure in the first driveRender pass must NOT bubble up to
+  // withStatusRevertOnFailure (which wraps resumeAnalysis) -- reverting the
+  // booking to "collecting" would discard the render plan and orphan
+  // whatever chunks already reached R2, forcing a full re-analyze/enhance.
+  // Leave it "editing"; poll-and-recap.js's continue-render phase resumes it
+  // next run. (A failure BEFORE this upsert still reverts, which is correct.)
+  // A "video-only" re-render has no scheduler to resume it -- let it throw so
+  // the operator running `full-video` sees a real failure.
+  if (finalize === "video-only") {
+    await driveRender(bookingId, { budgetMs });
+    return;
+  }
+  try {
+    await driveRender(bookingId, { budgetMs });
+  } catch (err) {
+    console.error(`Booking ${bookingId}: first render pass failed -- staying "editing" to resume next run: ${err.message}`);
+    captureError(err, { tags: { script: "auto-recap", step: "start-render" }, extra: { bookingId } });
+  }
 }
 
 // Called by poll-and-recap.js's continue-render phase, once per tick, for
-// every "editing" booking whose render_state isn't "done" yet.
-async function continueRender(bookingId) {
-  await driveRender(bookingId, { budgetMs: RENDER_BUDGET_MS });
+// every "editing" booking whose render_state isn't "done" yet. budgetMs is
+// the wall-clock slice this run gets (poll-and-recap.js shrinks it so the
+// whole render phase stays within one CI job). A throw here is caught by
+// processRenderingBookings and the booking just resumes next tick.
+async function continueRender(bookingId, budgetMs = RENDER_BUDGET_MS) {
+  await driveRender(bookingId, { budgetMs });
 }
 
 // Advances a booking's render as far as budgetMs of wall time allows,
@@ -1254,7 +1291,7 @@ if (require.main === module) {
     console.log("       node scripts/auto-recap.js submit <bookingId>                          (submit the analysis batch only)");
     console.log("       node scripts/auto-recap.js resume <bookingId>                          (check/continue after a submitted batch)");
     console.log('       node scripts/auto-recap.js full-video <bookingId> <batchId> ["context"]  (re-render only the full video of a delivered booking)');
-    console.log("       node scripts/auto-recap.js continue-render <bookingId>                  (advance a render in progress -- called by the scheduler)");
+    console.log("       node scripts/auto-recap.js continue-render <bookingId> [budgetMs]        (advance a render in progress -- called by the scheduler)");
     process.exit(1);
   }
 
@@ -1262,7 +1299,7 @@ if (require.main === module) {
     arg1 === "submit" ? runSubmitOnly
     : arg1 === "resume" ? runResumeOnly
     : arg1 === "full-video" ? (id) => regenerateFullVideo(id, arg3, fullVideoHostContext)
-    : arg1 === "continue-render" ? continueRender
+    : arg1 === "continue-render" ? (id) => continueRender(id, arg3 ? Number(arg3) : undefined)
     : runAutoRecap;
 
   run(bookingId)

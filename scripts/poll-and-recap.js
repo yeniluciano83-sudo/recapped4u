@@ -74,12 +74,26 @@ function runResumeAnalysis(bookingId) {
   });
 }
 
-function runContinueRender(bookingId) {
-  execSync(`node "${path.join(__dirname, "auto-recap.js")}" continue-render ${bookingId}`, {
+function runContinueRender(bookingId, budgetMs) {
+  execSync(`node "${path.join(__dirname, "auto-recap.js")}" continue-render ${bookingId} ${Math.round(budgetMs)}`, {
     stdio: "inherit",
     cwd: path.join(__dirname, ".."),
   });
 }
+
+// The render phase (advancing in-progress 4K renders) runs first in main()
+// and must leave enough of the CI job's 75-minute budget for analysis,
+// collecting, and the purges -- so it gets a shared wall-clock ceiling that
+// every continue-render this run does draws down together, rather than each
+// booking getting its own fresh 35 minutes (which N>=3 in-progress renders
+// would blow the whole job on).
+const RENDER_PHASE_BUDGET_MS = 45 * 60 * 1000;
+const PER_RENDER_BUDGET_MS = 35 * 60 * 1000; // cap for any single booking's slice
+const MIN_RENDER_SLICE_MS = 4 * 60 * 1000; // don't bother spawning for less than this
+
+// A booking's render lock is stale (a previous run crashed holding it, or
+// legitimately handed off) once it's older than one full slice plus slack.
+const RENDER_LOCK_TTL_MS = PER_RENDER_BUDGET_MS + 15 * 60 * 1000;
 
 // See lib/processingPriority.js for hoursSinceEvent/sortByProcessingPriority
 // -- the queue-ordering logic (Luxe's advertised "24-hour priority
@@ -244,7 +258,7 @@ async function processAnalyzingBookings(failures) {
 // render_state is the checkpoint, so the next run just resumes from it;
 // recoverStaleBookings only steps in if render_state itself stops advancing.
 async function processRenderingBookings(failures) {
-  const { data: editing, error } = await supabase.from("bookings").select("id, host_name").eq("status", "editing");
+  const { data: editing, error } = await supabase.from("bookings").select("id, host_name, render_lock_at").eq("status", "editing");
   if (error) {
     console.error("Failed to query editing bookings:", error.message);
     captureError(error, { tags: { script: "poll-and-recap", step: "query-editing" } });
@@ -262,14 +276,47 @@ async function processRenderingBookings(failures) {
   });
   if (inProgress.length === 0) return;
 
-  console.log(`\nAdvancing ${inProgress.length} in-progress render(s)...`);
+  console.log(`\n${inProgress.length} render(s) in progress -- advancing within a ${Math.round(RENDER_PHASE_BUDGET_MS / 60000)}m shared budget...`);
+  const phaseDeadline = Date.now() + RENDER_PHASE_BUDGET_MS;
+  const lockStaleCutoff = Date.now() - RENDER_LOCK_TTL_MS;
+
   for (const booking of inProgress) {
+    const remainingMs = phaseDeadline - Date.now();
+    if (remainingMs < MIN_RENDER_SLICE_MS) {
+      console.log(`Render phase budget spent -- remaining render(s) continue next run.`);
+      break;
+    }
+
+    // Skip a booking whose render lock is still fresh -- another poll run
+    // (a cron tick next to a manual workflow_dispatch) is already advancing
+    // it. A stale lock (older than RENDER_LOCK_TTL_MS) means that run
+    // crashed holding it; take it over.
+    if (booking.render_lock_at && new Date(booking.render_lock_at).getTime() > lockStaleCutoff) {
+      console.log(`Render for booking ${booking.id} is locked by another run -- skipping this tick.`);
+      continue;
+    }
+
+    // Atomic compare-and-swap on the exact lock value we just read: if a
+    // concurrent run claimed it in between, our update matches no row.
+    let claim = supabase.from("bookings").update({ render_lock_at: new Date().toISOString() }).eq("id", booking.id).eq("status", "editing");
+    claim = booking.render_lock_at == null ? claim.is("render_lock_at", null) : claim.eq("render_lock_at", booking.render_lock_at);
+    const { data: claimed } = await claim.select("id").maybeSingle();
+    if (!claimed) {
+      console.log(`Render for booking ${booking.id} was claimed by another run -- skipping this tick.`);
+      continue;
+    }
+
     try {
-      runContinueRender(booking.id);
+      runContinueRender(booking.id, Math.min(PER_RENDER_BUDGET_MS, remainingMs));
     } catch (err) {
       console.error(`Continuing render for booking ${booking.id} failed:`, err.message);
       captureError(err, { tags: { script: "poll-and-recap", step: "continue-render" }, extra: { bookingId: booking.id } });
       failures.push({ bookingId: booking.id, error: `Render step failed (will resume from its checkpoint next run): ${err.message}` });
+    } finally {
+      // Release the lock unless the render finished (status flipped to
+      // "delivered", so this update matches nothing) -- lets the next run
+      // pick it straight up rather than waiting out the TTL.
+      await supabase.from("bookings").update({ render_lock_at: null }).eq("id", booking.id).eq("status", "editing");
     }
   }
 }

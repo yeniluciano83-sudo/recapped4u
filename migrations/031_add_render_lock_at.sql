@@ -1,0 +1,12 @@
+-- Rendering a large booking now happens across several scheduled runs (see
+-- migration 030 and driveRender in scripts/auto-recap.js). Unlike the
+-- analysis phases, the render phase has no natural status change to claim
+-- against -- the booking stays "editing" the whole time -- so overlapping
+-- runs (a cron tick next to a manual workflow_dispatch) could both start
+-- advancing the same render and race on render_state. render_lock_at is the
+-- claim: poll-and-recap.js conditionally sets it before running a
+-- continue-render, and only claims a booking whose lock is null or older
+-- than the lock TTL (so a crashed run's lock self-heals). Cleared when a
+-- run finishes its slice without completing the render, and irrelevant once
+-- the booking flips to "delivered".
+alter table bookings add column render_lock_at timestamptz;

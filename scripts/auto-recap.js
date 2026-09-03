@@ -638,9 +638,9 @@ async function runResumeOnly(bookingId) {
 // booking's batch_id has already been cleared. Not wrapped in
 // withStatusRevertOnFailure: the booking stays "delivered" throughout, and
 // a failure just leaves the previous full video in place.
-async function regenerateFullVideo(bookingId, batchId) {
+async function regenerateFullVideo(bookingId, batchId, hostContext) {
   if (!batchId) {
-    throw new Error("full-video needs the analysis batch id: node scripts/auto-recap.js full-video <bookingId> <batchId>");
+    throw new Error("full-video needs the analysis batch id: node scripts/auto-recap.js full-video <bookingId> <batchId> [\"host context...\"]");
   }
   const { data: booking, error } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
   if (error || !booking) throw new Error("Booking not found");
@@ -654,9 +654,10 @@ async function regenerateFullVideo(bookingId, batchId) {
     throw new Error(`Analysis batch ${batchId} is "${batch.processing_status}", not "ended"`);
   }
   console.log(`Rebuilding analysis for booking ${bookingId} from batch ${batchId}...`);
+  if (hostContext) console.log(`Using host context for the roast: ${hostContext}`);
   const analyzed = await buildAnalyzedFromBatchResults(bookingId, batch.results_url);
   if (analyzed.length === 0) throw new Error(`No usable analyzed photos from batch ${batchId}`);
-  await continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly: true });
+  await continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly: true, hostContext });
 }
 
 // The back half of the pipeline -- everything that happens once a photo's
@@ -670,7 +671,7 @@ async function regenerateFullVideo(bookingId, batchId) {
 // overwrites only full-cut.mp4 / full-cut-no-roast.mp4 and their posters.
 // The gallery photos, every social cut, the booking status, and the
 // delivery email are all left exactly as the original delivery left them.
-async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly = false } = {}) {
+async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly = false, hostContext } = {}) {
   const bookingId = booking.id;
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "recap-"));
   currentTmpDir = tmpDir;
@@ -783,12 +784,15 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
 
   // Roast Reel captions the full video -- there's no full video to caption
   // in "social cuts of every photo" mode, so this (the full-video script)
-  // is skipped there even if roast_enabled is set. Social cuts get their
-  // own roast script generated separately, per cut, inside finalizeDelivery
-  // -- see the comment there. Every intensity level's prompt (lib/roast.js)
-  // carries a hard rule to roast the moment, never a person's body/
-  // appearance/race, so the script needs no separate host review before
-  // it's used.
+  // is skipped there even if roast_enabled is set. Every intensity level's
+  // prompt (lib/roast.js) carries a hard rule to roast the moment, never a
+  // person's body/appearance/race, so the script needs no separate host
+  // review before it's used.
+  //
+  // hostContext (an explicit override on a re-render, otherwise the
+  // booking's own notes) is passed as ground-truth facts -- names, who's
+  // who, relationships -- so the model doesn't have to guess at, e.g.,
+  // whether two people are sisters or friends (it's told not to guess).
   let roastLines = null;
   if (booking.roast_enabled && !useAllPhotoSocialCuts) {
     console.log("Roast Reel add-on enabled -- generating full-video script...");
@@ -798,6 +802,7 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
       eventType: booking.event_type,
       roastLevel: booking.roast_level || "light",
       recentLines,
+      hostContext: hostContext || booking.notes || undefined,
     });
     roastLines = script.map((line) => line.line);
     await saveRoastLines(bookingId, booking.event_type, booking.roast_level || "light", roastLines);
@@ -1107,22 +1112,26 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
 }
 
 if (require.main === module) {
-  const [arg1, arg2, arg3] = process.argv.slice(2);
+  const [arg1, arg2, arg3, ...rest] = process.argv.slice(2);
   const isSubcommand = arg1 === "submit" || arg1 === "resume" || arg1 === "full-video";
   const bookingId = isSubcommand ? arg2 : arg1;
+  // For `full-video`: everything after <batchId> is the optional host-context
+  // string for the roast -- quote it as one arg, or leave it unquoted and the
+  // words get joined back together.
+  const fullVideoHostContext = rest.length ? rest.join(" ") : undefined;
 
   if (!bookingId) {
     console.log("Usage: node scripts/auto-recap.js <bookingId>");
-    console.log("       node scripts/auto-recap.js submit <bookingId>              (submit the analysis batch only)");
-    console.log("       node scripts/auto-recap.js resume <bookingId>              (check/continue after a submitted batch)");
-    console.log("       node scripts/auto-recap.js full-video <bookingId> <batchId>  (re-render only the full video of an already-delivered booking)");
+    console.log("       node scripts/auto-recap.js submit <bookingId>                          (submit the analysis batch only)");
+    console.log("       node scripts/auto-recap.js resume <bookingId>                          (check/continue after a submitted batch)");
+    console.log('       node scripts/auto-recap.js full-video <bookingId> <batchId> ["context"]  (re-render only the full video of a delivered booking)');
     process.exit(1);
   }
 
   const run =
     arg1 === "submit" ? runSubmitOnly
     : arg1 === "resume" ? runResumeOnly
-    : arg1 === "full-video" ? (id) => regenerateFullVideo(id, arg3)
+    : arg1 === "full-video" ? (id) => regenerateFullVideo(id, arg3, fullVideoHostContext)
     : runAutoRecap;
 
   run(bookingId)

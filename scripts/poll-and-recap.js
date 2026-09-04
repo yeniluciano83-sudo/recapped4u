@@ -87,20 +87,13 @@ function runContinueRender(bookingId, budgetMs) {
 // every continue-render this run does draws down together, rather than each
 // booking getting its own fresh 35 minutes (which N>=3 in-progress renders
 // would blow the whole job on).
-// #### TEMPORARY FOR MULTI-RUN TESTING -- REVERT BEFORE MERGING PR #1 ####
-// Shrunk so a manually-triggered workflow run (from the Actions tab, branch
-// = fix/resumable-rendering) forces even a normal-sized booking through
-// several ticks instead of finishing in one -- exercises the resume path
-// without waiting for a genuinely huge booking. Real values commented out.
-const RENDER_PHASE_BUDGET_MS = 3 * 60 * 1000;
-const PER_RENDER_BUDGET_MS = 1 * 60 * 1000; // cap for any single booking's slice
-const MIN_RENDER_SLICE_MS = 30 * 1000; // don't bother spawning for less than this
-const RENDER_LOCK_TTL_MS = 3 * 60 * 1000; // short, so back-to-back manual triggers a few minutes apart don't see a stale lock as still held
-// const RENDER_PHASE_BUDGET_MS = 45 * 60 * 1000;
-// const PER_RENDER_BUDGET_MS = 35 * 60 * 1000;
-// const MIN_RENDER_SLICE_MS = 4 * 60 * 1000;
-// const RENDER_LOCK_TTL_MS = PER_RENDER_BUDGET_MS + 15 * 60 * 1000;
-// #### END TEMPORARY ####
+const RENDER_PHASE_BUDGET_MS = 45 * 60 * 1000;
+const PER_RENDER_BUDGET_MS = 35 * 60 * 1000; // cap for any single booking's slice
+const MIN_RENDER_SLICE_MS = 4 * 60 * 1000; // don't bother spawning for less than this
+
+// A booking's render lock is stale (a previous run crashed holding it, or
+// legitimately handed off) once it's older than one full slice plus slack.
+const RENDER_LOCK_TTL_MS = PER_RENDER_BUDGET_MS + 15 * 60 * 1000;
 
 // See lib/processingPriority.js for hoursSinceEvent/sortByProcessingPriority
 // -- the queue-ordering logic (Luxe's advertised "24-hour priority

@@ -924,11 +924,13 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
   currentTmpDir = null;
   await startRender(bookingId, spec, {
     finalize: fullVideoOnly ? "video-only" : "full",
-    // A manual full-video re-render has no job clock; a scheduled first
-    // delivery run has already spent time on analysis + enhancement +
-    // roast, so it gets a reduced first slice and continuation runs pick up
-    // the rest.
-    budgetMs: fullVideoOnly ? Infinity : FIRST_RENDER_BUDGET_MS,
+    // A manual full-video re-render normally has no job clock (Infinity) --
+    // TEMPORARY FOR MULTI-RUN TESTING: forced through FIRST_RENDER_BUDGET_MS
+    // instead, so `full-video` can be used to exercise the resume path by
+    // hand (via repeated `continue-render` calls) against a real booking's
+    // saved data, without waiting for a scheduled run. REVERT (restore
+    // `fullVideoOnly ? Infinity : FIRST_RENDER_BUDGET_MS`) before merging.
+    budgetMs: FIRST_RENDER_BUDGET_MS,
   });
   // Release the render lock claimed at the analyzing->editing flip (or, for a
   // full-video re-render, never claimed -- this is a harmless no-op then).

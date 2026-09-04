@@ -177,11 +177,15 @@ const FULL_CUT_TARGET_SECONDS = { free: 75 }; // middle of the advertised 60-90s
 
 // Only this top fraction of the shortlist (by emotional_strength +
 // technical_quality) gets a Roast Reel line; the rest play captionless at
-// the normal pace. A roast-captioned slot runs 2.5x longer
-// (ROAST_SLOT_SECONDS in lib/video-assemble.js), so captioning every photo
-// balloons both the runtime and the render time of a large booking --
-// captioning ~the best third keeps the reel punchy and the render bounded.
-const ROAST_FRACTION = 0.35;
+// the normal pace. A roast-captioned slot runs 2.5x longer (ROAST_SLOT_SECONDS
+// in lib/video-assemble.js), so captioning every photo balloons both the
+// runtime and the render time of a large booking -- briefly capped to the
+// best-scored ~third for exactly that reason, but reverted (1 = all of
+// them): picking "Roast Reel" should mean the whole video is roasted, not
+// just some of it. Large bookings now lean on resumable rendering (spans
+// several scheduled runs) rather than a coverage cap to stay within a job's
+// time budget -- see fix/resumable-rendering.
+const ROAST_FRACTION = 1;
 
 const s3 = new S3Client({
   region: "auto",
@@ -1085,7 +1089,7 @@ async function driveRender(bookingId, { budgetMs }) {
 
         const res = await renderFullVideoChunks(imagePaths, [], unitName === "main" ? spec.roastLines : null, cardOverlays, unitDir, {
           baseSlotSeconds: spec.fullCutSlotSeconds,
-          styleConfig: { ...styleVideoConfigFor(spec.style), kenBurns: true, photoBackground: "black" },
+          styleConfig: { ...styleVideoConfigFor(spec.style), kenBurns: true, photoBackground: "polaroid" },
           doneChunks: doneSet,
           budgetMs: deadline - Date.now(),
           onChunkRendered: async (idx, chunkPath) => {

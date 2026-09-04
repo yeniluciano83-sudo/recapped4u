@@ -29,6 +29,11 @@ export default function GalleryDeliveryPage() {
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState(new Set());
+  // Whether the recap video is playing inline (vs. showing its poster +
+  // play button). Reset whenever the selected cut changes so switching
+  // toggles always drops back to the poster for the new cut.
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  useEffect(() => { setVideoPlaying(false); }, [videoLength]);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -256,23 +261,43 @@ export default function GalleryDeliveryPage() {
               aspectRatio: isSocialSelected ? "9/16" : "16/9",
               width: isSocialSelected ? "min(360px, 60vw)" : "100%",
               margin: isSocialSelected ? "0 auto" : 0,
-              background: activeVideoPosterUrl ? `#000 url(${activeVideoPosterUrl}) center / cover no-repeat` : "linear-gradient(135deg, #FBEEE0, #FAF7F2)",
-              display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: "pointer",
+              background: "#000",
+              backgroundImage: !videoPlaying && activeVideoPosterUrl ? `url(${activeVideoPosterUrl})` : undefined,
+              backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat",
+              display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: videoPlaying ? "default" : "pointer",
             }}
-            onClick={() => { if (activeVideoUrl) window.open(activeVideoUrl, "_blank"); }}>
-            {/* Posters are an arbitrary frame from the actual cut, so a
-                white play button needs a floor of contrast under it no
-                matter how bright that frame happens to be -- the gradient
-                fallback never needed this. */}
-            {activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.18)" }} />}
-            {isRoastCut && (
-              <span style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 5, background: "#C97A3D", color: "#211F1D", fontSize: 12, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
-                🔥 Roast Reel cut
-              </span>
+            onClick={() => { if (!videoPlaying && activeVideoUrl) setVideoPlaying(true); }}>
+            {videoPlaying && activeVideoUrl ? (
+              // Plays right here, filling the box (the box already carries
+              // the cut's real aspect ratio), instead of dumping the raw
+              // .mp4 into a new browser tab where it rendered tiny and
+              // inconsistently across browsers.
+              <video
+                key={activeVideoUrl}
+                src={activeVideoUrl}
+                controls
+                autoPlay
+                playsInline
+                style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000", display: "block" }}
+              />
+            ) : (
+              <>
+                {/* Posters are an arbitrary frame from the actual cut, so a
+                    white play button needs a floor of contrast under it no
+                    matter how bright that frame happens to be -- the gradient
+                    fallback never needed this. */}
+                {activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.18)" }} />}
+                {!activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #FBEEE0, #FAF7F2)" }} />}
+                {isRoastCut && (
+                  <span style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 5, background: "#C97A3D", color: "#211F1D", fontSize: 12, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
+                    🔥 Roast Reel cut
+                  </span>
+                )}
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: activeVideoPosterUrl ? "0 4px 18px rgba(0,0,0,0.4)" : "none", position: "relative" }}>
+                  <Play size={26} color="#211F1D" fill="#211F1D" style={{ marginLeft: "3px" }} />
+                </div>
+              </>
             )}
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: activeVideoPosterUrl ? "0 4px 18px rgba(0,0,0,0.4)" : "none", position: "relative" }}>
-              <Play size={26} color="#211F1D" fill="#211F1D" style={{ marginLeft: "3px" }} />
-            </div>
           </div>
           <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>

@@ -936,8 +936,16 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
   await supabase.from("bookings").update({ render_lock_at: null }).eq("id", bookingId).eq("status", "editing");
 }
 
-const RENDER_BUDGET_MS = 35 * 60 * 1000; // per continuation run
-const FIRST_RENDER_BUDGET_MS = 20 * 60 * 1000; // run 1 already spent time on analysis/enhance/roast
+// #### TEMPORARY FOR MULTI-RUN TESTING -- REVERT BEFORE MERGING PR #1 ####
+// Shrunk from 35m/20m so even a normal-sized booking is forced to span
+// several continue-render ticks, to exercise the resume path without
+// needing to wait for (or manufacture) a 200+ photo booking. See the real
+// values below, commented out.
+const RENDER_BUDGET_MS = 1 * 60 * 1000; // per continuation run
+const FIRST_RENDER_BUDGET_MS = 1 * 60 * 1000; // run 1 already spent time on analysis/enhance/roast
+// const RENDER_BUDGET_MS = 35 * 60 * 1000;
+// const FIRST_RENDER_BUDGET_MS = 20 * 60 * 1000;
+// #### END TEMPORARY ####
 
 // Builds and R2-parks the intro/outro title cards (from the first and last
 // shortlisted photo) so a resume run can fetch them like any other slot.

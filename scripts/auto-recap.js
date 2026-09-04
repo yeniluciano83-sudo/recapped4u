@@ -38,7 +38,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const sharp = require("sharp");
 const { enhancePhoto } = require("../lib/photo-enhance");
-const { assembleSlideshow, extractPosterFrame } = require("../lib/video-assemble");
+const { assembleSlideshow, extractPosterFrame, planChunks, renderFullVideoChunks, mergeFullVideoChunks } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
 const { buildCardBackground } = require("../lib/card-background");
 const { buildSocialSelections } = require("../lib/socialSelections");
@@ -992,10 +992,19 @@ async function startRender(bookingId, spec, { finalize, budgetMs = RENDER_BUDGET
   // "full" first delivery: created here, partial -- the gallery route treats
   // a row with render_state set and no delivered_at as not-ready.
   // "video-only": the row already exists from the prior delivery.
-  await supabase.from("deliverables").upsert(
-    { booking_id: bookingId, render_state: renderState, ...(finalize === "full" ? { gallery_photo_keys: spec.galleryPhotoKeys } : {}) },
-    { onConflict: "booking_id" }
-  );
+  const { error: upsertErr } = await supabase
+    .from("deliverables")
+    .upsert(
+      { booking_id: bookingId, render_state: renderState, ...(finalize === "full" ? { gallery_photo_keys: spec.galleryPhotoKeys } : {}) },
+      { onConflict: "booking_id" }
+    );
+  // Checked, not swallowed: an unchecked failure here (confirmed live --
+  // e.g. the render_state/render_lock_at columns not existing yet because
+  // migrations 030/031 hadn't been run) used to silently no-op the entire
+  // render instead of surfacing anything -- driveRender's own read-back
+  // would then also fail the same way, log "no active render to continue",
+  // and return having done nothing, with no error anywhere.
+  if (upsertErr) throw new Error(`Failed to write initial render_state for booking ${bookingId}: ${upsertErr.message}`);
 
   // For a "full" delivery, past this point render_state is the checkpoint: a
   // failure in the first driveRender pass must NOT bubble up to
@@ -1032,7 +1041,13 @@ async function continueRender(bookingId, budgetMs = RENDER_BUDGET_MS) {
 // Re-entrant: it resumes from render_state.phase and the per-unit done sets,
 // so a job killed mid-render loses at most the chunk in flight.
 async function driveRender(bookingId, { budgetMs }) {
-  const { data: row } = await supabase.from("deliverables").select("render_state").eq("booking_id", bookingId).maybeSingle();
+  const { data: row, error: readErr } = await supabase.from("deliverables").select("render_state").eq("booking_id", bookingId).maybeSingle();
+  // Checked, not swallowed -- see the matching comment on startRender's
+  // upsert. Without this, a query failure (wrong/missing column, RLS, a
+  // transient error) looked identical to "this render already finished":
+  // logged as routine, and the caller (continueRender / poll-and-recap.js)
+  // saw a normal return, not a failure to retry.
+  if (readErr) throw new Error(`Failed to read render_state for booking ${bookingId}: ${readErr.message}`);
   const rs = row && row.render_state;
   if (!rs || rs.phase === "done") {
     console.log(`Booking ${bookingId}: no active render to continue.`);

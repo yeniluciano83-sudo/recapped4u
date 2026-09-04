@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check } from "lucide-react";
+import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
 
 // Keep in sync with GALLERY_RETENTION in app/booking/page.jsx.
@@ -428,27 +428,75 @@ function Lightbox({ photos, index, onClose }) {
   const containerRef = useRef(null);
   useModalDialog(containerRef, onClose);
 
+  // Opening a photo used to strand you on that one image -- the only way to
+  // the next was closing and finding its thumbnail. Now the lightbox steps
+  // through the whole gallery: arrows, keyboard <-/->, and swipe.
+  const [cur, setCur] = useState(index);
+  const wrap = (n) => ((n % photos.length) + photos.length) % photos.length;
+  const go = (delta) => setCur((c) => wrap(c + delta));
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "ArrowLeft") go(-1);
+      else if (e.key === "ArrowRight") go(1);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [photos.length]);
+
+  const touchX = useRef(null);
+  const onTouchStart = (e) => { touchX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e) => {
+    if (touchX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    touchX.current = null;
+  };
+
+  const navBtn = { position: "fixed", top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.45)", border: "none", color: "#FFFFFF", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", zIndex: 51, display: "flex", alignItems: "center", justifyContent: "center" };
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 50, overflowY: "auto", padding: "24px" }}>
-      {/* No stopPropagation here -- clicking anywhere, including the photo
-          itself, has always closed this lightbox (unlike this site's other
-          modals, which only close on a backdrop click); preserving that. */}
-      <div ref={containerRef} role="dialog" aria-modal="true" aria-label={`Photo ${index + 1} of ${photos.length}`}>
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Photo ${cur + 1} of ${photos.length}`}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         {/* Close button is position:fixed (not absolute) so it stays
             pinned to the viewport corner instead of scrolling away with
             the enlarged photo when that photo is taller than the
             screen. */}
         <button onClick={onClose} aria-label="Close photo" style={{ position: "fixed", top: 20, right: 20, background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", zIndex: 51 }}><X size={26} /></button>
+
+        {photos.length > 1 && (
+          <>
+            <button onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="Previous photo" style={{ ...navBtn, left: 12 }}><ChevronLeft size={26} /></button>
+            <button onClick={(e) => { e.stopPropagation(); go(1); }} aria-label="Next photo" style={{ ...navBtn, right: 12 }}><ChevronRight size={26} /></button>
+            <div style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", color: "#FFFFFF", fontSize: 13, background: "rgba(0,0,0,0.45)", padding: "4px 12px", borderRadius: 999, zIndex: 51 }}>
+              {cur + 1} / {photos.length}
+            </div>
+          </>
+        )}
+
         {/* min-height: 100% + centered flex is the standard pattern for
             a lightbox that centers short content but still lets you
             scroll to see the full image when it doesn't fit the
-            viewport -- a plain flex-center with no overflow handling
-            (the old version) just clips whatever doesn't fit, with no
-            way to reach the clipped part. Applies to every gallery
-            template (Grid, Masonry, Polaroid, Slideshow) since they all
-            open this same lightbox. */}
+            viewport. Applies to every gallery template (Grid, Masonry,
+            Polaroid, Slideshow) since they all open this same lightbox. */}
         <div style={{ minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          <img src={photos[index]} alt={`Photo ${index + 1} of ${photos.length}`} style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }} />
+          {/* Clicking the photo itself no longer closes the lightbox (it
+              used to) -- now that you can page through the gallery here, a
+              stray tap on the image while navigating shouldn't dump you
+              out. Backdrop click and the X still close it. */}
+          <img
+            src={photos[cur]}
+            alt={`Photo ${cur + 1} of ${photos.length}`}
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }}
+          />
         </div>
       </div>
     </div>

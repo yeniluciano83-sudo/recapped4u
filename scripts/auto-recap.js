@@ -391,28 +391,31 @@ async function fetchPhotoUploads(bookingId) {
   return uploads.filter((u) => u.file_type === "photo");
 }
 
-// Claude's vision input only accepts jpeg/png/gif/webp. Guest uploads are
-// only restricted to image/* client-side (see app/api/events/[eventId]/
-// upload/route.js), so anything else -- HEIC/HEIF above all, the default
-// photo format on every iPhone -- has to be actually converted, not just
-// relabeled. Confirmed live: a request declaring raw HEIC bytes as
-// image/jpeg is what produced a real guest-facing "Could not process
-// image" analysis failure.
-const CLAUDE_IMAGE_MEDIA_TYPES = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp" };
+// Photo analysis only scores technical_quality / emotional_strength /
+// moment_type and flags explicit content -- it never needs full delivery
+// resolution. Sending the raw uploads (iPhone photos, several MB each) is
+// what pushed a real 133-photo keepsake booking's analysis batch past
+// Anthropic's 256MB request cap (confirmed live: 413 request_too_large).
+// 1024px on the long edge is more than enough for that scoring, and
+// Claude's vision pipeline downsamples large images anyway.
+const MAX_ANALYSIS_IMAGE_DIMENSION = 1024;
 
+// Normalizes any guest upload into a small JPEG for Claude's vision input.
+// Folds in HEIC/HEIF conversion (the default iPhone format, which Claude
+// can't read as-is) and the downscale above. Can still throw for a
+// genuinely undecodable file (confirmed live: some iPhone Portrait/Live
+// Photo HEIC variants trip up libheif even when the file isn't corrupt) --
+// every caller wraps this in the try/catch that records a normal per-photo
+// analysis failure, so that degrades gracefully. This buffer is
+// Claude-only; the final video still assembles from the untouched original
+// (see the callers, which keep `buffer` separate from this result).
 async function toClaudeCompatibleImage(buffer, storageKey) {
-  const ext = path.extname(storageKey).toLowerCase();
-  const knownType = CLAUDE_IMAGE_MEDIA_TYPES[ext];
-  if (knownType) return { buffer, mediaType: knownType };
-
-  // HEIC/HEIF (or anything else unrecognized) -- convert to JPEG. This can
-  // still throw for a genuinely undecodable file (confirmed live: some
-  // iPhone Portrait/Live Photo HEIC variants trip up libheif's decoder even
-  // though the file itself isn't corrupt) -- callers already wrap this in
-  // the same try/catch that records a normal analysis failure, so that
-  // case degrades exactly as before, just with an accurate error message
-  // now instead of a silent mislabeled-media-type one.
-  const jpegBuffer = await sharp(buffer).rotate().jpeg({ quality: 92 }).toBuffer();
+  void storageKey; // kept for signature stability / call-site clarity
+  const jpegBuffer = await sharp(buffer)
+    .rotate()
+    .resize({ width: MAX_ANALYSIS_IMAGE_DIMENSION, height: MAX_ANALYSIS_IMAGE_DIMENSION, fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 80 })
+    .toBuffer();
   return { buffer: jpegBuffer, mediaType: "image/jpeg" };
 }
 

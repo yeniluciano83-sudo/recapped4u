@@ -94,7 +94,13 @@ const STYLE_VIDEO_CONFIG = {
   upbeat: { transitionType: "slideleft", transitionSeconds: 0.25, slotSeconds: 2.5, grain: false },
   // A near-instant fade reads as a hard cut -- "minimal, candid, true to the moment" gets the least stylized transition of any of them.
   documentary: { transitionType: "fade", transitionSeconds: 0.15, slotSeconds: 4, grain: false },
-  retro: { transitionType: "dissolve", transitionSeconds: 0.9, slotSeconds: 4, grain: true },
+  // grain was true -- Retro's "warm film grain" (see the noise filter comment
+  // in lib/video-assemble.js) turned out to read as distracting "moving
+  // pixels" rather than a charming vintage texture, confirmed live pixel-by-
+  // pixel (nonzero frame-to-frame noise even on the pure-black backdrop).
+  // Removed by request; the dissolve transitions and color grade alone still
+  // carry the "retro" feel.
+  retro: { transitionType: "dissolve", transitionSeconds: 0.9, slotSeconds: 4, grain: false },
   highlight: { transitionType: "circleopen", transitionSeconds: 0.3, slotSeconds: 2.5, grain: false },
 };
 

@@ -1119,7 +1119,14 @@ async function driveRender(bookingId, { budgetMs }) {
         const mergedPath = path.join(mergeDir, "merged.mp4");
         await mergeFullVideoChunks(chunkPaths, mergedPath, musicPath);
         await uploadToR2(finalKey, fs.readFileSync(mergedPath), "video/mp4");
-        await uploadPosterFor(mergedPath, mergeDir, posterKey, spec.fullCutSlotSeconds + 1.5);
+        // uploadPosterFor's own default (1.5s) lands inside the intro card
+        // itself -- was spec.fullCutSlotSeconds + 1.5 to skip past the card
+        // onto a real photo instead, but that made the gallery's static
+        // poster and the video's actual opening frame two different things:
+        // reported live as the recap "showing the first picture before the
+        // host intro message" when played. Landing the poster ON the card
+        // matches what actually plays first.
+        await uploadPosterFor(mergedPath, mergeDir, posterKey);
         unit.merged = true;
         unit.finalKey = finalKey;
         unit.posterKey = posterKey;
@@ -1215,7 +1222,9 @@ async function renderOneSocialCut(bookingId, cutIndex, socialKeys, spec, tmpDir)
     kenBurns: true,
   });
   await uploadToR2(`deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`, fs.readFileSync(outPath), "video/mp4");
-  await uploadPosterFor(outPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`, slotSeconds + 1.5);
+  // Default (1.5s) lands inside the intro card -- see the full-video
+  // uploadPosterFor call above for why this used to skip past it.
+  await uploadPosterFor(outPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`);
 }
 
 // The deliverable row + status flip + delivery email, once every video for a

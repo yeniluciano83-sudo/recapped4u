@@ -12,7 +12,10 @@ const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 export async function POST(req, { params }) {
   const { eventId } = await params;
 
-  const { success } = await checkRateLimit("event-upload-confirm", req, { requests: 60, windowSeconds: 60 });
+  // 600/min per client IP, same reasoning as presign/route.js -- a shared
+  // event Wi-Fi means many guests share one budget, and the per-event
+  // upload cap is the real leaked-link backstop, not this.
+  const { success } = await checkRateLimit("event-upload-confirm", req, { requests: 600, windowSeconds: 60 });
   if (!success) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }

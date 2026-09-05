@@ -561,9 +561,16 @@ async function resumeAnalysis(bookingId) {
   // continue-render loop) so a concurrent poll run can't start a second
   // render on this booking while this first pass is still going. Released in
   // continuePipelineWithAnalysis once the first driveRender pass returns.
+  //
+  // batch_id is deliberately NOT cleared here anymore -- it's only ever read
+  // on the "analyzing" path (status-gated), so a lingering value on an
+  // "editing"/"delivered" booking is harmless, and keeping it lets
+  // `full-video` re-render a delivered booking with no batch id to hand it
+  // (see regenerateFullVideo). It's still cleared on the paths that revert a
+  // booking to "collecting", where the batch really is stale.
   await supabase
     .from("bookings")
-    .update({ status: "editing", processing_started_at: new Date().toISOString(), batch_id: null, render_lock_at: new Date().toISOString() })
+    .update({ status: "editing", processing_started_at: new Date().toISOString(), render_lock_at: new Date().toISOString() })
     .eq("id", bookingId);
   await continuePipelineWithAnalysis(booking, analyzed);
   return true;
@@ -665,14 +672,13 @@ async function runResumeOnly(bookingId) {
 // the original photo-analysis batch (so buildShortlist picks the same
 // photos in the same order), then runs the pipeline's back half in
 // fullVideoOnly mode -- see continuePipelineWithAnalysis. The batch id is
-// required and explicit rather than looked up, because a delivered
-// booking's batch_id has already been cleared. Not wrapped in
-// withStatusRevertOnFailure: the booking stays "delivered" throughout, and
-// a failure just leaves the previous full video in place.
+// taken from the booking record (retained through delivery now -- see the
+// analyzing->editing transition); an explicit arg still wins, for a booking
+// analyzed via the synchronous fallback (no batch) or delivered before
+// batch_id started being kept. Not wrapped in withStatusRevertOnFailure:
+// the booking stays "delivered" throughout, and a failure just leaves the
+// previous full video in place.
 async function regenerateFullVideo(bookingId, batchId, hostContext) {
-  if (!batchId) {
-    throw new Error("full-video needs the analysis batch id: node scripts/auto-recap.js full-video <bookingId> <batchId> [\"host context...\"]");
-  }
   const { data: booking, error } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
   if (error || !booking) throw new Error("Booking not found");
   if (booking.status !== "delivered") {
@@ -680,11 +686,17 @@ async function regenerateFullVideo(bookingId, batchId, hostContext) {
       `Booking ${bookingId} is "${booking.status}", not "delivered" -- full-video re-render is only for an already-delivered booking. Use the normal pipeline for one that hasn't shipped yet.`
     );
   }
-  const batch = await getBatch(batchId);
-  if (batch.processing_status !== "ended") {
-    throw new Error(`Analysis batch ${batchId} is "${batch.processing_status}", not "ended"`);
+  const resolvedBatchId = batchId || booking.batch_id;
+  if (!resolvedBatchId) {
+    throw new Error(
+      `Booking ${bookingId} has no stored analysis batch id -- pass one explicitly: node scripts/auto-recap.js full-video <bookingId> <batchId> ["host context..."]`
+    );
   }
-  console.log(`Rebuilding analysis for booking ${bookingId} from batch ${batchId}...`);
+  const batch = await getBatch(resolvedBatchId);
+  if (batch.processing_status !== "ended") {
+    throw new Error(`Analysis batch ${resolvedBatchId} is "${batch.processing_status}", not "ended"`);
+  }
+  console.log(`Rebuilding analysis for booking ${bookingId} from batch ${resolvedBatchId}${batchId ? "" : " (from the booking record)"}...`);
   if (hostContext) console.log(`Using host context for the roast: ${hostContext}`);
   const analyzed = await buildAnalyzedFromBatchResults(bookingId, batch.results_url);
   if (analyzed.length === 0) throw new Error(`No usable analyzed photos from batch ${batchId}`);
@@ -1316,16 +1328,20 @@ if (require.main === module) {
   const [arg1, arg2, arg3, ...rest] = process.argv.slice(2);
   const isSubcommand = arg1 === "submit" || arg1 === "resume" || arg1 === "full-video" || arg1 === "continue-render";
   const bookingId = isSubcommand ? arg2 : arg1;
-  // For `full-video`: everything after <batchId> is the optional host-context
-  // string for the roast -- quote it as one arg, or leave it unquoted and the
-  // words get joined back together.
-  const fullVideoHostContext = rest.length ? rest.join(" ") : undefined;
+  // For `full-video`: <batchId> is optional (it falls back to the one stored
+  // on the booking). An Anthropic batch id always starts "msgbatch_", so
+  // arg3 is only the batch id if it looks like one -- otherwise arg3 is the
+  // first word of the host-context string. Everything from there on is
+  // joined back into one context string (quote it as one arg, or don't).
+  const fullVideoBatchId = arg3 && arg3.startsWith("msgbatch_") ? arg3 : undefined;
+  const fullVideoContextParts = fullVideoBatchId ? rest : [arg3, ...rest].filter(Boolean);
+  const fullVideoHostContext = fullVideoContextParts.length ? fullVideoContextParts.join(" ") : undefined;
 
   if (!bookingId) {
     console.log("Usage: node scripts/auto-recap.js <bookingId>");
     console.log("       node scripts/auto-recap.js submit <bookingId>                          (submit the analysis batch only)");
     console.log("       node scripts/auto-recap.js resume <bookingId>                          (check/continue after a submitted batch)");
-    console.log('       node scripts/auto-recap.js full-video <bookingId> <batchId> ["context"]  (re-render only the full video of a delivered booking)');
+    console.log('       node scripts/auto-recap.js full-video <bookingId> [batchId] ["context"]  (re-render only the full video of a delivered booking; batchId defaults to the one on the booking)');
     console.log("       node scripts/auto-recap.js continue-render <bookingId> [budgetMs]        (advance a render in progress -- called by the scheduler)");
     process.exit(1);
   }
@@ -1333,7 +1349,7 @@ if (require.main === module) {
   const run =
     arg1 === "submit" ? runSubmitOnly
     : arg1 === "resume" ? runResumeOnly
-    : arg1 === "full-video" ? (id) => regenerateFullVideo(id, arg3, fullVideoHostContext)
+    : arg1 === "full-video" ? (id) => regenerateFullVideo(id, fullVideoBatchId, fullVideoHostContext)
     : arg1 === "continue-render" ? (id) => continueRender(id, arg3 ? Number(arg3) : undefined)
     : runAutoRecap;
 

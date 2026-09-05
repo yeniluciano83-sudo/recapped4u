@@ -354,6 +354,14 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
             </a>
           </div>
         )}
+        {booking.status === "delivered" && (
+          <div style={{ padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
+            <a href={`/gallery/${booking.id}`} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>
+              View delivered gallery &amp; recap →
+            </a>
+          </div>
+        )}
         <DetailRow label="Style" value={booking.style} />
         {booking.email && <DetailRow label="Email" value={booking.email} />}
         {booking.guest_count && <DetailRow label="Guests" value={booking.guest_count} />}

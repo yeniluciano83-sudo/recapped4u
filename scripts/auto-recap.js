@@ -916,10 +916,14 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
     const videoBuffer = fs.readFileSync(videoLocalPath);
     videoKey = `deliverable/${bookingId}/full-cut.mp4`;
     await uploadToR2(videoKey, videoBuffer, "video/mp4");
-    // Grabs a frame 1.5s into whatever's playing at that timestamp (see
-    // extractPosterFrame) -- offset by the intro card's own duration so
-    // the poster still shows a real photo, not the intro card itself.
-    videoPosterKey = await uploadPosterFor(videoLocalPath, tmpDir, `deliverable/${bookingId}/full-cut-poster.jpg`, fullCutSlotSeconds + 1.5);
+    // uploadPosterFor's own default (1.5s) lands inside the intro card
+    // itself -- was fullCutSlotSeconds + 1.5 to skip past the card onto a
+    // real photo instead, but that made the gallery's static poster and
+    // the video's actual opening frame two different things: reported
+    // live as the recap "showing the first picture before the host intro
+    // message" when played. Landing the poster ON the card matches what
+    // actually plays first.
+    videoPosterKey = await uploadPosterFor(videoLocalPath, tmpDir, `deliverable/${bookingId}/full-cut-poster.jpg`);
 
     // Roast Reel bookings previously only ever got the captioned cut -- render
     // a second, caption-free twin of the exact same shortlist/pacing so hosts
@@ -933,7 +937,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       const noRoastVideoBuffer = fs.readFileSync(noRoastVideoLocalPath);
       noRoastVideoKey = `deliverable/${bookingId}/full-cut-no-roast.mp4`;
       await uploadToR2(noRoastVideoKey, noRoastVideoBuffer, "video/mp4");
-      noRoastVideoPosterKey = await uploadPosterFor(noRoastVideoLocalPath, tmpDir, `deliverable/${bookingId}/full-cut-no-roast-poster.jpg`, fullCutSlotSeconds + 1.5);
+      noRoastVideoPosterKey = await uploadPosterFor(noRoastVideoLocalPath, tmpDir, `deliverable/${bookingId}/full-cut-no-roast-poster.jpg`);
     }
   } else {
     console.log("Delivery format is social cuts of every photo -- skipping the full recap video.");
@@ -1050,7 +1054,9 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");
       socialVideoKeys.push(socialVideoKey);
-      socialVideoPosterKeys.push(await uploadPosterFor(socialVideoLocalPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`, slotSeconds + 1.5));
+      // Default (1.5s) lands inside the intro card -- see the full-video
+      // uploadPosterFor calls above for why this used to skip past it.
+      socialVideoPosterKeys.push(await uploadPosterFor(socialVideoLocalPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`));
     }
   }
 

@@ -79,7 +79,11 @@ create table deliverables (
   social_video_key text, -- kept in sync with social_video_keys[0] for backward compatibility
   social_video_keys text[], -- Luxe gets multiple cuts; Signature/Free get at most 1
   gallery_photo_keys text[],
-  delivered_at timestamptz not null default now()
+  -- null while a "full" first delivery is still rendering (the row is
+  -- inserted up front so the resumable renderer can checkpoint against it);
+  -- finalizeFullDelivery sets it once every video is in R2. See
+  -- migration 032 and the gallery route's "not ready" guard.
+  delivered_at timestamptz
 );
 
 -- Draft Roast Reel scripts awaiting host review, separate from `deliverables`

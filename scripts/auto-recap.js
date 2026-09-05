@@ -117,13 +117,14 @@ function styleVideoConfigFor(style) {
 // landscape defaults untouched.
 const SOCIAL_CUT_OUTPUT = { outputWidth: 1080, outputHeight: 1920 };
 
-// The first real photo in a social cut always lands at imagePaths index 1
-// (index 0 is the intro card -- see socialLocalPathsWithCards below). Giving
-// that one slot a punch-in zoom (lib/video-assemble.js's heroZoomIndex)
-// creates a mini "hook" right as the intro card hands off, which matters
-// for social retention in a way it doesn't for the full video (never given
-// a hero slot -- it's watched start-to-finish already, not scrolled past).
-const SOCIAL_CUT_HERO_ZOOM_INDEX = 1;
+// Social cuts used to give only the first real photo (imagePaths index 1 --
+// index 0 is the intro card) a punch-in zoom (lib/video-assemble.js's
+// heroZoomIndex) and leave every other slot a static frame, on the theory
+// that a hook right as the intro card hands off matters for social
+// retention. Dropped by request in favor of the same continuous kenBurns
+// drift the full video gives every photo -- one photo visibly moving
+// differently from the rest of the same cut read as inconsistent rather
+// than as a deliberate hook.
 
 // Per-photo overlay text is switched off: nothing is burned onto the
 // actual photos in either the full video or the social cuts, for any
@@ -1044,7 +1045,7 @@ async function finalizeDelivery(bookingId, localPaths, enhancedKeys, tmpDir, mus
         { text: outroOverlayText(hostName, eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
       ];
       const socialVideoLocalPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
-      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines, heroZoomIndex: SOCIAL_CUT_HERO_ZOOM_INDEX });
+      await assembleSlideshow(socialLocalPathsWithCards, [], socialVideoLocalPath, socialMusicPath, null, slotSeconds, { ...socialStyleConfig, ...SOCIAL_CUT_OUTPUT, overlayLines: cutOverlayLines, kenBurns: true });
       const socialVideoBuffer = fs.readFileSync(socialVideoLocalPath);
       const socialVideoKey = `deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`;
       await uploadToR2(socialVideoKey, socialVideoBuffer, "video/mp4");

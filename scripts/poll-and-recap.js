@@ -74,6 +74,27 @@ function runResumeAnalysis(bookingId) {
   });
 }
 
+function runContinueRender(bookingId, budgetMs) {
+  execSync(`node "${path.join(__dirname, "auto-recap.js")}" continue-render ${bookingId} ${Math.round(budgetMs)}`, {
+    stdio: "inherit",
+    cwd: path.join(__dirname, ".."),
+  });
+}
+
+// The render phase (advancing in-progress 4K renders) runs first in main()
+// and must leave enough of the CI job's 75-minute budget for analysis,
+// collecting, and the purges -- so it gets a shared wall-clock ceiling that
+// every continue-render this run does draws down together, rather than each
+// booking getting its own fresh 35 minutes (which N>=3 in-progress renders
+// would blow the whole job on).
+const RENDER_PHASE_BUDGET_MS = 45 * 60 * 1000;
+const PER_RENDER_BUDGET_MS = 35 * 60 * 1000; // cap for any single booking's slice
+const MIN_RENDER_SLICE_MS = 4 * 60 * 1000; // don't bother spawning for less than this
+
+// A booking's render lock is stale (a previous run crashed holding it, or
+// legitimately handed off) once it's older than one full slice plus slack.
+const RENDER_LOCK_TTL_MS = PER_RENDER_BUDGET_MS + 15 * 60 * 1000;
+
 // See lib/processingPriority.js for hoursSinceEvent/sortByProcessingPriority
 // -- the queue-ordering logic (Luxe's advertised "24-hour priority
 // turnaround") that this script uses below.
@@ -230,6 +251,92 @@ async function processAnalyzingBookings(failures) {
   }
 }
 
+// A non-null render_state (on the deliverable row) always means a 4K render
+// is part-way through -- driveRender in auto-recap.js nulls it the moment
+// it finishes. A large render legitimately spans several of these runs;
+// give each one another slice of wall time per tick. Two booking statuses
+// carry a resumable render: "editing" (a normal first delivery) and
+// "delivered" (a manual `full-video` re-render that got killed mid-run).
+// Any other status with a leftover render_state is dead work -- clear it
+// and sweep its scratch prefix. A failure advancing a render does NOT
+// revert the booking: render_state is the checkpoint, the next run resumes.
+async function processRenderingBookings(failures) {
+  const { deleteByPrefix } = require("../lib/storage");
+
+  const { data: dels, error } = await supabase.from("deliverables").select("booking_id").not("render_state", "is", null);
+  if (error) {
+    console.error("Failed to query in-progress renders:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-renders" } });
+    return;
+  }
+  if (!dels || dels.length === 0) return;
+
+  const { data: bookings } = await supabase
+    .from("bookings")
+    .select("id, host_name, status, render_lock_at")
+    .in("id", dels.map((d) => d.booking_id));
+
+  const inProgress = [];
+  for (const b of bookings || []) {
+    if (b.status === "editing" || b.status === "delivered") {
+      inProgress.push(b);
+    } else {
+      // Cancelled (or otherwise abandoned) mid-render -- nothing will ever
+      // resume it. Drop the checkpoint and the scratch files.
+      console.log(`Booking ${b.id} is "${b.status}" with a leftover render_state -- clearing it and its _render/ scratch.`);
+      await supabase.from("deliverables").update({ render_state: null }).eq("booking_id", b.id);
+      await deleteByPrefix(`deliverable/${b.id}/_render/`).catch((e) => console.error(`  _render/ sweep failed for ${b.id}: ${e.message}`));
+    }
+  }
+  if (inProgress.length === 0) return;
+
+  console.log(`\n${inProgress.length} render(s) in progress -- advancing within a ${Math.round(RENDER_PHASE_BUDGET_MS / 60000)}m shared budget...`);
+  const phaseDeadline = Date.now() + RENDER_PHASE_BUDGET_MS;
+  const lockStaleCutoff = Date.now() - RENDER_LOCK_TTL_MS;
+
+  for (const booking of inProgress) {
+    const remainingMs = phaseDeadline - Date.now();
+    if (remainingMs < MIN_RENDER_SLICE_MS) {
+      console.log(`Render phase budget spent -- remaining render(s) continue next run.`);
+      break;
+    }
+
+    // Skip a booking whose render lock is still fresh -- another poll run
+    // (a cron tick next to a manual workflow_dispatch) is already advancing
+    // it. A stale lock (older than RENDER_LOCK_TTL_MS) means that run
+    // crashed holding it; take it over.
+    if (booking.render_lock_at && new Date(booking.render_lock_at).getTime() > lockStaleCutoff) {
+      console.log(`Render for booking ${booking.id} is locked by another run -- skipping this tick.`);
+      continue;
+    }
+
+    // Atomic compare-and-swap on the exact lock value we just read, guarded
+    // on the status we read too: if a concurrent run claimed it (or the
+    // booking's status moved) in between, our update matches no row.
+    const myLock = new Date().toISOString();
+    let claim = supabase.from("bookings").update({ render_lock_at: myLock }).eq("id", booking.id).eq("status", booking.status);
+    claim = booking.render_lock_at == null ? claim.is("render_lock_at", null) : claim.eq("render_lock_at", booking.render_lock_at);
+    const { data: claimed } = await claim.select("id").maybeSingle();
+    if (!claimed) {
+      console.log(`Render for booking ${booking.id} was claimed by another run -- skipping this tick.`);
+      continue;
+    }
+
+    try {
+      runContinueRender(booking.id, Math.min(PER_RENDER_BUDGET_MS, remainingMs));
+    } catch (err) {
+      console.error(`Continuing render for booking ${booking.id} failed:`, err.message);
+      captureError(err, { tags: { script: "poll-and-recap", step: "continue-render" }, extra: { bookingId: booking.id } });
+      failures.push({ bookingId: booking.id, error: `Render step failed (will resume from its checkpoint next run): ${err.message}` });
+    } finally {
+      // Release only our own lock -- lets the next run pick it straight up
+      // rather than waiting out the TTL. Matched on myLock so we never
+      // clobber a lock a subsequent run has already taken.
+      await supabase.from("bookings").update({ render_lock_at: null }).eq("id", booking.id).eq("render_lock_at", myLock);
+    }
+  }
+}
+
 // A real synchronous run (photo analysis + video encoding for a handful of
 // bookings) finishes in minutes. If a booking is still "editing" after this
 // long, the process that claimed it was killed before reaching its own
@@ -268,8 +375,28 @@ async function recoverStaleBookingsInStatus(failures, status, staleHours) {
   }
   if (!stale || stale.length === 0) return;
 
-  console.log(`\nFound ${stale.length} booking(s) stuck in "${status}" for over ${staleHours}h -- recovering...`);
-  for (const booking of stale) {
+  // An "editing" booking with an active render_state isn't hung just because
+  // processing_started_at is old -- a large 4K render legitimately spans
+  // several runs (see driveRender in auto-recap.js). It's only stale if its
+  // render_state stopped advancing too (the continue-render process keeps
+  // dying), or there's no render_state at all (killed the old way, before
+  // this mechanism, or before the first checkpoint landed).
+  let candidates = stale;
+  if (status === "editing") {
+    const { data: dels } = await supabase
+      .from("deliverables")
+      .select("booking_id, render_state")
+      .in("booking_id", stale.map((b) => b.id));
+    const byId = new Map((dels || []).map((d) => [d.booking_id, d.render_state]));
+    candidates = stale.filter((b) => {
+      const rsUpdated = byId.get(b.id)?.updated_at;
+      return !rsUpdated || rsUpdated < staleCutoff;
+    });
+    if (candidates.length === 0) return;
+  }
+
+  console.log(`\nFound ${candidates.length} booking(s) stuck in "${status}" for over ${staleHours}h -- recovering...`);
+  for (const booking of candidates) {
     // Guarded the same way as the claim above: only revert if it's still
     // in this status right now, so this can't clobber a run that finishes
     // (or gets cancelled) in the moment between the query above and this
@@ -335,7 +462,7 @@ async function purgeExpiredGalleries(failures) {
   if (!expired || expired.length === 0) return;
 
   console.log(`\nPurging ${expired.length} gallery/video past their retention window...`);
-  const { deleteFile } = require("../lib/storage");
+  const { deleteFile, deleteByPrefix } = require("../lib/storage");
   for (const booking of expired) {
     try {
       const { data: deliverables } = await supabase.from("deliverables").select("id, full_video_key, full_video_no_roast_key, full_video_poster_key, full_video_no_roast_poster_key, social_video_key, social_video_keys, social_video_no_roast_keys, social_video_poster_keys, social_video_no_roast_poster_keys, gallery_photo_keys").eq("booking_id", booking.id);
@@ -346,6 +473,11 @@ async function purgeExpiredGalleries(failures) {
         }
         await supabase.from("deliverables").delete().eq("id", deliverable.id);
       }
+      // Backstop for the resumable renderer's scratch area: a render that
+      // died in the narrow window between nulling render_state and running
+      // its own cleanup would otherwise leave the parked title cards here
+      // forever (nothing else scans _render/).
+      await deleteByPrefix(`deliverable/${booking.id}/_render/`);
       await supabase.from("bookings").update({ gallery_purge_at: null }).eq("id", booking.id);
     } catch (err) {
       console.error(`Failed to purge gallery for booking ${booking.id}:`, err.message);
@@ -359,9 +491,11 @@ async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
   const failures = [];
   await recoverStaleBookings(failures);
-  // Resume already-in-flight batches before submitting new ones, so
-  // finishing existing work is prioritized if this run is ever tight on
-  // its 20-minute budget.
+  // Finish existing work before taking on new work, so a run that's tight on
+  // its time budget prioritizes deliveries already in flight: advance
+  // in-progress 4K renders first, then resume analysis batches, then submit
+  // new ones.
+  await processRenderingBookings(failures);
   await processAnalyzingBookings(failures);
   await processCollectingBookings(failures);
   await purgeExpiredUploads(failures);

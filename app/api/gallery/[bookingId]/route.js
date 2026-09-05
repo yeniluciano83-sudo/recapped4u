@@ -30,7 +30,13 @@ export async function GET(req, { params }) {
     .limit(1)
     .maybeSingle();
 
-  if (!deliverable) {
+  // A render still in progress writes a partial deliverable row up front
+  // (render_state set, delivered_at null) so scripts/auto-recap.js's
+  // driveRender has a row to checkpoint against -- treat that as "not ready"
+  // exactly like no row at all. A row with render_state AND delivered_at is
+  // a delivered booking mid full-video re-render: its existing videos are
+  // still valid, so it renders normally.
+  if (!deliverable || (deliverable.render_state && !deliverable.delivered_at)) {
     return NextResponse.json({ booking, deliverable: null, photos: [] });
   }
 

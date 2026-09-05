@@ -18,6 +18,11 @@ const STATUS_POLL_MS = 60000;
 // those; only retry on network failures or 5xx.
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 900;
+// A 429 (rate limited) clears on its own once the sliding window moves --
+// wait longer than the normal retry backoff before trying that one file
+// again, rather than burning all its attempts against a window that hasn't
+// moved yet.
+const RATE_LIMIT_RETRY_MS = 3000;
 
 // Stable across every retry of the SAME File object -- the browser never
 // changes a file's name/size/lastModified between attempts, whether the
@@ -45,6 +50,12 @@ function formatDate(dateStr) {
 async function classifyJsonError(res) {
   const data = await res.json().catch(() => ({}));
   const error = data.error || "Upload failed. Please try again.";
+  // 429: transient, not a permanent rejection -- a room of guests on one
+  // shared Wi-Fi (plus a host adding a big album) share a single per-IP
+  // budget. Must NOT abort the rest of the batch the way a real 4xx
+  // (uploads closed, wrong file type) does; the caller pauses and retries
+  // this one file.
+  if (res.status === 429) return { rateLimited: true, error };
   if (res.status >= 400 && res.status < 500) return { ok: false, error, retryable: false, scope: data.scope };
   return null; // 5xx -- caller falls through to its retry loop
 }
@@ -68,6 +79,11 @@ async function uploadOneFile(eventId, uploaderName, file) {
       });
       if (!presignRes.ok) {
         const classified = await classifyJsonError(presignRes);
+        if (classified?.rateLimited) {
+          lastError = classified.error;
+          if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, RATE_LIMIT_RETRY_MS));
+          continue;
+        }
         if (classified) return classified;
         lastError = "Upload failed. Please try again.";
       } else {
@@ -84,6 +100,11 @@ async function uploadOneFile(eventId, uploaderName, file) {
           });
           if (confirmRes.ok) return { ok: true };
           const classified = await classifyJsonError(confirmRes);
+          if (classified?.rateLimited) {
+            lastError = classified.error;
+            if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, RATE_LIMIT_RETRY_MS));
+            continue;
+          }
           if (classified) return classified;
           lastError = "Upload failed. Please try again.";
         } else {

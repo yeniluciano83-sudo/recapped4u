@@ -17,7 +17,14 @@ const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 export async function POST(req, { params }) {
   const { eventId } = await params;
 
-  const { success } = await checkRateLimit("event-upload-presign", req, { requests: 60, windowSeconds: 60 });
+  // Keyed per client IP. A whole room of guests on one shared event Wi-Fi
+  // (plus a host adding a large album from their camera roll) all NAT out
+  // through a single public IP, so they compete for one budget -- 60/min
+  // was far too low for that and a legit bulk upload would hit 429s. The
+  // real anti-abuse backstop for a guessed/leaked link is the per-event
+  // upload cap below (getUploadLimit), not this; this just stops the
+  // endpoint being hammered thousands of times a second.
+  const { success } = await checkRateLimit("event-upload-presign", req, { requests: 600, windowSeconds: 60 });
   if (!success) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }

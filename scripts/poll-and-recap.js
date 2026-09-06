@@ -102,7 +102,7 @@ const MIN_RENDER_SLICE_MS = 4 * 60 * 1000; // don't bother spawning for less tha
 const RENDER_LOCK_TTL_MS = RENDER_PHASE_BUDGET_MS + 20 * 60 * 1000;
 
 // See lib/processingPriority.js for hoursSinceEvent/sortByProcessingPriority
-// -- the queue-ordering logic (Luxe's advertised "24-hour priority
+// -- the queue-ordering logic (Luxe's advertised "48-hour priority
 // turnaround") that this script uses below.
 
 async function processCollectingBookings(failures) {

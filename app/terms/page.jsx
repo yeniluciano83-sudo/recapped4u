@@ -36,7 +36,7 @@ export default function TermsPage() {
         </div>
 
         <Section title="What we provide">
-          <p>Recapped For You turns photos your event's guests upload into an edited recap video and curated photo gallery. Turnaround times we quote (a few days on Highlight/Spotlight, 24 hours on Luxe without a Roast Reel) are estimates, not guarantees — delivery can take longer if guest uploads arrive late or in unusually large volume.</p>
+          <p>Recapped For You turns photos your event's guests upload into an edited recap video and curated photo gallery. Turnaround times we quote (a few days on Highlight/Spotlight, up to 48 hours on Luxe without a Roast Reel) are estimates, not guarantees — delivery can take longer if guest uploads arrive late or in unusually large volume.</p>
         </Section>
 
         <Section title="Guest-uploaded content">

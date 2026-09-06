@@ -285,7 +285,7 @@ export default function EventUploadPage() {
   // long does it take?") -- kept in sync manually since that's plain JSX
   // text, not a shared constant.
   const turnaroundText = eventInfo?.tier === "keepsake"
-    ? "Luxe recaps are usually ready within 24 hours (priority turnaround)."
+    ? "Luxe recaps are usually ready within 48 hours (priority turnaround)."
     : "Recaps are usually ready within a few days.";
 
   return (

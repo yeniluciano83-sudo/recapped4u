@@ -91,9 +91,15 @@ const RENDER_PHASE_BUDGET_MS = 45 * 60 * 1000;
 const PER_RENDER_BUDGET_MS = 35 * 60 * 1000; // cap for any single booking's slice
 const MIN_RENDER_SLICE_MS = 4 * 60 * 1000; // don't bother spawning for less than this
 
-// A booking's render lock is stale (a previous run crashed holding it, or
-// legitimately handed off) once it's older than one full slice plus slack.
-const RENDER_LOCK_TTL_MS = PER_RENDER_BUDGET_MS + 15 * 60 * 1000;
+// A booking's render lock is stale (a previous run was hard-killed holding
+// it -- a caught error releases it in a finally) once it's older than the
+// longest a single run can legitimately hold it: the whole render phase
+// (RENDER_PHASE_BUDGET_MS), plus slack for a 4K chunk that overruns the
+// budget check mid-encode. Kept well under STALE_EDITING (90 min) so a
+// genuinely hung "editing" booking is still recovered by that pass, and --
+// now that the workflow has a concurrency group -- comfortably longer than
+// any run could hold it, so two runs can't both treat a live lock as free.
+const RENDER_LOCK_TTL_MS = RENDER_PHASE_BUDGET_MS + 20 * 60 * 1000;
 
 // See lib/processingPriority.js for hoursSinceEvent/sortByProcessingPriority
 // -- the queue-ordering logic (Luxe's advertised "24-hour priority

@@ -7,10 +7,12 @@ vi.mock("@/lib/storage", () => ({
   getObjectSize: vi.fn(),
 }));
 vi.mock("@/lib/sentry", () => ({ captureError: vi.fn() }));
+vi.mock("@/lib/email", () => ({ sendUploadCapReachedEmail: vi.fn(async () => {}) }));
 
 import { supabase } from "@/lib/supabase";
 import { deleteFile, getObjectSize } from "@/lib/storage";
 import { captureError } from "@/lib/sentry";
+import { sendUploadCapReachedEmail } from "@/lib/email";
 import { POST } from "./route";
 
 function makeRequest(body) {
@@ -28,6 +30,7 @@ describe("POST /api/events/[eventId]/upload/confirm -- status guards", () => {
     getObjectSize.mockReset();
     deleteFile.mockClear();
     captureError.mockClear();
+    sendUploadCapReachedEmail.mockClear();
   });
 
   it("returns 404 when the event can't be found", async () => {
@@ -61,6 +64,7 @@ describe("POST /api/events/[eventId]/upload/confirm -- object verification and i
     getObjectSize.mockReset();
     deleteFile.mockClear();
     captureError.mockClear();
+    sendUploadCapReachedEmail.mockClear();
   });
 
   it("returns a retryable 500 when the object hasn't landed yet", async () => {
@@ -143,5 +147,87 @@ describe("POST /api/events/[eventId]/upload/confirm -- object verification and i
     expect(res.status).toBe(500);
     expect(captureError).toHaveBeenCalledTimes(1);
     expect(deleteFile).toHaveBeenCalledWith(VALID_BODY.key);
+  });
+});
+
+// getUploadLimit("free") is 20 -- chosen so the fixture booking below (no
+// tier set) exercises the DEFAULT_MAX_UPLOADS_PER_EVENT fallback (500)
+// unless a test explicitly sets one, keeping each case's cap unambiguous.
+describe("POST /api/events/[eventId]/upload/confirm -- upload-cap-reached notification", () => {
+  let sb;
+
+  beforeEach(() => {
+    sb = createSupabaseMock();
+    supabase.from.mockImplementation(sb.from);
+    getObjectSize.mockReset();
+    getObjectSize.mockResolvedValue(1024);
+    deleteFile.mockClear();
+    captureError.mockClear();
+    sendUploadCapReachedEmail.mockClear();
+  });
+
+  const BOOKING = {
+    id: "b1", uploads_closed_at: null, status: "collecting", tier: "free",
+    email: "jordan@example.com", host_name: "Jordan Smith", event_type: "Wedding",
+    upload_slug: "slug-1", upload_cap_notified_at: null,
+  };
+
+  it("sends the email and stamps upload_cap_notified_at when this insert brings the count to exactly the cap", async () => {
+    sb.mockResponse({ data: { ...BOOKING }, error: null }); // booking lookup
+    sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null }); // insert
+    sb.mockResponse({ data: null, error: null }); // status update
+    sb.mockResponse({ data: null, error: null, count: 20 }); // re-count -- free's cap
+    sb.mockResponse({ data: null, error: null }); // upload_cap_notified_at stamp
+
+    const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(200);
+    expect(sendUploadCapReachedEmail).toHaveBeenCalledTimes(1);
+    expect(sendUploadCapReachedEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "jordan@example.com", tier: "free", uploadSlug: "slug-1", bookingId: "b1" })
+    );
+    const stampCall = sb.callLog.at(-1);
+    expect(stampCall.calls.some((c) => c.method === "update" && "upload_cap_notified_at" in c.args[0])).toBe(true);
+  });
+
+  it("does not send when the count is still under the cap", async () => {
+    sb.mockResponse({ data: { ...BOOKING }, error: null });
+    sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    sb.mockResponse({ data: null, error: null, count: 19 }); // one short of free's cap (20)
+
+    const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(200);
+    expect(sendUploadCapReachedEmail).not.toHaveBeenCalled();
+  });
+
+  // The trigger's row lock (migration 033) means only the one insert that
+  // actually crosses the threshold ever sees count === cap -- this flag is
+  // the defensive backstop against re-sending regardless, and it's also
+  // what makes the "already sent" case cheap: the route skips the re-count
+  // query entirely rather than running it just to throw the answer away.
+  it("does not re-send (or even re-count) once already notified", async () => {
+    sb.mockResponse({ data: { ...BOOKING, upload_cap_notified_at: "2026-01-01T00:00:00.000Z" }, error: null });
+    sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null });
+    sb.mockResponse({ data: null, error: null });
+
+    const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(200);
+    expect(sendUploadCapReachedEmail).not.toHaveBeenCalled();
+    // Exactly 3 .from() calls: booking, insert, status update -- no 4th for
+    // a re-count that was never going to matter.
+    expect(sb.callLog.length).toBe(3);
+  });
+
+  it("still returns success to the guest even if the notification email throws", async () => {
+    sendUploadCapReachedEmail.mockRejectedValueOnce(new Error("Resend down"));
+    sb.mockResponse({ data: { ...BOOKING }, error: null });
+    sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    sb.mockResponse({ data: null, error: null, count: 20 });
+    sb.mockResponse({ data: null, error: null });
+
+    const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(200);
+    expect(captureError).toHaveBeenCalledTimes(1);
   });
 });

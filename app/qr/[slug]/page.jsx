@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { buttonStyle, shadow, radius, LoadingState } from "@/components/ui";
 import { useParams, useSearchParams } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2 } from "lucide-react";
 
 // Spotlight/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
@@ -63,6 +63,7 @@ export default function QrSharePage() {
   const [photos, setPhotos] = useState([]);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   // One shared <audio> element for every style preview button on this page --
   // starting a new preview stops whatever was already playing.
@@ -193,6 +194,30 @@ export default function QrSharePage() {
       setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustInclude: !next } : p))); // revert on failure
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  // Pairs with sendUploadCapReachedEmail (lib/email.js) -- that email points
+  // hosts back to this page specifically so they can do this: free up room
+  // against their tier's cap without waiting on a WhatsApp message to us.
+  const handleDeletePhoto = async (photo) => {
+    if (!window.confirm("Remove this photo? It won't be recovered, and the guest who uploaded it would need to add it again.")) return;
+    setDeletingId(photo.id);
+    const previous = photos;
+    setPhotos((prev) => prev.filter((p) => p.id !== photo.id)); // optimistic -- rolled back on failure below
+    try {
+      const res = await fetch(`/api/events/${slug}/uploads/${photo.id}?t=${encodeURIComponent(hostToken)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Failed to remove photo. Please try again.");
+        setPhotos(previous);
+      }
+    } catch (err) {
+      console.error("Failed to delete photo", err);
+      alert("Failed to remove photo. Please try again.");
+      setPhotos(previous);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -363,23 +388,41 @@ export default function QrSharePage() {
                 <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                  {/* A sibling delete button, not part of the star-toggle
+                      button itself -- nested <button>s aren't valid HTML,
+                      and a host needs to be able to star a photo without
+                      also risking deleting it on a mistap. Delete-only here
+                      (not duplicated in the social-cut grid below): it's a
+                      photo-level action against the shared `photos` list,
+                      so removing it here removes it from both grids at once. */}
                   {photos.map((photo) => (
-                    <button key={photo.id} onClick={() => handleToggleMustInclude(photo)} disabled={togglingId === photo.id}
-                      style={{
-                        position: "relative", aspectRatio: "1", borderRadius: 8, border: photo.mustInclude ? "2px solid #C97A3D" : "1px solid #E4DED2",
-                        padding: 0, cursor: "pointer", overflow: "hidden", backgroundImage: `url(${photo.url})`, backgroundSize: "cover", backgroundPosition: "center",
-                      }}>
-                      {photo.mustInclude && (
-                        <div style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Star size={11} color="#211F1D" fill="#211F1D" />
-                        </div>
-                      )}
-                      {photo.uploaderName && (
-                        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2px 5px", background: "rgba(33,31,29,0.65)", color: "#FFFFFF", fontSize: 9.5, fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {photo.uploaderName}
-                        </div>
-                      )}
-                    </button>
+                    <div key={photo.id} style={{ position: "relative", aspectRatio: "1" }}>
+                      <button onClick={() => handleToggleMustInclude(photo)} disabled={togglingId === photo.id}
+                        style={{
+                          position: "absolute", inset: 0, width: "100%", height: "100%", borderRadius: 8, border: photo.mustInclude ? "2px solid #C97A3D" : "1px solid #E4DED2",
+                          padding: 0, cursor: "pointer", overflow: "hidden", backgroundImage: `url(${photo.url})`, backgroundSize: "cover", backgroundPosition: "center",
+                        }}>
+                        {photo.mustInclude && (
+                          <div style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Star size={11} color="#211F1D" fill="#211F1D" />
+                          </div>
+                        )}
+                        {photo.uploaderName && (
+                          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2px 5px", background: "rgba(33,31,29,0.65)", color: "#FFFFFF", fontSize: 9.5, fontWeight: 600, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {photo.uploaderName}
+                          </div>
+                        )}
+                      </button>
+                      <button onClick={() => handleDeletePhoto(photo)} disabled={deletingId === photo.id}
+                        aria-label={`Remove photo${photo.uploaderName ? ` from ${photo.uploaderName}` : ""}`}
+                        style={{
+                          position: "absolute", top: 3, left: 3, background: "rgba(33,31,29,0.65)", border: "none", borderRadius: "50%",
+                          width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+                          cursor: deletingId === photo.id ? "default" : "pointer", opacity: deletingId === photo.id ? 0.5 : 1,
+                        }}>
+                        <Trash2 size={10} color="#FFFFFF" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}

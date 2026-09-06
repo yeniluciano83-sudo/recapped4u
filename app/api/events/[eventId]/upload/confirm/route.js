@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { deleteFile, getObjectSize } from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { captureError } from "@/lib/sentry";
+import { getUploadLimit } from "@/lib/uploadLimits";
 
 // Keep in sync with presign/route.js's MAX_FILE_SIZE_BYTES -- this is the
 // real enforcement point, since a presigned PUT URL can't cryptographically
@@ -22,7 +23,7 @@ export async function POST(req, { params }) {
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
-    .select("id, uploads_closed_at, status")
+    .select("id, uploads_closed_at, status, tier, email, host_name, event_type, upload_slug, upload_cap_notified_at")
     .eq("upload_slug", eventId)
     .single();
 
@@ -170,6 +171,44 @@ export async function POST(req, { params }) {
     .neq("status", "editing")
     .neq("status", "delivered")
     .neq("status", "cancelled");
+
+  // Tell the host the moment their event actually fills up, not the moment a
+  // guest gets turned away by it -- that's this insert specifically, not
+  // whichever one happens to be first to get rejected afterward. The
+  // uploads_enforce_cap trigger (migration 033) serializes every insert for
+  // this booking via a row lock, so exactly one insert's re-count below can
+  // ever land on the cap: once it does, every later attempt is rejected by
+  // the trigger before it can insert at all (the UPCAP branch above), so no
+  // second request ever reaches this count query believing it's the one that
+  // filled the event. upload_cap_notified_at is still checked as a cheap
+  // extra guard, and it's what lets a host who deletes photos to free room
+  // (see the DELETE handler on uploads/[uploadId]/route.js, which resets this
+  // flag) get notified again on a later re-fill instead of just once ever.
+  if (!booking.upload_cap_notified_at) {
+    const cap = getUploadLimit(booking.tier);
+    const { count: newCount } = await supabase
+      .from("uploads")
+      .select("id", { count: "exact", head: true })
+      .eq("booking_id", booking.id);
+
+    if (newCount === cap) {
+      try {
+        const { sendUploadCapReachedEmail } = await import("@/lib/email");
+        await sendUploadCapReachedEmail({
+          to: booking.email,
+          hostName: booking.host_name,
+          eventType: booking.event_type,
+          tier: booking.tier,
+          uploadSlug: booking.upload_slug,
+          bookingId: booking.id,
+        });
+      } catch (err) {
+        console.error(`Upload-cap-reached email failed for booking ${booking.id}:`, err.message);
+        captureError(err, { tags: { route: "events.upload-confirm", email: "upload-cap-reached" }, extra: { bookingId: booking.id } });
+      }
+      await supabase.from("bookings").update({ upload_cap_notified_at: new Date().toISOString() }).eq("id", booking.id);
+    }
+  }
 
   return NextResponse.json({ upload: uploadRow });
 }

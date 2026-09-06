@@ -76,7 +76,6 @@ const SHARED_TIER_FEATURES = new Set(
 
 const FAQS = [
   { q: "What exactly do we get?", a: "A full recap video, a photo gallery of every shot your guests upload, and — on Spotlight and Luxe — ready-to-post social cuts sized for Instagram, TikTok, or Reels. Every photo is polished (color graded, cleaned up) before it goes into any of them, all built from photos you and your guests already have on your phones." },
-  { q: "Is this real footage, or generated?", a: "It's all real — every photo is genuine footage from your event. Our process analyzes and scores hundreds of guest uploads to find the best moments, then automatically cuts, grades, and paces them into your final story — nothing here is synthetic or computer-generated, and nothing waits on a human editor's schedule." },
   { q: "Will our photos be shared with anyone else?", a: "No. Your photos are used only to create your event's recap. We never sell, share, or use them for advertising, and raw guest uploads are automatically deleted 30 days after final delivery." },
   { q: "How long does it take?", a: "Standard turnaround is a few days; Luxe includes 24-hour priority delivery, Roast Reel included." },
   { q: "What happens to our photos after delivery?", a: "Your gallery and video stay accessible for 2 months on Highlight, 4 months on Spotlight, and 6 months on Luxe. Free's gallery and video are downloadable for 7 days after delivery, after which they're permanently removed. Raw guest uploads are automatically removed 30 days after final delivery to protect your privacy. Your photos and data are never sold to a third party." },
@@ -829,8 +828,17 @@ export default function HomePage() {
 // These stills are AI-generated portraits (not real customer photos, not
 // real people) -- picked deliberately generic/anonymous rather than
 // anything that could be mistaken for actual event footage, since real,
-// unedited guest uploads are what the product itself delivers (see the
-// Real footage, never generated badge above).
+// unedited guest uploads are what the product itself delivers.
+//
+// No copy on this page may claim the imagery here is real or ungenerated
+// while these stills are in use. An "Is this real footage, or generated?"
+// FAQ answering "nothing here is synthetic or computer-generated" was
+// removed on 2026-09-05: it was scoped to the delivered recap, but on the
+// page "here" read as "on this page", contradicting these stills. That
+// contradiction is the leading suspect for the Google Safe Browsing
+// "Deceptive pages" listing on the homepage. Re-add such a claim only
+// alongside a visible disclosure on the illustration, or after replacing
+// these with licensed photos of real people.
 const EVENT_SCENES = [
   { id: 1, x: 0, y: 0, stagePhoto: "/images/hero-1-raw.jpg", scenePhotoRaw: "/images/scene-1-raw.jpg", scenePhotoHQ: "/images/scene-1.jpg" },
   { id: 2, x: 104, y: 0, stagePhoto: "/images/hero-2-raw.jpg", scenePhotoRaw: "/images/scene-2-raw.jpg", scenePhotoHQ: "/images/scene-2.jpg" },

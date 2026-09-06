@@ -36,6 +36,15 @@ DKIM alone. Evidence: the last 100 sends through Resend all report `delivered`.
 The one gap that still costs us: `p=none` asks receivers to do nothing about
 failures, and the dead `rua` means we can't see them either.
 
+> **Resend is the only thing that sends as `@recappedforyou.com`** — confirmed
+> 2026-09-06. No Gmail "send as" alias, no CRM, no newsletter tool. That single
+> fact is what makes enforcement safe: the usual reason to sit at `p=none` is
+> to discover senders you'd forgotten, and there are none to discover. Stripe
+> and Vercel both send from their own domains, not this one. **If that ever
+> stops being true, add the new sender's SPF include and confirm it passes
+> before it meets `p=reject`** — under an enforced policy an unauthenticated
+> sender doesn't degrade, it disappears.
+
 ---
 
 ## 1. Apex SPF — optional, and NOT what fixes sending

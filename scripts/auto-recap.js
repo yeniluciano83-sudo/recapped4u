@@ -1006,12 +1006,21 @@ async function startRender(bookingId, spec, { finalize, budgetMs = RENDER_BUDGET
 
   // A deliverable row must exist for persistRenderState's .update() to land.
   // "full" first delivery: created here, partial -- the gallery route treats
-  // a row with render_state set and no delivered_at as not-ready.
-  // "video-only": the row already exists from the prior delivery.
+  // a row with render_state set and no delivered_at as not-ready, so
+  // delivered_at is pinned null (migration 032 also drops the column's
+  // `default now()`, which used to stamp this in-progress row as delivered
+  // the moment it was inserted). finalizeFullDelivery sets it for real once
+  // every video is in R2.
+  // "video-only": the row already exists from the prior delivery -- leave
+  // its delivered_at alone.
   const { error: upsertErr } = await supabase
     .from("deliverables")
     .upsert(
-      { booking_id: bookingId, render_state: renderState, ...(finalize === "full" ? { gallery_photo_keys: spec.galleryPhotoKeys } : {}) },
+      {
+        booking_id: bookingId,
+        render_state: renderState,
+        ...(finalize === "full" ? { gallery_photo_keys: spec.galleryPhotoKeys, delivered_at: null } : {}),
+      },
       { onConflict: "booking_id" }
     );
   // Checked, not swallowed: an unchecked failure here (confirmed live --

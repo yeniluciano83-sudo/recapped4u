@@ -1,5 +1,5 @@
 export default function robots() {
-  const baseUrl = process.env.APP_URL || "https://recappedforyou.com";
+  const baseUrl = process.env.APP_URL || "https://www.recappedforyou.com";
   return {
     rules: {
       userAgent: "*",

@@ -213,7 +213,7 @@ export default function GalleryDeliveryPage() {
       <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
         <div style={{ textAlign: "center", maxWidth: 380 }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>{eventName}</h1>
+          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>{eventName}</h1>
           <p style={{ color: "#4a4642", fontSize: "14.5px", lineHeight: 1.6 }}>
             This gallery's {RETENTION_LABEL[booking.tier] || ""} retention window has ended, and the photos and video have been permanently removed.
             {booking.tier === "free" && " Pick a paid tier next time for a longer downloadable window."}
@@ -252,7 +252,7 @@ export default function GalleryDeliveryPage() {
       <div {...(lightbox ? { inert: true } : {})} className="gallery-reveal" style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 12px" }}>Your recap is ready</p>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "32px", margin: "0 0 8px", lineHeight: 1.15 }}>{eventName}</h1>
+          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "32px", margin: "0 0 8px", lineHeight: 1.15 }}>{eventName}</h1>
           <p style={{ fontSize: "14px", color: "#4a4642", margin: 0 }}>{formatDate(booking.event_date)}</p>
         </div>
 
@@ -323,7 +323,7 @@ export default function GalleryDeliveryPage() {
         </p>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "20px", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+          <h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "20px", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
             <ImageIcon size={18} color="#C97A3D" /> Photo gallery
           </h2>
           {!isDownloadOnly && (

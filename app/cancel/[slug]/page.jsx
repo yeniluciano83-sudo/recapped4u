@@ -80,7 +80,7 @@ export default function CancelBookingPage() {
     return (
       <PageShell>
         <CheckCircle2 size={32} color="#7A8B76" className="success-pop" style={{ marginBottom: 14 }} />
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: "24px", margin: "0 0 10px" }}>Booking cancelled</h1>
+        <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "24px", margin: "0 0 10px" }}>Booking cancelled</h1>
         <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
           {refunded
             ? `A full refund${result?.amountRefunded ? ` of ${result.amountRefunded}` : ""} is on its way to your original payment method.`
@@ -114,7 +114,7 @@ export default function CancelBookingPage() {
 
   return (
     <PageShell>
-      <h1 style={{ fontFamily: "Georgia, serif", fontSize: "24px", margin: "0 0 8px" }}>
+      <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "24px", margin: "0 0 8px" }}>
         Cancel {booking.host_name.split(" ")[0]}'s {booking.event_type}?
       </h1>
       <p style={{ color: "#4a4642", fontSize: "13px", margin: "0 0 24px" }}>

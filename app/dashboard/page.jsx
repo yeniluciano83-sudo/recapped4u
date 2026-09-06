@@ -166,7 +166,7 @@ export default function Dashboard() {
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "28px" }}>
           <div>
             <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "0 0 6px" }}>Recapped For You</p>
-            <h1 style={{ fontFamily: "Georgia, serif", fontSize: "28px", margin: 0 }}>Your events</h1>
+            <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "28px", margin: 0 }}>Your events</h1>
           </div>
           <button onClick={() => setShowQuoteForm(true)} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px", borderRadius: "10px", border: "1px solid #C97A3D", background: "#FBEEE0", color: "#C97A3D", fontSize: "13px", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
             <Plus size={15} /> Custom quote
@@ -235,7 +235,7 @@ export default function Dashboard() {
         <div onClick={closeQuoteForm} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: "20px" }}>
           <div ref={quoteModalRef} role="dialog" aria-modal="true" aria-labelledby={quoteModalTitleId} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "440px", maxHeight: "90vh", overflowY: "auto", background: "#FFFFFF", borderRadius: "16px", padding: "26px 24px", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
-              <h2 id={quoteModalTitleId} style={{ fontFamily: "Georgia, serif", fontSize: "20px", margin: 0 }}>Custom quote</h2>
+              <h2 id={quoteModalTitleId} style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "20px", margin: 0 }}>Custom quote</h2>
               <button onClick={closeQuoteForm} aria-label="Close" style={{ background: "none", border: "none", cursor: "pointer", color: "#8a857d", padding: "4px" }}><X size={18} /></button>
             </div>
 
@@ -337,7 +337,7 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", justifyContent: "flex-end", zIndex: 50 }}>
       <div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "380px", height: "100%", background: "#FFFFFF", borderLeft: "1px solid #E4DED2", padding: "28px 22px", overflowY: "auto", boxSizing: "border-box" }}>
         <button onClick={onClose} style={{ background: "none", border: "none", color: "#8a857d", fontSize: "13px", cursor: "pointer", marginBottom: "18px", padding: 0 }}>← Back to list</button>
-        <h2 id={titleId} style={{ fontFamily: "Georgia, serif", fontSize: "22px", margin: "0 0 4px" }}>{booking.host_name}</h2>
+        <h2 id={titleId} style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "22px", margin: "0 0 4px" }}>{booking.host_name}</h2>
         <p style={{ color: "#6b655c", fontSize: "14px", margin: "0 0 22px" }}>
           {booking.event_type} · {formatDate(booking.event_date)}{booking.event_end_date ? ` – ${formatDate(booking.event_end_date)}` : ""}
         </p>

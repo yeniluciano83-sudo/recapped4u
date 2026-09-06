@@ -287,7 +287,7 @@ export default function HostUploadPage() {
 
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <p style={{ fontSize: "13px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", marginBottom: "10px", fontWeight: 600 }}>Your own upload page</p>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "34px", lineHeight: 1.15, margin: "0 0 8px" }}>{eventName}</h1>
+          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "34px", lineHeight: 1.15, margin: "0 0 8px" }}>{eventName}</h1>
           <p style={{ fontSize: "15px", color: "#4a4642", margin: 0 }}>Add photos straight from your own camera roll</p>
         </div>
 

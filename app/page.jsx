@@ -232,7 +232,7 @@ export default function HomePage() {
         @media (prefers-reduced-motion: reduce) {
           .how-step-circle { opacity: 1; transform: none; animation: none; }
         }
-        .how-step-title { font-family: Georgia, serif; font-size: 17px; font-weight: 700; margin: 12px 0 5px; }
+        .how-step-title { font-family: var(--font-fraunces), Georgia, serif; font-size: clamp(17px, 1.7vw, 20px); font-weight: 700; margin: 12px 0 5px; }
         .how-step-desc { font-size: 13.5px; color: #4a4642; line-height: 1.55; max-width: 480px; }
         @media (min-width: 760px) {
           .how-timeline { flex-direction: row; align-items: flex-start; }
@@ -551,10 +551,10 @@ export default function HomePage() {
         <p style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 16 }}>
           Event recap videos & photo galleries
         </p>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 40, lineHeight: 1.15, margin: "0 0 18px" }}>
+        <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(38px, 8.5vw, 68px)", lineHeight: 1.08, letterSpacing: "-0.015em", margin: "0 0 18px" }}>
           Your event, recapped.
         </h1>
-        <p style={{ fontSize: 16, color: "#4a4642", lineHeight: 1.6, margin: "0 0 28px" }}>
+        <p style={{ fontSize: "clamp(16.5px, 1.7vw, 19px)", color: "#4a4642", lineHeight: 1.65, margin: "0 0 28px" }}>
           You and your guests upload the shots. We polish, edit, and deliver a full recap video, social cuts, and a gallery — with an optional splash of humor.
         </p>
 
@@ -566,13 +566,13 @@ export default function HomePage() {
         <div style={{ width: "min(460px, 92vw)", margin: "0 auto 10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "center" }}>
           <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
             <img src={SAMPLE_PAIRS[heroPairIndex].raw} alt="A guest-uploaded photo, before editing" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
-            <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
+            <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
           </div>
           <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: "rotate(3deg)" }}>
             <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
               <img src={SAMPLE_PAIRS[heroPairIndex].polished} alt="The same photo, polished by our pipeline" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
+            <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "var(--font-fraunces), Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
           </div>
         </div>
 
@@ -649,7 +649,7 @@ export default function HomePage() {
               boxShadow: t.highlight ? "0 10px 26px rgba(201,122,61,0.22)" : "0 3px 10px rgba(33,31,29,0.05)",
             }}>
               {t.highlight ? (
-                <span style={{ position: "absolute", top: -11, left: 16, background: "#C97A3D", color: "#211F1D", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999 }}>
+                <span style={{ position: "absolute", top: -11, left: 16, background: "#C97A3D", color: "#211F1D", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999 }}>
                   Most popular
                 </span>
               ) : (
@@ -662,8 +662,8 @@ export default function HomePage() {
                 <span style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</span>
                 <span style={{ color: "#C97A3D", fontWeight: 700 }}><CountUpPrice value={t.price} /></span>
               </div>
-              <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 12px" }}>{t.tagline}</p>
-              <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 13 }}>
+              <p style={{ fontSize: 15, color: "#4a4642", margin: "0 0 12px" }}>{t.tagline}</p>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 15 }}>
                 {t.features.map((f) => {
                   const shared = SHARED_TIER_FEATURES.has(f);
                   return (
@@ -686,8 +686,8 @@ export default function HomePage() {
             <span style={{ fontWeight: 700, fontSize: 15.5 }}>Roast Reel</span>
             <span style={{ fontSize: 11.5, color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Specialty add-on</span>
           </div>
-          <p style={{ fontSize: 14, fontWeight: 600, margin: "0 0 8px" }}>Your recap, but make it savage. Affectionately.</p>
-          <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 14px", maxWidth: 520 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, margin: "0 0 8px" }}>Your recap, but make it savage. Affectionately.</p>
+          <p style={{ fontSize: 15, color: "#4a4642", margin: "0 0 14px", maxWidth: 520 }}>
             Witty, affectionate commentary layered over your photos — every roasted cut, whether it's your full recap video or a social cut, comes with a caption-free version alongside it. Every tier gets Light for free — only Spotlight and Luxe can turn up the heat to Lukewarm or Hot. Available for any event type.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -723,7 +723,7 @@ export default function HomePage() {
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                   <Flame size={13} color="#C97A3D" style={{ flexShrink: 0, marginTop: 3 }} />
-                  <p style={{ margin: 0, fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13.5, color: "#211F1D", lineHeight: 1.5 }}>{p.roast}</p>
+                  <p style={{ margin: 0, fontFamily: "var(--font-fraunces), Georgia, serif", fontStyle: "italic", fontSize: 15, color: "#211F1D", lineHeight: 1.5 }}>{p.roast}</p>
                 </div>
               </div>
             ))}
@@ -763,11 +763,11 @@ export default function HomePage() {
             <div key={i} style={{ ...cardStyle, padding: 0, borderLeft: isOpen ? "3px solid #C97A3D" : "1px solid #E4DED2", background: isOpen ? "#FFFDF9" : cardStyle.background, transition: "border-color 0.2s, background 0.2s" }}>
               <button onClick={() => setOpenFaq(isOpen ? null : i)} aria-expanded={isOpen} className="press-btn"
                 style={{ width: "100%", textAlign: "left", background: "none", border: "none", color: "#211F1D", padding: 18, fontSize: 14.5, fontWeight: 600, cursor: "pointer", display: "flex", gap: 14, alignItems: "center" }}>
-                <span style={{ fontFamily: "Georgia, serif", fontSize: 13, color: isOpen ? "#C97A3D" : "#C9BFA9", flexShrink: 0, minWidth: 22 }}>{String(i + 1).padStart(2, "0")}</span>
+                <span style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: 13, color: isOpen ? "#C97A3D" : "#C9BFA9", flexShrink: 0, minWidth: 22 }}>{String(i + 1).padStart(2, "0")}</span>
                 <span style={{ flex: 1 }}>{f.q}</span>
                 <ChevronRight size={16} color={isOpen ? "#C97A3D" : "#211F1D"} style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }} />
               </button>
-              {isOpen && <p style={{ padding: "0 18px 18px 54px", fontSize: 13.5, color: "#4a4642", lineHeight: 1.6, margin: 0 }}>{f.a}</p>}
+              {isOpen && <p style={{ padding: "0 18px 18px 54px", fontSize: 15, color: "#4a4642", lineHeight: 1.6, margin: 0 }}>{f.a}</p>}
             </div>
             );
           })}
@@ -778,13 +778,13 @@ export default function HomePage() {
       <Section id="about" refs={sectionRefs} title="About" icon={<Star size={20} color="#C97A3D" />} band="tint">
         <div style={{ position: "relative", maxWidth: 620, paddingLeft: 24, borderLeft: "3px solid #C97A3D" }}>
           <Quote aria-hidden="true" size={72} color="#C97A3D" style={{ position: "absolute", top: -18, left: -8, opacity: 0.12, transform: "scaleX(-1)" }} />
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 19, color: "#211F1D", lineHeight: 1.55, marginBottom: 18, position: "relative" }}>
+          <p style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontStyle: "italic", fontSize: "clamp(18px, 1.9vw, 22px)", color: "#211F1D", lineHeight: 1.55, marginBottom: 18, position: "relative" }}>
             Living in New York City means never running out of moments worth keeping — a wedding one weekend, a rooftop birthday the next, a block party you wandered into and didn't want to leave. The city hands you memories faster than you can hold onto them.
           </p>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 19, color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
+          <p style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontStyle: "italic", fontSize: "clamp(18px, 1.9vw, 22px)", color: "#4a4642", lineHeight: 1.7, marginBottom: 16 }}>
             That's exactly why Recapped For You exists — to gather what you and your guests captured, curate the best of it, and hand it back as a polished recap video, social cuts, and photo gallery.
           </p>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 19, color: "#4a4642", lineHeight: 1.7 }}>
+          <p style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontStyle: "italic", fontSize: "clamp(18px, 1.9vw, 22px)", color: "#4a4642", lineHeight: 1.7 }}>
             Roast Reel is the one part of this that's personal to us — we love nothing more than watching someone read their own roast and crack up. Putting a smile on people's faces is the whole point.
           </p>
         </div>
@@ -1023,9 +1023,9 @@ function Section({ id, refs, title, icon, children, subtitle, band, blob }) {
     <>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: subtitle ? 10 : 24 }}>
         {icon}
-        <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, margin: 0 }}>{title}</h2>
+        <h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(26px, 3.6vw, 34px)", lineHeight: 1.15, letterSpacing: "-0.01em", margin: 0 }}>{title}</h2>
       </div>
-      {subtitle && <p style={{ fontSize: 15, color: "#6b655c", margin: "0 0 28px", maxWidth: 520, lineHeight: 1.5 }}>{subtitle}</p>}
+      {subtitle && <p style={{ fontSize: "clamp(15px, 1.5vw, 17px)", color: "#6b655c", margin: "0 0 28px", maxWidth: 520, lineHeight: 1.5 }}>{subtitle}</p>}
       {children}
     </>
   );

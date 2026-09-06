@@ -204,7 +204,7 @@ function BookingFormInner() {
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
             <Check size={28} color="#211F1D" strokeWidth={2.5} />
           </div>
-          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>
+          <h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>
             One more step, {form.hostName.split(" ")[0]}
           </h2>
           <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
@@ -483,7 +483,7 @@ function Shell({ children }) {
 function StepBlock({ icon, title, children }) {
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>{icon}<h2 style={{ fontFamily: "Georgia, serif", fontSize: "21px", margin: 0 }}>{title}</h2></div>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>{icon}<h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "21px", margin: 0 }}>{title}</h2></div>
       {children}
     </div>
   );

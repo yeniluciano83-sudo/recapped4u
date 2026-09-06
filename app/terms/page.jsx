@@ -12,7 +12,7 @@ const BORDER = "#E4DED2";
 function Section({ title, children }) {
   return (
     <section style={{ marginBottom: 32 }}>
-      <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20, color: HEADING, margin: "0 0 10px" }}>{title}</h2>
+      <h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: 20, color: HEADING, margin: "0 0 10px" }}>{title}</h2>
       <div style={{ fontSize: 14.5, lineHeight: 1.7, color: BODY }}>{children}</div>
     </section>
   );
@@ -25,7 +25,7 @@ export default function TermsPage() {
         <a href="/" style={{ fontSize: 12.5, color: ACCENT, fontWeight: 600, textDecoration: "none" }}>← Back to Recapped For You</a>
 
         <p style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: "24px 0 8px" }}>Terms of Service</p>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 32, margin: "0 0 8px", lineHeight: 1.15 }}>The fine print</h1>
+        <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: 32, margin: "0 0 8px", lineHeight: 1.15 }}>The fine print</h1>
         <p style={{ fontSize: 13, color: MUTED, margin: "0 0 4px" }}>Last updated August 2026</p>
         <p style={{ fontSize: 13, color: MUTED, margin: "0 0 12px" }}>Recapped For You LLC, a New York limited liability company, operates this site and the services described here.</p>
 

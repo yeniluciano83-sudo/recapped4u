@@ -142,12 +142,30 @@ export default function HomePage() {
   const [heroReducedMotion] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   const [heroPairIndex, setHeroPairIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
+  // The pair shown BEHIND the current one during a crossfade -- previously
+  // the two hero photos hard-cut every 4s with no transition at all, the
+  // only auto-playing animation on the site and the first thing every
+  // visitor sees. Tracked as its own state (not derived as "heroPairIndex -
+  // 1") because the dot buttons below let a visitor jump to an arbitrary
+  // pair out of sequence -- deriving "previous" by simple subtraction would
+  // show the wrong backdrop photo on a manual jump. Updated HERO_FADE_MS
+  // after heroPairIndex changes, once the fade-in below has actually
+  // finished, so the backdrop is always whatever was really on screen a
+  // moment ago, however that change happened.
+  const [heroPrevPairIndex, setHeroPrevPairIndex] = useState(0);
 
   useEffect(() => {
     if (heroPaused || heroReducedMotion) return;
     const timer = setTimeout(() => { setHeroPairIndex((i) => (i + 1) % SAMPLE_PAIRS.length); }, 4000);
     return () => clearTimeout(timer);
   }, [heroPairIndex, heroPaused, heroReducedMotion]);
+
+  // Keep in sync with the "500ms" in .hero-fade-in's animation below.
+  const HERO_FADE_MS = 500;
+  useEffect(() => {
+    const t = setTimeout(() => setHeroPrevPairIndex(heroPairIndex), HERO_FADE_MS);
+    return () => clearTimeout(t);
+  }, [heroPairIndex]);
 
   const scrollTo = (id) => {
     setMobileMenuOpen(false);
@@ -215,6 +233,20 @@ export default function HomePage() {
         .nav-panel-enter { animation: nav-panel-in 200ms ease-out; }
         @media (prefers-reduced-motion: reduce) {
           .nav-panel-enter { animation: none; }
+        }
+
+        /* Crossfade for the hero before/after pair -- previously a hard
+           <img src> swap every 4s, the only auto-playing animation on the
+           site and the first thing every visitor sees. The static backdrop
+           image underneath (heroPrevPairIndex, no animation of its own) is
+           what makes this read as old-photo-to-new rather than a fade
+           through the panel's own background -- see the comment above the
+           two <img> pairs. 500ms here must match HERO_FADE_MS in this
+           component, which is when the backdrop itself catches up. */
+        @keyframes hero-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .hero-fade-in { animation: hero-fade-in 500ms ease-out; }
+        @media (prefers-reduced-motion: reduce) {
+          .hero-fade-in { animation: none; }
         }
 
         .how-timeline { display: flex; flex-direction: column; }
@@ -577,13 +609,22 @@ export default function HomePage() {
             raw photo labeled "Uploaded" next to a rotated "Polished" print,
             cycling through the real SAMPLE_PAIRS output. */}
         <div style={{ width: "min(460px, 92vw)", margin: "0 auto 10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "center" }}>
+          {/* Two stacked images per photo, not one -- the previous pair sits
+              static underneath while the current one fades in on top
+              (.hero-fade-in), which is what makes this a crossfade rather
+              than a fade-through-the-panel-background. The backdrop image is
+              aria-hidden with an empty alt: it's not new information, just
+              what's still visually present while the real one (the top
+              layer, which keeps the real alt text) finishes arriving. */}
           <div style={{ position: "relative", aspectRatio: "4 / 5", borderRadius: 10, overflow: "hidden", border: "1px solid #E4DED2" }}>
-            <img src={SAMPLE_PAIRS[heroPairIndex].raw} alt="A guest-uploaded photo, before editing" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
+            <img src={SAMPLE_PAIRS[heroPrevPairIndex].raw} alt="" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
+            <img key={heroPairIndex} src={SAMPLE_PAIRS[heroPairIndex].raw} alt="A guest-uploaded photo, before editing" className="hero-fade-in" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "saturate(0.82) contrast(0.95)" }} />
             <span style={{ position: "absolute", bottom: 8, left: 8, fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", padding: "4px 8px", borderRadius: 999, color: "#FFFFFF", background: "rgba(122,139,118,0.9)" }}>Uploaded</span>
           </div>
           <div style={{ background: "#FFFFFF", padding: "8px 8px 16px", borderRadius: 4, boxShadow: "0 6px 16px rgba(33,31,29,0.18)", transform: "rotate(3deg)" }}>
-            <div style={{ aspectRatio: "4 / 5", overflow: "hidden" }}>
-              <img src={SAMPLE_PAIRS[heroPairIndex].polished} alt="The same photo, polished by our pipeline" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <div style={{ position: "relative", aspectRatio: "4 / 5", overflow: "hidden" }}>
+              <img src={SAMPLE_PAIRS[heroPrevPairIndex].polished} alt="" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <img key={heroPairIndex} src={SAMPLE_PAIRS[heroPairIndex].polished} alt="The same photo, polished by our pipeline" className="hero-fade-in" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             <p style={{ margin: "8px 0 0", textAlign: "center", fontFamily: "var(--font-fraunces), Georgia, serif", fontStyle: "italic", fontSize: 11.5, color: "#C97A3D" }}>Polished</p>
           </div>

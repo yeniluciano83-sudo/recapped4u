@@ -204,7 +204,7 @@ function BookingFormInner() {
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
             <Check size={28} color="#211F1D" strokeWidth={2.5} />
           </div>
-          <h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "26px", margin: "0 0 10px" }}>
+          <h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(24px, 3.2vw, 30px)", margin: "0 0 10px" }}>
             One more step, {form.hostName.split(" ")[0]}
           </h2>
           <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, maxWidth: 340, margin: "0 auto" }}>
@@ -220,7 +220,7 @@ function BookingFormInner() {
       {confirmError && (
         <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "14px 16px", borderRadius: "10px", background: "#FBEEE0", border: "1px solid #E4DED2", marginBottom: "20px" }}>
           <AlertTriangle size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "2px" }} />
-          <p style={{ fontSize: "13px", color: "#4a4642", margin: 0, lineHeight: 1.5 }}>That confirmation link is invalid or expired. If you're trying to activate a free booking, check your email for the most recent confirmation link, or book again below.</p>
+          <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.5 }}>That confirmation link is invalid or expired. If you're trying to activate a free booking, check your email for the most recent confirmation link, or book again below.</p>
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
@@ -264,8 +264,8 @@ function BookingFormInner() {
                   </span>
                   <span style={{ color: "#C97A3D", fontWeight: 700 }}>{t.price}</span>
                 </div>
-                <p style={{ fontSize: "13px", color: "#4a4642", margin: "4px 0 10px" }}>{t.tagline}</p>
-                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: "13px" }}>
+                <p style={{ fontSize: 15, color: "#4a4642", margin: "4px 0 10px" }}>{t.tagline}</p>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 15 }}>
                   {t.features.map((f) => {
                     const shared = SHARED_TIER_FEATURES.has(f);
                     return (
@@ -283,7 +283,7 @@ function BookingFormInner() {
 
       {step === 3 && (
         <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
-          <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
+          <p style={{ fontSize: 15, color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
             {isSocialCutsFormat
               ? "Choose a theme for your social cuts, or pick \"No theme (no music)\" for a clean, true-to-life default look — one of the two is required, since this is the only style picker for social-cuts-only delivery."
               : "Optional — pick one if you have a preference. Skip it for a clean, true-to-life default look. Each theme sets the color grade applied to every photo, not just the music — so it's still worth picking one even if you turn the soundtrack off below."}
@@ -483,7 +483,7 @@ function Shell({ children }) {
 function StepBlock({ icon, title, children }) {
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>{icon}<h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "21px", margin: 0 }}>{title}</h2></div>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>{icon}<h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(19px, 2.1vw, 23px)", margin: 0 }}>{title}</h2></div>
       {children}
     </div>
   );

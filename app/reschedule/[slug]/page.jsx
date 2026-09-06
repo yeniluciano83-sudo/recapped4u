@@ -84,8 +84,8 @@ export default function ReschedulePage() {
     return (
       <PageShell>
         <CheckCircle2 size={32} color="#7A8B76" className="success-pop" style={{ marginBottom: 14 }} />
-        <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "24px", margin: "0 0 10px" }}>You're moved to {result.newDate}</h1>
-        <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
+        <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(21px, 2.6vw, 26px)", margin: "0 0 10px" }}>You're moved to {result.newDate}</h1>
+        <p style={{ color: "#4a4642", fontSize: 15, lineHeight: 1.6 }}>
           A confirmation email is on its way. Your guest upload link and QR code stay exactly the same — no need to re-share anything.
         </p>
       </PageShell>
@@ -96,7 +96,7 @@ export default function ReschedulePage() {
     return (
       <PageShell>
         <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
-        <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
+        <p style={{ color: "#4a4642", fontSize: 15, lineHeight: 1.6 }}>
           This booking has been cancelled, so there's no event to reschedule.
         </p>
       </PageShell>
@@ -107,7 +107,7 @@ export default function ReschedulePage() {
     return (
       <PageShell>
         <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
-        <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
+        <p style={{ color: "#4a4642", fontSize: 15, lineHeight: 1.6 }}>
           {booking.status === "delivered"
             ? "This event has already been delivered and can't be rescheduled online — "
             : "This is within 24 hours of your event (or already being processed), so it's too late to reschedule online — "}
@@ -120,15 +120,15 @@ export default function ReschedulePage() {
   return (
     <PageShell>
       <Calendar size={26} color="#C97A3D" style={{ marginBottom: 14 }} />
-      <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "24px", margin: "0 0 8px" }}>
+      <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(21px, 2.6vw, 26px)", margin: "0 0 8px" }}>
         Reschedule {booking.host_name.split(" ")[0]}'s {booking.event_type}
       </h1>
-      <p style={{ color: "#4a4642", fontSize: "13px", margin: "0 0 24px" }}>
+      <p style={{ color: "#4a4642", fontSize: 15, margin: "0 0 24px" }}>
         Currently {formatDate(booking.event_date)} · {TIER_LABELS[booking.tier] || booking.tier}
       </p>
 
       <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2", marginBottom: "20px", textAlign: "left" }}>
-        <p style={{ fontSize: "13px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
           Pick a new date at least 24 hours from now — it's free, and your guest upload link and QR code won't change.
         </p>
       </div>
@@ -142,7 +142,7 @@ export default function ReschedulePage() {
         style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", marginBottom: "16px", boxSizing: "border-box" }}
       />
 
-      {error && <p role="alert" style={{ color: "#C97A3D", fontSize: "13px", marginBottom: "14px" }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "#C97A3D", fontSize: 15, marginBottom: "14px" }}>{error}</p>}
 
       <button
         onClick={handleSubmit}

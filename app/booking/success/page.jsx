@@ -13,7 +13,7 @@ function SuccessContent() {
       <div className="success-pop" style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
         <Check size={30} color="#211F1D" strokeWidth={2.5} />
       </div>
-      <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "28px", margin: "0 0 12px" }}>{isEmailConfirm ? "Booking activated" : "Payment confirmed"}</h1>
+      <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(24px, 3.2vw, 30px)", margin: "0 0 12px" }}>{isEmailConfirm ? "Booking activated" : "Payment confirmed"}</h1>
       <p style={{ color: "#4a4642", fontSize: "15px", lineHeight: 1.6, margin: 0 }}>
         Your booking is complete. Check your email for your guest upload link and confirmation details.
       </p>

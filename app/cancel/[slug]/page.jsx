@@ -80,8 +80,8 @@ export default function CancelBookingPage() {
     return (
       <PageShell>
         <CheckCircle2 size={32} color="#7A8B76" className="success-pop" style={{ marginBottom: 14 }} />
-        <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "24px", margin: "0 0 10px" }}>Booking cancelled</h1>
-        <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
+        <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(21px, 2.6vw, 26px)", margin: "0 0 10px" }}>Booking cancelled</h1>
+        <p style={{ color: "#4a4642", fontSize: 15, lineHeight: 1.6 }}>
           {refunded
             ? `A full refund${result?.amountRefunded ? ` of ${result.amountRefunded}` : ""} is on its way to your original payment method.`
             : "A confirmation email is on its way. This cancellation wasn't eligible for a refund."}
@@ -94,7 +94,7 @@ export default function CancelBookingPage() {
     return (
       <PageShell>
         <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
-        <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
+        <p style={{ color: "#4a4642", fontSize: 15, lineHeight: 1.6 }}>
           This event has already been delivered and can't be cancelled online — <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D" }}>message us on WhatsApp</a> and we'll help.
         </p>
       </PageShell>
@@ -105,7 +105,7 @@ export default function CancelBookingPage() {
     return (
       <PageShell>
         <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
-        <p style={{ color: "#4a4642", fontSize: "14px", lineHeight: 1.6 }}>
+        <p style={{ color: "#4a4642", fontSize: 15, lineHeight: 1.6 }}>
           This event's recap is already being put together and can't be cancelled online — <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D" }}>message us on WhatsApp</a> and we'll help.
         </p>
       </PageShell>
@@ -114,22 +114,22 @@ export default function CancelBookingPage() {
 
   return (
     <PageShell>
-      <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "24px", margin: "0 0 8px" }}>
+      <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(21px, 2.6vw, 26px)", margin: "0 0 8px" }}>
         Cancel {booking.host_name.split(" ")[0]}'s {booking.event_type}?
       </h1>
-      <p style={{ color: "#4a4642", fontSize: "13px", margin: "0 0 24px" }}>
+      <p style={{ color: "#4a4642", fontSize: 15, margin: "0 0 24px" }}>
         {formatDate(booking.event_date)} · {TIER_LABELS[booking.tier] || booking.tier}
       </p>
 
       <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2", marginBottom: "24px", textAlign: "left" }}>
-        <p style={{ fontSize: "13px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
           {info.refundEligible
             ? "You're more than 24 hours out from your event, so cancelling now qualifies for a full refund."
             : "This is within 24 hours of your event, so this cancellation won't be eligible for a refund per our policy."}
         </p>
       </div>
 
-      {error && <p role="alert" style={{ color: "#C97A3D", fontSize: "13px", marginBottom: "14px" }}>{error}</p>}
+      {error && <p role="alert" style={{ color: "#C97A3D", fontSize: 15, marginBottom: "14px" }}>{error}</p>}
 
       <button
         onClick={handleCancel}

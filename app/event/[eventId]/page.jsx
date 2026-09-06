@@ -301,8 +301,8 @@ export default function EventUploadPage() {
 
       <div style={{ width: "100%", maxWidth: "480px", padding: "40px 24px 0" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
-          <p style={{ fontSize: "13px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", marginBottom: "10px", fontWeight: 600 }}>You're invited to add to the story</p>
-          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "34px", lineHeight: 1.15, margin: "0 0 8px" }}>{eventName}</h1>
+          <p style={{ fontSize: 15, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", marginBottom: "10px", fontWeight: 600 }}>You're invited to add to the story</p>
+          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(28px, 4.2vw, 40px)", lineHeight: 1.15, margin: "0 0 8px" }}>{eventName}</h1>
           <p style={{ fontSize: "15px", color: "#4a4642", margin: 0 }}>{eventDate}</p>
         </div>
 
@@ -315,7 +315,7 @@ export default function EventUploadPage() {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "16px 8px", textAlign: "center" }}>
               <Check size={26} color="#7A8B76" className="success-pop" />
               <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is ready!</p>
-              <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
                 The video and photo gallery have been delivered to the host's inbox.
               </p>
               <a href={`/gallery/${eventInfo.id}`}
@@ -327,12 +327,12 @@ export default function EventUploadPage() {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
               <Sparkles size={24} color="#C97A3D" className="pulse" />
               <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is being made right now!</p>
-              <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>{turnaroundText}</p>
+              <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>{turnaroundText}</p>
             </div>
           ) : uploadsClosed ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
               <AlertTriangle size={24} color="#C97A3D" />
-              <p style={{ fontSize: "14px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
                 {notActivated
                   ? "This event hasn't been activated yet."
                   : isCancelled

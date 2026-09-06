@@ -258,8 +258,8 @@ export default function QrSharePage() {
       <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif", padding: "40px 20px" }}>
         <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
           <AlertTriangle size={28} color="#C97A3D" style={{ marginBottom: 14 }} />
-          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: 24, margin: "0 0 10px" }}>This event has been cancelled</h1>
-          <p style={{ color: "#4a4642", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(21px, 2.6vw, 26px)", margin: "0 0 10px" }}>This event has been cancelled</h1>
+          <p style={{ color: "#4a4642", fontSize: 15, lineHeight: 1.6, margin: 0 }}>
             The guest upload link for {eventName} is no longer active. If this wasn't expected, <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#C97A3D" }}>message us on WhatsApp</a> and we'll help.
           </p>
         </div>
@@ -272,14 +272,14 @@ export default function QrSharePage() {
       <main className="no-print" style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
         <div style={{ width: "100%", maxWidth: 480, textAlign: "center" }}>
           <p style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 10 }}>Your guest QR code</p>
-          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: 28, margin: "0 0 6px" }}>{eventName}</h1>
-          <p style={{ color: "#4a4642", fontSize: 14, marginBottom: 28 }}>{formatDate(eventInfo.event_date)}</p>
+          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(24px, 3.2vw, 30px)", margin: "0 0 6px" }}>{eventName}</h1>
+          <p style={{ color: "#4a4642", fontSize: 15, marginBottom: 28 }}>{formatDate(eventInfo.event_date)}</p>
 
           <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 24, marginBottom: 24, display: "inline-block", border: "1px solid #E4DED2" }}>
             <img src={qrImageUrl} alt="Guest upload QR code" width={240} height={240} style={{ display: "block" }} />
           </div>
 
-          <p style={{ fontSize: 13, color: "#6b655c", marginBottom: 24, wordBreak: "break-all" }}>{uploadUrl}</p>
+          <p style={{ fontSize: 15, color: "#6b655c", marginBottom: 24, wordBreak: "break-all" }}>{uploadUrl}</p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={handleShare} style={primaryBtnStyle}>
@@ -304,7 +304,7 @@ export default function QrSharePage() {
                 <Camera size={19} color="#C97A3D" strokeWidth={1.8} />
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 2px" }}>Add your own photos</p>
+                <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 2px" }}>Add your own photos</p>
                 <p style={{ fontSize: 12.5, color: "#6b655c", margin: 0 }}>Your own upload page — straight from your camera roll</p>
               </div>
               <ChevronRight size={18} color="#8a857d" style={{ flexShrink: 0 }} />
@@ -314,12 +314,12 @@ export default function QrSharePage() {
           {eventInfo.status === "collecting" && (
             <div style={{ marginTop: 24, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
               {eventInfo.uploads_closed_at ? (
-                <p style={{ fontSize: 13, color: "#7A8B76", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+                <p style={{ fontSize: 15, color: "#7A8B76", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
                   <CheckCircle2 size={16} /> Uploads closed — your recap will start processing within a few hours.
                 </p>
               ) : (
                 <>
-                  <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 10px", lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 15, color: "#4a4642", margin: "0 0 10px", lineHeight: 1.5 }}>
                     All your guests already uploaded? You don't have to wait for the deadline.
                   </p>
                   <button onClick={handleCloseUploads} disabled={closingUploads} style={{ ...secondaryBtnStyle, width: "100%" }}>
@@ -333,12 +333,12 @@ export default function QrSharePage() {
           {eventInfo.tier === "keepsake" && eventInfo.status === "collecting" && !eventInfo.uploads_closed_at && (
             <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
               {eventInfo.deadline_extension_hours > 0 ? (
-                <p style={{ fontSize: 13, color: "#7A8B76", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
+                <p style={{ fontSize: 15, color: "#7A8B76", display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
                   <CheckCircle2 size={16} /> Deadline extended by 2 days.
                 </p>
               ) : (
                 <>
-                  <p style={{ fontSize: 13, color: "#4a4642", margin: "0 0 10px", lineHeight: 1.5, display: "flex", alignItems: "center", gap: 8 }}>
+                  <p style={{ fontSize: 15, color: "#4a4642", margin: "0 0 10px", lineHeight: 1.5, display: "flex", alignItems: "center", gap: 8 }}>
                     <Clock size={16} color="#C97A3D" style={{ flexShrink: 0 }} /> Need more time? Luxe includes a one-time 2-day deadline extension.
                   </p>
                   <button onClick={handleExtendDeadline} disabled={extendingDeadline} style={{ ...secondaryBtnStyle, width: "100%" }}>
@@ -351,7 +351,7 @@ export default function QrSharePage() {
 
           {eventInfo.status === "collecting" && (
             <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
-              <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px" }}>Star your favorites</p>
+              <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 4px" }}>Star your favorites</p>
               <p style={{ fontSize: 12.5, color: "#4a4642", margin: "0 0 12px", lineHeight: 1.5 }}>
                 Our AI picks the best shots for your main video automatically, but it can miss a beautiful photo that scores low on technical sharpness. Star any photo that absolutely has to be in the video, regardless of what the AI thinks of it.
               </p>
@@ -387,7 +387,7 @@ export default function QrSharePage() {
 
           {isSocialCutEligible && eventInfo.status === "collecting" && (
             <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
-              <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px" }}>Your social cut</p>
+              <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 4px" }}>Your social cut</p>
               <p style={{ fontSize: 12.5, color: "#4a4642", margin: "0 0 12px", lineHeight: 1.5 }}>
                 Pick a theme for the short cut (defaults to your main style if you don't choose one, or skip its music entirely), and star any photos that absolutely have to be in it.
               </p>

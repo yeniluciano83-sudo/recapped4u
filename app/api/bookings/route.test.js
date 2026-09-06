@@ -33,6 +33,12 @@ const BASE_BODY = {
   eventType: "Party",
   eventDate: "2026-12-25",
   tier: "standard",
+  // Every existing test below is about something other than style
+  // validation (delivery format, Stripe line items, the free-tier flow,
+  // insert failures) -- it shouldn't start failing on a missing style
+  // once that's enforced. The dedicated style-requirement tests further
+  // down override this explicitly.
+  style: "cinematic",
 };
 
 describe("POST /api/bookings", () => {
@@ -78,6 +84,42 @@ describe("POST /api/bookings", () => {
     expect(res.status).toBe(200);
     const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
     expect(insertCall.args[0].delivery_format).toBe("recap");
+  });
+
+  // The form's own Continue button gates this too (lib/bookingFormValidation.js,
+  // reused directly here), but that's UX on top of this -- a request that
+  // skips the form entirely must still be rejected, not silently stored with
+  // style: null and left for the render pipeline to quietly default.
+  it("requires a style on a tier that never sees the delivery-format picker", async () => {
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "standard", style: undefined }));
+    expect(res.status).toBe(400);
+    expect(sb.callLog.length).toBe(0);
+  });
+
+  it('requires a style on "recap" (full video + social cuts) -- socialStyle being unset does not substitute', async () => {
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "recap", style: undefined }));
+    expect(res.status).toBe(400);
+    expect(sb.callLog.length).toBe(0);
+  });
+
+  it('requires a style on "video_only"', async () => {
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "keepsake", deliveryFormat: "video_only", style: undefined }));
+    expect(res.status).toBe(400);
+  });
+
+  it('requires a socialStyle on "social_cuts" -- style being set does not substitute', async () => {
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "social_cuts", socialStyle: undefined }));
+    expect(res.status).toBe(400);
+    expect(sb.callLog.length).toBe(0);
+  });
+
+  it('accepts "social_cuts" with a socialStyle even though style itself is unset', async () => {
+    sb.mockResponse({ data: { id: "booking-sc" }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_sc", url: "https://checkout.stripe.com/sc" });
+
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "social_cuts", style: undefined, socialStyle: "retro" }));
+    expect(res.status).toBe(200);
   });
 
   it("persists video_only as-is for a social-cut-eligible tier", async () => {

@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { generateConfirmToken } from "@/lib/confirmToken";
 import { TIER_PRICES, SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents } from "@/lib/pricing";
+import { canProceedFromStyleStep } from "@/lib/bookingFormValidation";
 import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -28,6 +29,20 @@ export async function POST(req) {
     // form's own Continue button is just a UX nicety on top of it).
     if (SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) && !VALID_DELIVERY_FORMATS.includes(deliveryFormat)) {
       return NextResponse.json({ error: "Please choose a delivery format." }, { status: 400 });
+    }
+
+    // Same reasoning as the delivery-format check above -- the booking
+    // form's own Continue button (see lib/bookingFormValidation.js, which
+    // this reuses directly rather than a second copy of the same rule) is a
+    // UX nicety on top of this, not the actual gate. Without this, a
+    // request that skips the form entirely stored style: null and the
+    // pipeline silently defaulted to "cinematic" (enhancePhoto's own
+    // default) -- not a crash, just a video in a style the host never
+    // chose, with nothing anywhere to surface that it happened.
+    const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier);
+    const isSocialCutsFormat = isSocialCutEligible && deliveryFormat === "social_cuts";
+    if (!canProceedFromStyleStep({ isSocialCutEligible, deliveryFormat, isSocialCutsFormat, style, socialStyle })) {
+      return NextResponse.json({ error: "Please choose a theme for your recap." }, { status: 400 });
     }
 
     // The full UUID, not a truncated prefix -- this slug is the only thing

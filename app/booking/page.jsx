@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useId, useRef } from "react";
 import { fieldStyle, buttonStyle } from "@/components/ui";
+import { canProceedFromStyleStep } from "@/lib/bookingFormValidation";
 import { useSearchParams } from "next/navigation";
 import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame, AlertTriangle, Play, Pause } from "lucide-react";
 
@@ -171,12 +172,11 @@ function BookingFormInner() {
   const canProceed = () => {
     if (step === 1) return form.hostName && form.email && form.eventType && (form.eventType !== "Other" || form.eventTypeOther.trim()) && form.eventDate;
     if (step === 2) return form.tier;
-    // Only Spotlight/Luxe see the delivery-format picker at all -- every
-    // other tier only ever gets a full video, so there's nothing to require.
-    // Social-cuts-only additionally requires a theme choice (a real theme
-    // or the explicit "No theme" option) since that's the only style
-    // picker shown in that mode.
-    if (step === 3) return (!isSocialCutEligible || form.deliveryFormat) && (!isSocialCutsFormat || form.socialStyle);
+    // See lib/bookingFormValidation.js for what this actually checks and why
+    // it's a separate, tested function rather than inlined here.
+    if (step === 3) {
+      return canProceedFromStyleStep({ isSocialCutEligible, deliveryFormat: form.deliveryFormat, isSocialCutsFormat, style: form.style, socialStyle: form.socialStyle });
+    }
     return true;
   };
 
@@ -322,7 +322,13 @@ function BookingFormInner() {
 
           <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>
             {isSocialCutsFormat ? "Pick your editing theme" : "Pick your full recap video theme"}
-            {isSocialCutsFormat && <span style={{ fontWeight: 600, fontSize: "11px", color: "#C97A3D", textTransform: "uppercase", letterSpacing: "0.04em", marginLeft: "8px" }}>Required</span>}
+            {/* Required on every branch now, not just social-cuts-only --
+                this picker sets form.style whenever a full video is actually
+                being produced (every tier below Spotlight/Luxe, plus
+                Spotlight/Luxe's "recap" and "video_only" formats), and
+                canProceed() below enforces it the same way it already
+                enforced socialStyle here. */}
+            <span style={{ fontWeight: 600, fontSize: "11px", color: "#C97A3D", textTransform: "uppercase", letterSpacing: "0.04em", marginLeft: "8px" }}>Required</span>
           </div>
           <p style={{ fontSize: "12.5px", color: "#6b655c", margin: "0 0 10px", lineHeight: 1.5 }}>
             Once guests start uploading, you can star must-include photos to guarantee they make {isSocialCutsFormat ? "your social cuts" : "the video"} — even if our AI's automatic picks would've skipped them. That happens later, from your QR share page.

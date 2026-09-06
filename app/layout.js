@@ -53,7 +53,43 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`} style={{ colorScheme: "light" }}>
-      <body style={{ colorScheme: "light" }}>{children}</body>
+      <body style={{ colorScheme: "light" }}>
+        {children}
+        <style>{`
+          /* Global, site-wide -- every button/input/etc. on the site is a
+             hand-styled inline object (557 of them, see components/ui.jsx),
+             and none of them set outline, filter, or transform, so this adds
+             clean without overriding or double-applying anything. Confirmed:
+             zero existing :hover rules, zero inline filter on any button/a
+             site-wide, and every disabled state uses the real disabled
+             attribute (not just a style change), so :not(:disabled) works.
+
+             :focus-visible needs no touch/mouse gating -- browsers already
+             suppress it after a click or tap and show it only after real
+             keyboard navigation, on every device. That's the built-in
+             behavior the pseudo-class exists for. */
+          button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+            outline: 2px solid #C97A3D;
+            outline-offset: 2px;
+          }
+
+          /* Hover, unlike focus, has no such built-in protection -- gated
+             behind (hover: hover) and (pointer: fine) so it only reaches an
+             input that can genuinely hover with precision (mouse, trackpad,
+             an iPad with a Magic Keyboard). Without this, mobile Safari/Chrome
+             fake a hover on tap that can visibly stick until the next tap
+             elsewhere -- exactly the bug this guards against. */
+          @media (hover: hover) and (pointer: fine) {
+            button:not(:disabled):hover, a:hover {
+              filter: brightness(0.94);
+              transform: translateY(-1px);
+            }
+          }
+          button:not(:disabled), a {
+            transition: filter 120ms ease, transform 120ms ease, outline-color 120ms ease;
+          }
+        `}</style>
+      </body>
     </html>
   );
 }

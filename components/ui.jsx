@@ -69,6 +69,10 @@ export function cardStyle({ pad = 20, r = radius.lg, raised = "none" } = {}) {
   };
 }
 
+// Hover and focus-visible are handled globally in app/layout.js, not per
+// style here -- they apply to every native button/a/input on the site
+// (hand-styled ones included), gated correctly for touch in the hover case.
+// Adding filter/transform/outline in this object too would just double them.
 const BUTTON_BASE = {
   display: "flex",
   alignItems: "center",

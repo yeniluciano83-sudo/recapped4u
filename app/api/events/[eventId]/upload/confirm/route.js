@@ -21,9 +21,18 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }
 
+  // upload_cap_notified_at deliberately isn't in this select. It's a new
+  // column (migration 034), and the migration was pushed to production
+  // ahead of actually being run against the database -- PostgREST errors
+  // out an entire select over one unknown column, so including it here
+  // would have made THIS query fail for every booking, turning every
+  // guest's upload confirm into a 404 the moment this code went live.
+  // Confirmed the migration was still outstanding while this shipped.
+  // It's re-fetched on its own, inside a try/catch, right where the
+  // cap-notification feature actually needs it -- see below.
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
-    .select("id, uploads_closed_at, status, tier, email, host_name, event_type, upload_slug, upload_cap_notified_at")
+    .select("id, uploads_closed_at, status, tier, email, host_name, event_type, upload_slug")
     .eq("upload_slug", eventId)
     .single();
 
@@ -184,30 +193,55 @@ export async function POST(req, { params }) {
   // extra guard, and it's what lets a host who deletes photos to free room
   // (see the DELETE handler on uploads/[uploadId]/route.js, which resets this
   // flag) get notified again on a later re-fill instead of just once ever.
-  if (!booking.upload_cap_notified_at) {
-    const cap = getUploadLimit(booking.tier);
-    const { count: newCount } = await supabase
-      .from("uploads")
-      .select("id", { count: "exact", head: true })
-      .eq("booking_id", booking.id);
+  //
+  // Fetched here, on its own, and every step below checks its own `error`
+  // explicitly rather than relying on a try/catch -- supabase-js resolves a
+  // PostgREST failure (including "unknown column", the exact shape of
+  // upload_cap_notified_at not existing yet if migration 034 hasn't run) as
+  // a normal { data: null, error } value, not a thrown exception. This
+  // entire block is optional relative to the guest's upload actually
+  // succeeding, so any failure anywhere in it is logged and walked away
+  // from, never allowed to affect the response below.
+  try {
+    const { data: capState, error: capStateError } = await supabase
+      .from("bookings")
+      .select("upload_cap_notified_at")
+      .eq("id", booking.id)
+      .maybeSingle();
 
-    if (newCount === cap) {
-      try {
-        const { sendUploadCapReachedEmail } = await import("@/lib/email");
-        await sendUploadCapReachedEmail({
-          to: booking.email,
-          hostName: booking.host_name,
-          eventType: booking.event_type,
-          tier: booking.tier,
-          uploadSlug: booking.upload_slug,
-          bookingId: booking.id,
-        });
-      } catch (err) {
-        console.error(`Upload-cap-reached email failed for booking ${booking.id}:`, err.message);
-        captureError(err, { tags: { route: "events.upload-confirm", email: "upload-cap-reached" }, extra: { bookingId: booking.id } });
+    if (capStateError) {
+      console.error(`Could not read upload_cap_notified_at for booking ${booking.id} (has migration 034 run?):`, capStateError.message);
+    } else if (!capState?.upload_cap_notified_at) {
+      const cap = getUploadLimit(booking.tier);
+      const { count: newCount, error: countError } = await supabase
+        .from("uploads")
+        .select("id", { count: "exact", head: true })
+        .eq("booking_id", booking.id);
+
+      if (!countError && newCount === cap) {
+        try {
+          const { sendUploadCapReachedEmail } = await import("@/lib/email");
+          await sendUploadCapReachedEmail({
+            to: booking.email,
+            hostName: booking.host_name,
+            eventType: booking.event_type,
+            tier: booking.tier,
+            uploadSlug: booking.upload_slug,
+            bookingId: booking.id,
+          });
+        } catch (err) {
+          console.error(`Upload-cap-reached email failed for booking ${booking.id}:`, err.message);
+          captureError(err, { tags: { route: "events.upload-confirm", email: "upload-cap-reached" }, extra: { bookingId: booking.id } });
+        }
+        await supabase.from("bookings").update({ upload_cap_notified_at: new Date().toISOString() }).eq("id", booking.id);
       }
-      await supabase.from("bookings").update({ upload_cap_notified_at: new Date().toISOString() }).eq("id", booking.id);
     }
+  } catch (err) {
+    // Belt and braces for a genuine exception (not the missing-column case
+    // above, which resolves as a value -- this is for anything else, e.g. a
+    // network-level failure) -- still never allowed past this point.
+    console.error(`Upload-cap-reached check failed for booking ${booking.id}:`, err.message);
+    captureError(err, { tags: { route: "events.upload-confirm", step: "cap-notification" }, extra: { bookingId: booking.id } });
   }
 
   return NextResponse.json({ upload: uploadRow });

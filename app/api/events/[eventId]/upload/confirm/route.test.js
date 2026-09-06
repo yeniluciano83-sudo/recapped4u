@@ -169,13 +169,14 @@ describe("POST /api/events/[eventId]/upload/confirm -- upload-cap-reached notifi
   const BOOKING = {
     id: "b1", uploads_closed_at: null, status: "collecting", tier: "free",
     email: "jordan@example.com", host_name: "Jordan Smith", event_type: "Wedding",
-    upload_slug: "slug-1", upload_cap_notified_at: null,
+    upload_slug: "slug-1",
   };
 
   it("sends the email and stamps upload_cap_notified_at when this insert brings the count to exactly the cap", async () => {
     sb.mockResponse({ data: { ...BOOKING }, error: null }); // booking lookup
     sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null }); // insert
     sb.mockResponse({ data: null, error: null }); // status update
+    sb.mockResponse({ data: { upload_cap_notified_at: null }, error: null }); // cap-state read
     sb.mockResponse({ data: null, error: null, count: 20 }); // re-count -- free's cap
     sb.mockResponse({ data: null, error: null }); // upload_cap_notified_at stamp
 
@@ -193,6 +194,7 @@ describe("POST /api/events/[eventId]/upload/confirm -- upload-cap-reached notifi
     sb.mockResponse({ data: { ...BOOKING }, error: null });
     sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null });
     sb.mockResponse({ data: null, error: null });
+    sb.mockResponse({ data: { upload_cap_notified_at: null }, error: null });
     sb.mockResponse({ data: null, error: null, count: 19 }); // one short of free's cap (20)
 
     const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
@@ -206,16 +208,38 @@ describe("POST /api/events/[eventId]/upload/confirm -- upload-cap-reached notifi
   // what makes the "already sent" case cheap: the route skips the re-count
   // query entirely rather than running it just to throw the answer away.
   it("does not re-send (or even re-count) once already notified", async () => {
-    sb.mockResponse({ data: { ...BOOKING, upload_cap_notified_at: "2026-01-01T00:00:00.000Z" }, error: null });
+    sb.mockResponse({ data: { ...BOOKING }, error: null });
     sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null });
     sb.mockResponse({ data: null, error: null });
+    sb.mockResponse({ data: { upload_cap_notified_at: "2026-01-01T00:00:00.000Z" }, error: null });
 
     const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
     expect(res.status).toBe(200);
     expect(sendUploadCapReachedEmail).not.toHaveBeenCalled();
-    // Exactly 3 .from() calls: booking, insert, status update -- no 4th for
-    // a re-count that was never going to matter.
-    expect(sb.callLog.length).toBe(3);
+    // Exactly 4 .from() calls: booking, insert, status update, cap-state read
+    // -- no 5th for a re-count that was never going to matter.
+    expect(sb.callLog.length).toBe(4);
+  });
+
+  // The actual scenario this shipped into, live: migration 034 was pushed to
+  // production ahead of being run against the database. PostgREST errors an
+  // entire select over one unknown column, and supabase-js resolves that as
+  // { data: null, error } rather than throwing -- this proves that shape is
+  // survived, not just a JS exception.
+  it("still returns success to the guest when upload_cap_notified_at doesn't exist yet (migration not applied)", async () => {
+    sb.mockResponse({ data: { ...BOOKING }, error: null });
+    sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    sb.mockResponse({ data: null, error: { code: "PGRST204", message: "column bookings.upload_cap_notified_at does not exist" } });
+
+    const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.upload.id).toBe("u1");
+    expect(sendUploadCapReachedEmail).not.toHaveBeenCalled();
+    // No re-count and no stamp attempt either -- the route gave up on the
+    // whole feature right at the cap-state read, not partway through.
+    expect(sb.callLog.length).toBe(4);
   });
 
   it("still returns success to the guest even if the notification email throws", async () => {
@@ -223,6 +247,7 @@ describe("POST /api/events/[eventId]/upload/confirm -- upload-cap-reached notifi
     sb.mockResponse({ data: { ...BOOKING }, error: null });
     sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null });
     sb.mockResponse({ data: null, error: null });
+    sb.mockResponse({ data: { upload_cap_notified_at: null }, error: null });
     sb.mockResponse({ data: null, error: null, count: 20 });
     sb.mockResponse({ data: null, error: null });
 

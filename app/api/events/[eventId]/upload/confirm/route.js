@@ -104,6 +104,29 @@ export async function POST(req, { params }) {
   }
 
   if (insertError) {
+    // UPCAP is raised by the uploads_enforce_cap trigger (migration 033) when
+    // this booking is already at its tier's limit. presign/route.js checks the
+    // same cap first, so reaching here means the count moved underneath us --
+    // a genuine concurrent-upload race, which is exactly what the trigger
+    // exists to catch and what the route alone could never enforce.
+    //
+    // Not a 500: nothing is broken, the event is simply full. Cleaned up like
+    // the oversized-file path above, since the object is already in R2 and an
+    // uploads row is what makes it visible to curation and the purge job.
+    // scope: "file" so the client fails this one photo instead of aborting the
+    // guest's whole batch (see uploadOneFile in both upload pages).
+    if (insertError.code === "UPCAP") {
+      try {
+        await deleteFile(key);
+      } catch (cleanupErr) {
+        console.error(`Failed to clean up over-cap R2 object ${key}:`, cleanupErr.message);
+      }
+      return NextResponse.json(
+        { error: "This event has reached its upload limit. Please reach out to us for help.", scope: "file" },
+        { status: 400 }
+      );
+    }
+
     // Unique violation on (booking_id, client_upload_id) means a
     // near-simultaneous duplicate request already won the race -- this one
     // lost, so it's a genuine duplicate, not a real error. Return the

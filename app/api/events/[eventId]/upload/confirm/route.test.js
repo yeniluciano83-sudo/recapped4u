@@ -111,6 +111,30 @@ describe("POST /api/events/[eventId]/upload/confirm -- object verification and i
     expect(deleteFile).toHaveBeenCalledWith(VALID_BODY.key);
   });
 
+  // The uploads_enforce_cap trigger (migration 033) raises UPCAP when the
+  // event is already at its tier's limit. presign checks the same cap first,
+  // so getting here means the count moved underneath us -- the concurrent race
+  // the trigger exists to close.
+  it("returns a readable 400 and cleans up when the trigger reports the event is full", async () => {
+    sb.mockResponse({ data: { id: "b1", uploads_closed_at: null, status: "collecting" }, error: null }); // booking
+    getObjectSize.mockResolvedValue(1024);
+    sb.mockResponse({ data: null, error: { code: "UPCAP", message: "upload cap of 20 reached for booking b1" } });
+    const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
+    const json = await res.json();
+
+    // A full event is not a server fault -- 400, not 500.
+    expect(res.status).toBe(400);
+    expect(json.error).toMatch(/upload limit/i);
+    // scope "file" so the client drops this one photo rather than aborting
+    // the guest's whole batch.
+    expect(json.scope).toBe("file");
+    // The object reached R2 before the insert was rejected; without an uploads
+    // row it's invisible to both curation and the 30-day purge job.
+    expect(deleteFile).toHaveBeenCalledWith(VALID_BODY.key);
+    // Nothing broke, so this shouldn't page anyone.
+    expect(captureError).not.toHaveBeenCalled();
+  });
+
   it("captures the error, cleans up, and returns 500 on a genuine insert failure", async () => {
     sb.mockResponse({ data: { id: "b1", uploads_closed_at: null, status: "collecting" }, error: null }); // booking
     getObjectSize.mockResolvedValue(1024);

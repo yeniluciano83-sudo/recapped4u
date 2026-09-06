@@ -21,11 +21,20 @@ export default function GalleryDeliveryPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState(null);
-  const [videoLength, setVideoLength] = useState("full");
+  // Seeded from ?v= so a shared video link opens on the cut the sender was
+  // actually watching, rather than always landing on the full cut. Read once
+  // at mount -- after that the toggles own it.
+  const [videoLength, setVideoLength] = useState(() => {
+    if (typeof window === "undefined") return "full";
+    return new URLSearchParams(window.location.search).get("v") || "full";
+  });
   const [template, setTemplate] = useState("grid");
   const [slideIndex, setSlideIndex] = useState(0);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  // Separate from shareCopied so the video toolbar's confirmation doesn't also
+  // light up the "Share this gallery" button further down the page.
+  const [videoShareCopied, setVideoShareCopied] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState(new Set());
@@ -71,6 +80,50 @@ export default function GalleryDeliveryPage() {
       setTimeout(() => setShareCopied(false), 2500);
     } catch (err) {
       console.error("Failed to copy gallery link", err);
+    }
+  };
+
+  // Shares the video by link, deliberately -- not the file, and not the video
+  // URL itself.
+  //
+  // The file is out: the video URLs are presigned R2 links that the bucket
+  // serves with no Access-Control-Allow-Origin, so the browser can't fetch the
+  // bytes to hand to navigator.share({files}) even if we wanted to. And we
+  // wouldn't -- a full cut runs ~290MB, past what share targets accept and
+  // enough to take a phone's tab down buffering it.
+  //
+  // The presigned URL is out too, for a quieter reason: it expires in 24h
+  // (getSignedDownloadUrl's 86400 in the gallery route), so anyone who opened
+  // it the next day would get an opaque S3 error on what looked like a
+  // permanent link.
+  //
+  // The gallery URL lasts as long as the gallery does, and drops the recipient
+  // on the real player with the photos alongside it. ?v= pins the cut being
+  // watched so a shared "social cut 2" doesn't open on the full recap.
+  const handleShareVideo = async () => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("v", videoLength);
+    const shareUrl = url.toString();
+    // Derived here rather than reusing socialIndex, which is declared further
+    // down this component body -- this only reads correctly because the
+    // handler runs after render, and that's too subtle to lean on.
+    const label = videoLength.startsWith("social-") ? "social cut" : "recap video";
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: eventName, text: `Watch ${eventName}'s ${label}`, url: shareUrl });
+      } catch (err) {
+        // AbortError when the user dismisses the native sheet -- not a failure.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setVideoShareCopied(true);
+      setTimeout(() => setVideoShareCopied(false), 2500);
+    } catch (err) {
+      console.error("Failed to copy video link", err);
     }
   };
 
@@ -312,9 +365,14 @@ export default function GalleryDeliveryPage() {
                 </React.Fragment>
               ))}
             </div>
-            <a href={activeVideoDownloadUrl} download style={iconBtnStyle}>
-              <Download size={16} /> Download
-            </a>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button type="button" onClick={handleShareVideo} style={{ ...iconBtnStyle, fontFamily: "inherit" }}>
+                {videoShareCopied ? <><Check size={16} /> Link copied</> : <><Share2 size={16} /> Share</>}
+              </button>
+              <a href={activeVideoDownloadUrl} download style={iconBtnStyle}>
+                <Download size={16} /> Download
+              </a>
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { buttonStyle, radius, shadow } from "@/components/ui";
+import { buttonStyle, radius, shadow, LoadingState } from "@/components/ui";
 import { useParams } from "next/navigation";
 import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
@@ -193,21 +193,8 @@ export default function GalleryDeliveryPage() {
 
   if (loading) {
     return (
-      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
-        <style>{`
-          .gallery-loader-badge { animation: gallery-loader-pulse 1.6s ease-in-out infinite; }
-          @keyframes gallery-loader-pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.08); opacity: 0.75; }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .gallery-loader-badge { animation: none; }
-          }
-        `}</style>
-        <div className="gallery-loader-badge" style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(201,122,61,0.32)" }}>
-          <Film size={22} color="#FFFFFF" />
-        </div>
-        <p style={{ fontSize: 15, color: "#6b655c" }}>Loading your recap…</p>
+      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+        <LoadingState icon={Film} label="Loading your recap…" />
       </main>
     );
   }
@@ -515,7 +502,22 @@ function Lightbox({ photos, index, onClose }) {
   const navBtn = { position: "fixed", top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.45)", border: "none", color: "#FFFFFF", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", zIndex: 51, display: "flex", alignItems: "center", justifyContent: "center" };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 50, overflowY: "auto", padding: "24px" }}>
+    <div onClick={onClose} className="lightbox-fade" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 50, overflowY: "auto", padding: "24px" }}>
+      {/* Entrance only -- exit stays an instant unmount. Animating the close
+          too would mean delaying the actual unmount behind a timeout, adding
+          state just to know "is this closing or already closed" and a second
+          place for the escape-key/backdrop-click handlers to race against.
+          An instant close reads as snappy, not broken, on something opened
+          and closed this often while browsing a gallery. */}
+      <style>{`
+        .lightbox-fade { animation: lightbox-fade-in 180ms ease-out; }
+        .lightbox-pop { animation: lightbox-pop-in 220ms ease-out; }
+        @keyframes lightbox-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes lightbox-pop-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        @media (prefers-reduced-motion: reduce) {
+          .lightbox-fade, .lightbox-pop { animation: none; }
+        }
+      `}</style>
       <div
         ref={containerRef}
         role="dialog"
@@ -550,10 +552,15 @@ function Lightbox({ photos, index, onClose }) {
               used to) -- now that you can page through the gallery here, a
               stray tap on the image while navigating shouldn't dump you
               out. Backdrop click and the X still close it. */}
+          {/* No key={cur} here -- the pop-in should play once, on the
+              lightbox's initial mount, not replay on every arrow-key or
+              swipe page-through, which would look frantic browsing quickly
+              through a large gallery. */}
           <img
             src={photos[cur]}
             alt={`Photo ${cur + 1} of ${photos.length}`}
             onClick={(e) => e.stopPropagation()}
+            className="lightbox-pop"
             style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }}
           />
         </div>

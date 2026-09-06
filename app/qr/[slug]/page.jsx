@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { buttonStyle, shadow, radius } from "@/components/ui";
+import { buttonStyle, shadow, radius, LoadingState } from "@/components/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause } from "lucide-react";
 
@@ -240,8 +240,8 @@ export default function QrSharePage() {
 
   if (loading) {
     return (
-      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
-        Loading…
+      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+        <LoadingState icon={Camera} label="Loading…" />
       </main>
     );
   }

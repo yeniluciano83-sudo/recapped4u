@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Calendar } from "lucide-react";
+import { LoadingState } from "@/components/ui";
 
 const TIER_LABELS = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
 
@@ -64,7 +65,7 @@ export default function ReschedulePage() {
   if (loading) {
     return (
       <PageShell>
-        <p style={{ color: "#4a4642" }}>Loading…</p>
+        <LoadingState icon={Calendar} label="Loading…" />
       </PageShell>
     );
   }

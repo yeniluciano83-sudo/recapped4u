@@ -2,6 +2,7 @@
 import React, { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check } from "lucide-react";
+import { LoadingState } from "@/components/ui";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -37,7 +38,7 @@ export default function BookingSuccessPage() {
         @keyframes success-pop-in { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
         @media (prefers-reduced-motion: reduce) { .success-pop { animation: none; } }
       `}</style>
-      <Suspense fallback={<p style={{ color: "#4a4642" }}>Loading...</p>}>
+      <Suspense fallback={<LoadingState icon={Check} label="Loading…" />}>
         <SuccessContent />
       </Suspense>
     </main>

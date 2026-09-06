@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { shadow } from "@/components/ui";
+import { shadow, LoadingState } from "@/components/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle, ArrowLeft } from "lucide-react";
 
@@ -255,8 +255,8 @@ export default function HostUploadPage() {
 
   if (loading) {
     return (
-      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
-        Loading…
+      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+        <LoadingState icon={Camera} label="Loading…" />
       </main>
     );
   }

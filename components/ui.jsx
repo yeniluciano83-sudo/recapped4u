@@ -154,3 +154,45 @@ export function Button({ as: Tag = "button", variant, size, disabled, style, chi
 export function Field({ as: Tag = "input", size, style, ...rest }) {
   return <Tag style={{ ...fieldStyle({ size }), ...style }} {...rest} />;
 }
+
+// A branded loading placeholder: pulsing gradient badge + icon + message.
+// Extracted from the pattern app/gallery/[bookingId]/page.jsx already built
+// for its own initial load -- six other pages (qr share, qr upload, cancel,
+// reschedule, booking success) were showing bare grey "Loading…" text with
+// no styling at all while this exact treatment already existed one file
+// over. The badge's shadow is the gallery page's original hand-picked value,
+// not the shadow.clay token -- kept verbatim rather than switched to the
+// token, since that would have quietly changed a look that already shipped.
+//
+// Deliberately unopinionated about its wrapper: some pages need a full
+// <main style={{minHeight:"100vh",...}}>, others need to sit inside an
+// existing <PageShell>. This renders just the badge and message; the caller
+// supplies the surrounding layout, same as before.
+export function LoadingState({ icon: Icon, label = "Loading…" }) {
+  return (
+    <>
+      <style>{`
+        .ui-loading-badge { animation: ui-loading-pulse 1.6s ease-in-out infinite; }
+        @keyframes ui-loading-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.08); opacity: 0.75; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ui-loading-badge { animation: none; }
+        }
+      `}</style>
+      <div
+        className="ui-loading-badge"
+        style={{
+          width: 52, height: 52, borderRadius: "50%", margin: "0 auto 16px",
+          background: `linear-gradient(135deg, ${tone.clay}, ${tone.clayLight})`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 4px 14px rgba(201,122,61,0.32)",
+        }}
+      >
+        {Icon && <Icon size={22} color={tone.surface} />}
+      </div>
+      <p style={{ fontSize: 15, color: tone.muted, textAlign: "center", margin: 0 }}>{label}</p>
+    </>
+  );
+}

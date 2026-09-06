@@ -120,6 +120,19 @@ confirm it's working before waiting for the schedule.
 In Vercel → Domains, add `recappedforyou.com` (or whatever you registered)
 and follow the DNS instructions it gives you.
 
+## 7. Email authentication (SPF / DKIM / DMARC)
+
+All mail goes out through Resend. A young domain sending unauthenticated mail
+that links back to itself is a strong "deceptive site" signal for Google Safe
+Browsing and the mailbox providers, so this isn't optional in production.
+
+Full record list and dashboard steps: **[`docs/EMAIL_AUTH.md`](docs/EMAIL_AUTH.md)**.
+Check the live state at any time with:
+
+```bash
+node scripts/check-email-auth.js
+```
+
 ## File map
 
 - `app/booking/page.jsx` — client-facing booking form
@@ -135,6 +148,7 @@ and follow the DNS instructions it gives you.
 - `lib/video-assemble.js` — ffmpeg-based video assembly
 - `lib/storage.js` — R2 upload/download helpers
 - `lib/email.js` — Resend email templates
+- `scripts/check-email-auth.js` — verifies SPF/DKIM/DMARC on the sending domain (see `docs/EMAIL_AUTH.md`)
 - `middleware.js` — dashboard auth gate
 - `schema.sql` — base database schema
 - `migrations/` — additive schema changes since `schema.sql`, run in order

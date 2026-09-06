@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Calendar } from "lucide-react";
 
 const TIER_LABELS = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
@@ -14,6 +14,10 @@ function formatDate(dateStr) {
 export default function ReschedulePage() {
   const params = useParams();
   const slug = params?.slug;
+  // Host token from the emailed link -- the slug on its own is a guest
+  // credential (it is on the QR poster), so it cannot authorize rescheduling.
+  // See lib/hostToken.js.
+  const hostToken = useSearchParams().get("t") || "";
 
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +28,7 @@ export default function ReschedulePage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/events/${slug}/reschedule`);
+      const res = await fetch(`/api/events/${slug}/reschedule?t=${encodeURIComponent(hostToken)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Event not found");
       setInfo(data);
@@ -33,7 +37,7 @@ export default function ReschedulePage() {
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, [slug, hostToken]);
 
   useEffect(() => { if (slug) load(); }, [slug, load]);
 
@@ -42,7 +46,7 @@ export default function ReschedulePage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/events/${slug}/reschedule`, {
+      const res = await fetch(`/api/events/${slug}/reschedule?t=${encodeURIComponent(hostToken)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newDate }),

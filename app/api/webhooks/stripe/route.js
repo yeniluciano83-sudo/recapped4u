@@ -59,6 +59,7 @@ export async function POST(req) {
             roastEnabled: booking.roast_enabled,
             uploadUrl,
             uploadSlug: booking.upload_slug,
+            bookingId: booking.id,
             deliveryFormat: booking.delivery_format,
           });
         } catch (err) {

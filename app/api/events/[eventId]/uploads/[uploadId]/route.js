@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { isValidHostToken, hostTokenFromRequest } from "@/lib/hostToken";
 
 // Spotlight/Luxe only, matching what those tiers actually advertise --
 // same list as SOCIAL_CUT_ELIGIBLE_TIERS elsewhere (app/qr/[slug]/page.jsx,
@@ -23,6 +24,12 @@ export async function PATCH(req, { params }) {
 
   if (bookingError || !booking) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // Must-include is the host's editorial control over their own recap --
+  // a guest shouldn't be able to force or drop photos. See lib/hostToken.js.
+  if (!isValidHostToken(booking.id, hostTokenFromRequest(req))) {
+    return NextResponse.json({ error: "This link isn't valid for managing this event." }, { status: 403 });
   }
 
   const body = await req.json();

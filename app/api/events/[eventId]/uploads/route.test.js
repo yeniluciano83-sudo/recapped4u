@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock } from "@/test/helpers/mockSupabase";
+import { hostUrl, guestUrl } from "@/test/helpers/hostToken";
 
 vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
 vi.mock("@/lib/storage", () => ({ getSignedDownloadUrl: vi.fn() }));
@@ -9,7 +10,7 @@ import { getSignedDownloadUrl } from "@/lib/storage";
 import { GET } from "./route";
 
 function makeRequest() {
-  return { headers: { get: () => null } };
+  return { url: hostUrl(), headers: { get: () => null } };
 }
 
 describe("GET /api/events/[eventId]/uploads", () => {

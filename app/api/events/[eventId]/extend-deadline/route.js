@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { isValidHostToken, hostTokenFromRequest } from "@/lib/hostToken";
 
 const EXTENSION_HOURS = 48;
 
@@ -24,6 +25,12 @@ export async function POST(req, { params }) {
 
   if (error || !booking) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // The extension is one-shot, so a guest could otherwise burn the host's
+  // only deadline push before they ever wanted it. See lib/hostToken.js.
+  if (!isValidHostToken(booking.id, hostTokenFromRequest(req))) {
+    return NextResponse.json({ error: "This link isn't valid for managing this event." }, { status: 403 });
   }
 
   if (booking.tier !== "keepsake") {

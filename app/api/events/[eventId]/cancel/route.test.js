@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createSupabaseMock } from "@/test/helpers/mockSupabase";
+import { hostUrl, guestUrl } from "@/test/helpers/hostToken";
 
 const stripeMocks = vi.hoisted(() => ({
   retrieve: vi.fn(),
@@ -24,7 +25,7 @@ import { sendCancellationConfirmation } from "@/lib/email";
 import { GET, POST } from "./route";
 
 function makeRequest() {
-  return { headers: { get: () => null } };
+  return { url: hostUrl(), headers: { get: () => null } };
 }
 
 // "Now" is fixed so hoursUntilEventDate/isAtLeast24HoursOut (lib/eventDate.js)
@@ -55,6 +56,14 @@ describe("GET /api/events/[eventId]/cancel", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  // upload_slug is printed on the QR poster, so on its own it proves only that
+  // the caller attended the event. Cancelling is the host's call alone.
+  it("rejects a request with no host token", async () => {
+    sb.mockResponse({ data: { id: "b1", status: "collecting", event_date: "2026-06-20" }, error: null });
+    const res = await GET({ url: guestUrl(), headers: { get: () => null } }, { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(403);
   });
 
   it("returns 404 when the event can't be found", async () => {
@@ -99,6 +108,23 @@ describe("POST /api/events/[eventId]/cancel", () => {
     sb.mockResponse({ data: null, error: new Error("not found") });
     const res = await POST(makeRequest(), { params: { eventId: "slug-1" } });
     expect(res.status).toBe(404);
+  });
+
+  // The destructive one: the status flip to "cancelled" happens before any
+  // refund-eligibility check, so an unguarded POST kills the recap outright.
+  it("rejects a request with no host token, without mutating anything", async () => {
+    sb.mockResponse({ data: { ...PAID_BOOKING }, error: null });
+    const res = await POST({ url: guestUrl(), headers: { get: () => null } }, { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(403);
+    // Only the initial select ran -- no update, no refund.
+    expect(sb.callLog.length).toBe(1);
+    expect(sb.callLog[0].calls.some((c) => c.method === "update")).toBe(false);
+  });
+
+  it("rejects a token minted for a different booking", async () => {
+    sb.mockResponse({ data: { ...PAID_BOOKING }, error: null });
+    const res = await POST({ url: hostUrl("some-other-booking"), headers: { get: () => null } }, { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(403);
   });
 
   it("short-circuits with alreadyCancelled if the event is already cancelled -- no double-processing", async () => {

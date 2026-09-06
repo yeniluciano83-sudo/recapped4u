@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle, ArrowLeft } from "lucide-react";
 
 // A dropped connection (weak WiFi/cell signal at a real event, common with
@@ -117,6 +117,11 @@ async function uploadOneFile(eventId, uploaderName, file) {
 export default function HostUploadPage() {
   const params = useParams();
   const slug = params?.slug;
+  // Carried through purely so the "back" link below returns the host to their
+  // management page with its credential intact -- nothing on this page needs
+  // it, since adding your own photos uses the same open upload endpoints
+  // guests do. See lib/hostToken.js.
+  const hostToken = useSearchParams().get("t") || "";
 
   const [files, setFiles] = useState([]);
   const [uploaderName, setUploaderName] = useState("");
@@ -276,7 +281,7 @@ export default function HostUploadPage() {
       </div>
 
       <div style={{ width: "100%", maxWidth: "480px", padding: "40px 24px 0" }}>
-        <a href={`/qr/${slug}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#7A8B76", fontWeight: 600, textDecoration: "none", marginBottom: 24 }}>
+        <a href={`/qr/${slug}?t=${encodeURIComponent(hostToken)}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#7A8B76", fontWeight: 600, textDecoration: "none", marginBottom: 24 }}>
           <ArrowLeft size={14} /> Back to your QR code
         </a>
 

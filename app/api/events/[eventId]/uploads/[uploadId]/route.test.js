@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock } from "@/test/helpers/mockSupabase";
+import { hostUrl, guestUrl } from "@/test/helpers/hostToken";
 
 vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
 
@@ -7,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { PATCH } from "./route";
 
 function jsonRequest(body) {
-  return { json: async () => body, headers: { get: () => null } };
+  return { json: async () => body, url: hostUrl(), headers: { get: () => null } };
 }
 
 describe("PATCH /api/events/[eventId]/uploads/[uploadId]", () => {

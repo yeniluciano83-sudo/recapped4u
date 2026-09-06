@@ -48,6 +48,7 @@ export async function GET(req, { params }) {
       roastEnabled: booking.roast_enabled,
       uploadUrl: `${process.env.APP_URL}/event/${booking.upload_slug}`,
       uploadSlug: booking.upload_slug,
+      bookingId: booking.id,
       deliveryFormat: booking.delivery_format,
     });
   } catch (err) {

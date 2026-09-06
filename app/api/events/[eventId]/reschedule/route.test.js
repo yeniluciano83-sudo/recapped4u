@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createSupabaseMock } from "@/test/helpers/mockSupabase";
+import { hostUrl, guestUrl } from "@/test/helpers/hostToken";
 
 vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
 vi.mock("@/lib/email", () => ({
@@ -12,7 +13,7 @@ import { GET, POST } from "./route";
 
 function makeRequest(body) {
   return {
-    headers: { get: () => null },
+    url: hostUrl(), headers: { get: () => null },
     json: async () => body,
   };
 }

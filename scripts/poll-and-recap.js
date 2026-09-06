@@ -219,6 +219,7 @@ async function processCollectingBookings(failures) {
           eventDate: booking.event_date,
           uploadUrl: `${process.env.APP_URL}/event/${booking.upload_slug}`,
           uploadSlug: booking.upload_slug,
+          bookingId: booking.id,
           tier: booking.tier,
         });
       } catch (err) {

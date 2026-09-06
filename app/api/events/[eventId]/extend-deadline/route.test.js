@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock } from "@/test/helpers/mockSupabase";
+import { hostUrl, guestUrl } from "@/test/helpers/hostToken";
 
 vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
 
@@ -7,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { POST } from "./route";
 
 function makeRequest() {
-  return { headers: { get: () => null } };
+  return { url: hostUrl(), headers: { get: () => null } };
 }
 
 const BASE_BOOKING = { id: "b1", tier: "keepsake", status: "collecting", uploads_closed_at: null, deadline_extension_hours: 0 };
@@ -24,6 +25,14 @@ describe("POST /api/events/[eventId]/extend-deadline", () => {
     sb.mockResponse({ data: null, error: new Error("not found") });
     const res = await POST(makeRequest(), { params: { eventId: "slug-1" } });
     expect(res.status).toBe(404);
+  });
+
+  // The extension is one-shot; a guest with the QR could burn it before the
+  // host ever wanted it.
+  it("rejects a request with no host token", async () => {
+    sb.mockResponse({ data: { id: "b1", tier: "keepsake", status: "collecting", uploads_closed_at: null, deadline_extension_hours: 0 }, error: null });
+    const res = await POST({ url: guestUrl(), headers: { get: () => null } }, { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(403);
   });
 
   it("is a Luxe-only perk -- rejects every other tier", async () => {

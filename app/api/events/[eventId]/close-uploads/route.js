@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { isValidHostToken, hostTokenFromRequest } from "@/lib/hostToken";
 
 // Lets a host signal "guests are done uploading" ahead of their tier's
 // upload deadline. Doesn't run the pipeline directly (that needs
@@ -23,6 +24,12 @@ export async function POST(req, { params }) {
 
   if (error || !booking) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // Without this any guest who scanned the QR could cut off collection
+  // mid-event, stranding every photo not yet uploaded. See lib/hostToken.js.
+  if (!isValidHostToken(booking.id, hostTokenFromRequest(req))) {
+    return NextResponse.json({ error: "This link isn't valid for managing this event." }, { status: 403 });
   }
 
   if (booking.status !== "collecting") {

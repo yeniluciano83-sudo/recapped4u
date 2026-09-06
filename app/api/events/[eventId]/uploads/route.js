@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getSignedDownloadUrl } from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { isValidHostToken, hostTokenFromRequest } from "@/lib/hostToken";
 
 // Lists a booking's uploaded photos for the host's must-include picker.
 // Photos only. Two independent star flags: must_include (guarantees a spot
@@ -23,6 +24,12 @@ export async function GET(req, { params }) {
 
   if (bookingError || !booking) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // This lists every guest's photo for the event -- host review surface, not
+  // something a single guest with the QR should be able to enumerate.
+  if (!isValidHostToken(booking.id, hostTokenFromRequest(req))) {
+    return NextResponse.json({ error: "This link isn't valid for managing this event." }, { status: 403 });
   }
 
   const { data: uploads, error } = await supabase

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 const TIER_LABELS = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
@@ -14,6 +14,10 @@ function formatDate(dateStr) {
 export default function CancelBookingPage() {
   const params = useParams();
   const slug = params?.slug;
+  // Host token from the emailed link -- the slug on its own is a guest
+  // credential (it's on the QR poster), so it can't authorize cancelling.
+  // See lib/hostToken.js.
+  const hostToken = useSearchParams().get("t") || "";
 
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,7 +27,7 @@ export default function CancelBookingPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/events/${slug}/cancel`);
+      const res = await fetch(`/api/events/${slug}/cancel?t=${encodeURIComponent(hostToken)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Event not found");
       setInfo(data);
@@ -32,7 +36,7 @@ export default function CancelBookingPage() {
     } finally {
       setLoading(false);
     }
-  }, [slug]);
+  }, [slug, hostToken]);
 
   useEffect(() => { if (slug) load(); }, [slug, load]);
 
@@ -41,7 +45,7 @@ export default function CancelBookingPage() {
     setCancelling(true);
     setError(null);
     try {
-      const res = await fetch(`/api/events/${slug}/cancel`, { method: "POST" });
+      const res = await fetch(`/api/events/${slug}/cancel?t=${encodeURIComponent(hostToken)}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to cancel");
       setResult(data);

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause } from "lucide-react";
 
 // Spotlight/Luxe only, matching what those tiers actually advertise.
@@ -48,6 +48,10 @@ function StylePreviewButton({ styleId, playingId, onToggle }) {
 export default function QrSharePage() {
   const params = useParams();
   const slug = params?.slug;
+  // This is the host's own management page, reached from the emailed link.
+  // The slug in the URL is a guest credential (it's what the QR encodes), so
+  // every host-only call below carries this token instead. See lib/hostToken.js.
+  const hostToken = useSearchParams().get("t") || "";
 
   const [eventInfo, setEventInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -103,12 +107,12 @@ export default function QrSharePage() {
   useEffect(() => {
     if (!slug || eventInfo?.status !== "collecting") return;
     setPhotosLoading(true);
-    fetch(`/api/events/${slug}/uploads`)
+    fetch(`/api/events/${slug}/uploads?t=${encodeURIComponent(hostToken)}`)
       .then((res) => res.json())
       .then((data) => setPhotos(data.photos || []))
       .catch((err) => console.error("Failed to load photos", err))
       .finally(() => setPhotosLoading(false));
-  }, [slug, eventInfo?.status]);
+  }, [slug, hostToken, eventInfo?.status]);
 
   const qrImageUrl = slug ? `/api/qrcode/${slug}` : "";
   const uploadUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/event/${slug}` : "";
@@ -143,7 +147,7 @@ export default function QrSharePage() {
     setSavingStyle(true);
     setEventInfo((prev) => ({ ...prev, social_style: next }));
     try {
-      await fetch(`/api/events/${slug}`, {
+      await fetch(`/api/events/${slug}?t=${encodeURIComponent(hostToken)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ socialStyle: next }),
@@ -160,7 +164,7 @@ export default function QrSharePage() {
     setTogglingId(photo.id);
     setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustIncludeSocial: next } : p)));
     try {
-      await fetch(`/api/events/${slug}/uploads/${photo.id}`, {
+      await fetch(`/api/events/${slug}/uploads/${photo.id}?t=${encodeURIComponent(hostToken)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mustIncludeSocial: next }),
@@ -178,7 +182,7 @@ export default function QrSharePage() {
     setTogglingId(photo.id);
     setPhotos((prev) => prev.map((p) => (p.id === photo.id ? { ...p, mustInclude: next } : p)));
     try {
-      await fetch(`/api/events/${slug}/uploads/${photo.id}`, {
+      await fetch(`/api/events/${slug}/uploads/${photo.id}?t=${encodeURIComponent(hostToken)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mustInclude: next }),
@@ -197,7 +201,7 @@ export default function QrSharePage() {
     }
     setClosingUploads(true);
     try {
-      const res = await fetch(`/api/events/${slug}/close-uploads`, { method: "POST" });
+      const res = await fetch(`/api/events/${slug}/close-uploads?t=${encodeURIComponent(hostToken)}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Failed to close uploads. Please try again.");
@@ -218,7 +222,7 @@ export default function QrSharePage() {
     }
     setExtendingDeadline(true);
     try {
-      const res = await fetch(`/api/events/${slug}/extend-deadline`, { method: "POST" });
+      const res = await fetch(`/api/events/${slug}/extend-deadline?t=${encodeURIComponent(hostToken)}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         alert(data.error || "Failed to extend deadline. Please try again.");
@@ -295,7 +299,7 @@ export default function QrSharePage() {
           </div>
 
           {eventInfo.status === "collecting" && !eventInfo.uploads_closed_at && (
-            <a href={`/qr/${slug}/upload`} style={{ marginTop: 24, padding: 18, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left", textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 14 }}>
+            <a href={`/qr/${slug}/upload?t=${encodeURIComponent(hostToken)}`} style={{ marginTop: 24, padding: 18, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left", textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FBEEE0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Camera size={19} color="#C97A3D" strokeWidth={1.8} />
               </div>

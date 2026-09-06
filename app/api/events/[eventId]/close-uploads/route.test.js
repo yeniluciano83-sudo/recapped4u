@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock } from "@/test/helpers/mockSupabase";
+import { hostUrl, guestUrl } from "@/test/helpers/hostToken";
 
 vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
 
@@ -7,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { POST } from "./route";
 
 function makeRequest() {
-  return { headers: { get: () => null } };
+  return { url: hostUrl(), headers: { get: () => null } };
 }
 
 describe("POST /api/events/[eventId]/close-uploads", () => {
@@ -22,6 +23,13 @@ describe("POST /api/events/[eventId]/close-uploads", () => {
     sb.mockResponse({ data: null, error: new Error("not found") });
     const res = await POST(makeRequest(), { params: { eventId: "slug-1" } });
     expect(res.status).toBe(404);
+  });
+
+  // A guest with the QR could otherwise cut off collection mid-event.
+  it("rejects a request with no host token", async () => {
+    sb.mockResponse({ data: { id: "b1", status: "collecting", uploads_closed_at: null }, error: null });
+    const res = await POST({ url: guestUrl(), headers: { get: () => null } }, { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(403);
   });
 
   it("rejects closing uploads on a booking that isn't collecting", async () => {

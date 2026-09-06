@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { hoursUntilEventDate } from "@/lib/eventDate";
+import { isValidHostToken, hostTokenFromRequest } from "@/lib/hostToken";
 import { captureError } from "@/lib/sentry";
 
 // Self-service rescheduling is only safe while nothing's happened yet --
@@ -20,12 +21,18 @@ export async function GET(req, { params }) {
 
   const { data: booking, error } = await supabase
     .from("bookings")
-    .select("host_name, event_type, event_date, tier, status")
+    .select("id, host_name, event_type, event_date, tier, status")
     .eq("upload_slug", eventId)
     .single();
 
   if (error || !booking) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // upload_slug alone proves nothing here -- it's on the QR poster every
+  // guest scans. See lib/hostToken.js.
+  if (!isValidHostToken(booking.id, hostTokenFromRequest(req))) {
+    return NextResponse.json({ error: "This link isn't valid for managing this event." }, { status: 403 });
   }
 
   return NextResponse.json({
@@ -56,6 +63,12 @@ export async function POST(req, { params }) {
 
   if (error || !booking) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // upload_slug alone proves nothing here -- it's on the QR poster every
+  // guest scans. See lib/hostToken.js.
+  if (!isValidHostToken(booking.id, hostTokenFromRequest(req))) {
+    return NextResponse.json({ error: "This link isn't valid for managing this event." }, { status: 403 });
   }
 
   if (!RESCHEDULABLE_STATUSES.includes(booking.status)) {

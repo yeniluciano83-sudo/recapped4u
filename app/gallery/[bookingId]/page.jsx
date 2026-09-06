@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { buttonStyle, radius } from "@/components/ui";
+import { buttonStyle, radius, shadow } from "@/components/ui";
 import { useParams } from "next/navigation";
 import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
@@ -310,7 +310,7 @@ export default function GalleryDeliveryPage() {
           <p style={{ fontSize: 15, color: "#4a4642", margin: 0 }}>{formatDate(booking.event_date)}</p>
         </div>
 
-        <div style={{ background: "#FFFFFF", borderRadius: "18px", border: "1px solid #E4DED2", overflow: "hidden", marginBottom: "16px" }}>
+        <div style={{ background: "#FFFFFF", borderRadius: radius.lg, border: "1px solid #E4DED2", overflow: "hidden", marginBottom: "16px", boxShadow: shadow.md }}>
           <div style={{
               aspectRatio: isSocialSelected ? "9/16" : "16/9",
               width: isSocialSelected ? "min(360px, 60vw)" : "100%",

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
+import { shadow } from "@/components/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { Camera, Upload, Check, Image as ImageIcon, Loader2, AlertTriangle, ArrowLeft } from "lucide-react";
 
@@ -295,7 +296,7 @@ export default function HostUploadPage() {
           <strong style={{ color: "#C97A3D", fontSize: "16px" }}>{uploadCount}</strong> {uploadCount === 1 ? "moment" : "moments"} captured so far
         </div>
 
-        <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2" }}>
+        <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2", boxShadow: shadow.md }}>
           {uploadsClosed ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
               <AlertTriangle size={24} color="#C97A3D" />

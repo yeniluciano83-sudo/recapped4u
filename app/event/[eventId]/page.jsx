@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
+import { shadow } from "@/components/ui";
 import { useParams } from "next/navigation";
 import { Camera, Upload, Check, Loader2, AlertTriangle, Sparkles } from "lucide-react";
 
@@ -310,7 +311,7 @@ export default function EventUploadPage() {
           <strong className={justUploaded ? "count-pop" : undefined} style={{ color: "#C97A3D", fontSize: "16px", display: "inline-block" }}>{uploadCount}</strong> {uploadCount === 1 ? "moment" : "moments"} captured so far
         </div>
 
-        <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2" }}>
+        <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2", boxShadow: shadow.md }}>
           {isDelivered ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "16px 8px", textAlign: "center" }}>
               <Check size={26} color="#7A8B76" className="success-pop" />

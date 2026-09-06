@@ -1068,5 +1068,5 @@ function Section({ id, refs, title, icon, children, subtitle, band, blob }) {
 // Radius stays 14 rather than snapping to the lg token (16) -- unifying the
 // six rectangle radii in use is a real visual change and belongs in its own
 // commit, not smuggled into a refactor.
-const cardStyle = sharedCardStyle({ pad: 20, r: 14 });
+const cardStyle = sharedCardStyle({ pad: 20, r: 14, raised: "sm" });
 

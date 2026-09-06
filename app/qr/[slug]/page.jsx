@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { buttonStyle } from "@/components/ui";
+import { buttonStyle, shadow, radius } from "@/components/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause } from "lucide-react";
 
@@ -276,7 +276,7 @@ export default function QrSharePage() {
           <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(24px, 3.2vw, 30px)", margin: "0 0 6px" }}>{eventName}</h1>
           <p style={{ color: "#4a4642", fontSize: 15, marginBottom: 28 }}>{formatDate(eventInfo.event_date)}</p>
 
-          <div style={{ background: "#FFFFFF", borderRadius: 16, padding: 24, marginBottom: 24, display: "inline-block", border: "1px solid #E4DED2" }}>
+          <div style={{ background: "#FFFFFF", borderRadius: radius.lg, padding: 24, marginBottom: 24, display: "inline-block", border: "1px solid #E4DED2", boxShadow: shadow.md }}>
             <img src={qrImageUrl} alt="Guest upload QR code" width={240} height={240} style={{ display: "block" }} />
           </div>
 

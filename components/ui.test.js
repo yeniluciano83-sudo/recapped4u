@@ -85,7 +85,9 @@ describe("buttonStyle matches the buttons it replaced", () => {
 });
 
 describe("cardStyle matches the card it replaced", () => {
-  it("== homepage cardStyle at its original 14px radius", () => {
+  // The homepage now opts into raised: "sm" on top of this; the unraised form
+  // is still what has to match the original hand-written object.
+  it("unraised == the original homepage card, at its 14px radius", () => {
     expectMatches(cardStyle({ pad: 20, r: 14 }), {
       background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: 14, padding: 20,
     });
@@ -93,6 +95,15 @@ describe("cardStyle matches the card it replaced", () => {
 
   it("defaults to no shadow, so adopting Card can't add depth by surprise", () => {
     expect(cardStyle().boxShadow).toBe("none");
+  });
+
+  it("raising a card changes only its shadow", () => {
+    const flat = cardStyle({ pad: 20, r: 14 });
+    const lifted = cardStyle({ pad: 20, r: 14, raised: "sm" });
+    expect(lifted.boxShadow).toBe(shadow.sm);
+    for (const k of ["background", "border", "borderRadius", "padding"]) {
+      expect(lifted[k]).toBe(flat[k]);
+    }
   });
 });
 

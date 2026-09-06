@@ -346,7 +346,7 @@ async function processRenderingBookings(failures) {
 // A real synchronous run (photo analysis + video encoding for a handful of
 // bookings) finishes in minutes. If a booking is still "editing" after this
 // long, the process that claimed it was killed before reaching its own
-// catch block (job timeout -- see the 20-minute limit in
+// catch block (job timeout -- see the 75-minute limit in
 // .github/workflows/recap-scheduler.yml -- OOM, or a crash) and never
 // reverted itself. Left alone, that booking is invisible forever: this is
 // the only thing that ever looks at status = "editing" again.
@@ -358,7 +358,7 @@ const STALE_EDITING_HOURS = 1.5;
 // is only meant to catch a genuinely abandoned booking (the submit/resume
 // process itself was killed before it could revert), not a slow-but-healthy
 // batch -- set comfortably past the fallback threshold plus a couple of
-// retry cycles at this scheduler's 3-hour cadence.
+// retry cycles at this scheduler's hourly cadence.
 const STALE_ANALYZING_HOURS = 12;
 
 async function recoverStaleBookings(failures) {

@@ -2,10 +2,17 @@ name: Recap scheduler
 
 on:
   schedule:
-    # Every 3 hours. Bookings become eligible in 24h/48h windows (see
-    # scripts/poll-and-recap.js), so this cadence catches both thresholds
-    # promptly without running excessively often.
-    - cron: "0 */3 * * *"
+    # Hourly. Bookings become eligible in 24h/48h windows (see
+    # scripts/poll-and-recap.js), so cadence was never about catching
+    # those thresholds promptly -- it is about render throughput. A run
+    # renders at most RENDER_PHASE_BUDGET_MS (45 min) before checkpointing
+    # and exiting, so at the old 3-hour cadence a multi-run render (Luxe:
+    # full cut, its no-roast pair, then up to 10 social cuts) spent ~75% of
+    # the wall clock idle between ticks -- confirmed live on a 131-photo
+    # Luxe booking that sat 90 minutes between checkpoints while the encode
+    # itself ran at ~1.4 min/chunk. Hourly keeps the runner busy; the
+    # concurrency group below is what actually prevents overlap.
+    - cron: "0 * * * *"
   workflow_dispatch: {} # allows manually triggering a run from the Actions tab
 
 # Only ever one scheduler run at a time. A cron tick landing on top of a
@@ -48,12 +55,17 @@ jobs:
     # MAX_SLOTS_PER_CHUNK in lib/video-assemble.js) -- there's simply a lot
     # of ffmpeg encoding to do in one job run for a booking this size,
     # regardless of memory. Raised to comfortably cover that, while staying
-    # under two other ceilings on purpose: STALE_EDITING_HOURS (90 minutes)
-    # above, so a genuinely hung job still gets killed by *this* timeout
-    # before the separate stale-recovery pass would also try to intervene
-    # on the same booking from a different process; and the 3-hour (180
-    # minute) cron cadence above, so one run is guaranteed to finish before
-    # the next one starts.
+    # under STALE_EDITING_HOURS (90 minutes) on purpose, so a genuinely
+    # hung job still gets killed by *this* timeout before the separate
+    # stale-recovery pass would also try to intervene on the same booking
+    # from a different process.
+    #
+    # This used to also sit under the cron cadence (then 3-hourly), so one
+    # run was guaranteed to finish before the next tick. Hourly ticks give
+    # that up -- a 75-minute run outlives its interval. That is fine: the
+    # concurrency group above queues the next tick instead of running it
+    # alongside, so two runs still never share a render. Timing was belt
+    # and braces; the concurrency group is the actual guarantee.
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v5

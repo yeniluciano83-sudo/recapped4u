@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useId, useRef } from "react";
 import { fieldStyle, buttonStyle } from "@/components/ui";
-import { canProceedFromStyleStep } from "@/lib/bookingFormValidation";
+import { canProceedFromStyleStep, hasMadeRequiredRoastChoice } from "@/lib/bookingFormValidation";
 import { useSearchParams } from "next/navigation";
 import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame, AlertTriangle, Play, Pause } from "lucide-react";
 
@@ -125,7 +125,7 @@ function BookingFormInner() {
   // to make an actual choice on step 3 -- canProceed() below blocks
   // Continue until they do, rather than silently defaulting to "recap"
   // the way this used to work.
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", deliveryFormat: "", fullVideoNoMusic: false });
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", roastChoiceMade: false, deliveryFormat: "", fullVideoNoMusic: false });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -175,7 +175,10 @@ function BookingFormInner() {
     // See lib/bookingFormValidation.js for what this actually checks and why
     // it's a separate, tested function rather than inlined here.
     if (step === 3) {
-      return canProceedFromStyleStep({ isSocialCutEligible, deliveryFormat: form.deliveryFormat, isSocialCutsFormat, style: form.style, socialStyle: form.socialStyle });
+      return (
+        canProceedFromStyleStep({ isSocialCutEligible, deliveryFormat: form.deliveryFormat, isSocialCutsFormat, style: form.style, socialStyle: form.socialStyle })
+        && hasMadeRequiredRoastChoice({ isSocialCutsFormat, roastChoiceMade: form.roastChoiceMade })
+      );
     }
     return true;
   };
@@ -388,17 +391,54 @@ function BookingFormInner() {
 
           {isRoastEligible && (
             <div style={{ marginTop: "16px", padding: "16px", borderRadius: "14px", background: "#FFFFFF", border: form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
-                <input type="checkbox" checked={form.roastEnabled} onChange={(e) => update("roastEnabled", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
-                <Flame size={17} color="#C97A3D" />
-                <span style={{ fontWeight: 700, fontSize: "15px" }}>Add Roast Reel</span>
-                <span style={{ fontSize: "10.5px", color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  {roastAddonPrice(form.tier, effectiveRoastLevel) ? `+$${roastAddonPrice(form.tier, effectiveRoastLevel)}` : "Included"}
-                </span>
-              </label>
+              {/* A plain checkbox can't cleanly represent "not yet decided"
+                  -- it's a 2-state control, and the only way to land on an
+                  explicit "no" would be checking it and then unchecking it
+                  again, which isn't a reasonable thing to ask anyone to
+                  figure out. Social-cuts-only gets two real buttons instead,
+                  neither pre-selected, so both "yes" and "no" are single,
+                  equally-obvious clicks. Every other format keeps the plain
+                  checkbox exactly as it was -- roast is genuinely optional
+                  there, and "left unchecked" is already a fine, deliberate
+                  answer with nothing to force. */}
+              {isSocialCutsFormat ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <Flame size={17} color="#C97A3D" />
+                    <span style={{ fontWeight: 700, fontSize: "15px" }}>Roast Reel</span>
+                    <span style={{ fontSize: "10.5px", color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      {roastAddonPrice(form.tier, effectiveRoastLevel) ? `+$${roastAddonPrice(form.tier, effectiveRoastLevel)}` : "Included"}
+                    </span>
+                    <span style={{ fontWeight: 600, fontSize: "11px", color: "#C97A3D", textTransform: "uppercase", letterSpacing: "0.04em" }}>Required</span>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "10px", flexWrap: "wrap" }}>
+                    <button onClick={() => setForm((f) => ({ ...f, roastEnabled: true, roastChoiceMade: true }))} aria-pressed={form.roastChoiceMade && form.roastEnabled}
+                      style={{ flex: "1 1 140px", textAlign: "left", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: form.roastChoiceMade && form.roastEnabled ? "#FBEEE0" : "#FAF7F2", border: form.roastChoiceMade && form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #D8CFC0" }}>
+                      <div style={{ fontWeight: 600, fontSize: "13px", display: "flex", alignItems: "center", gap: "4px" }}>
+                        {form.roastChoiceMade && form.roastEnabled && <Check size={12} color="#C97A3D" strokeWidth={3} />} Yes, roast it
+                      </div>
+                    </button>
+                    <button onClick={() => setForm((f) => ({ ...f, roastEnabled: false, roastChoiceMade: true }))} aria-pressed={form.roastChoiceMade && !form.roastEnabled}
+                      style={{ flex: "1 1 140px", textAlign: "left", padding: "10px 12px", borderRadius: "8px", cursor: "pointer", background: form.roastChoiceMade && !form.roastEnabled ? "#FBEEE0" : "#FAF7F2", border: form.roastChoiceMade && !form.roastEnabled ? "1.5px solid #C97A3D" : "1px solid #D8CFC0" }}>
+                      <div style={{ fontWeight: 600, fontSize: "13px", display: "flex", alignItems: "center", gap: "4px" }}>
+                        {form.roastChoiceMade && !form.roastEnabled && <Check size={12} color="#C97A3D" strokeWidth={3} />} No roast
+                      </div>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                  <input type="checkbox" checked={form.roastEnabled} onChange={(e) => update("roastEnabled", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
+                  <Flame size={17} color="#C97A3D" />
+                  <span style={{ fontWeight: 700, fontSize: "15px" }}>Add Roast Reel</span>
+                  <span style={{ fontSize: "10.5px", color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    {roastAddonPrice(form.tier, effectiveRoastLevel) ? `+$${roastAddonPrice(form.tier, effectiveRoastLevel)}` : "Included"}
+                  </span>
+                </label>
+              )}
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "8px 0 0", lineHeight: 1.5 }}>
                 {isSocialCutsFormat
-                  ? "Witty commentary layered over your social cuts. Each cut comes with both a captioned and a caption-free version."
+                  ? "Witty commentary layered over your social cuts. Each cut comes with both a captioned and a caption-free version. Since social cuts here use every uploaded photo with nothing curated out, this sets the tone for the whole deliverable, so pick one to continue."
                   : "Witty commentary layered over your photos. You'll get both a captioned cut and a caption-free version of the same video."}
               </p>
               {form.roastEnabled && (isRoastFullLevelEligible ? (
@@ -462,7 +502,17 @@ function BookingFormInner() {
       {submitError && <p role="alert" style={{ color: "#C97A3D", fontSize: 14, margin: "0 0 14px" }}>{submitError}</p>}
 
       <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
-        {step > 1 && <button onClick={() => setStep(step - 1)} style={backBtn}><ArrowLeft size={16} /> Back</button>}
+        {/* Every step gets a back affordance now, not just steps 2-4 -- step
+            1 has no earlier step within the form to return to, so it leaves
+            the flow entirely rather than changing step state. Same backBtn
+            style either way (built on buttonStyle(), whose textDecoration:
+            "none" already covers the <a> case, same as the "Back to
+            homepage" link on the booking success page). */}
+        {step > 1 ? (
+          <button onClick={() => setStep(step - 1)} style={backBtn}><ArrowLeft size={16} /> Back</button>
+        ) : (
+          <a href="/" style={backBtn}><ArrowLeft size={16} /> Back</a>
+        )}
         {step < 4 ? (
           <button onClick={() => canProceed() && setStep(step + 1)} disabled={!canProceed()} style={nextBtn(canProceed())}>Continue <ArrowRight size={16} /></button>
         ) : (

@@ -3,9 +3,18 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { buttonStyle, shadow, radius, LoadingState, toastStyle } from "@/components/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2 } from "lucide-react";
+import { getUploadLimit } from "@/lib/uploadLimits";
 
 // Spotlight/Luxe only, matching what those tiers actually advertise.
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
+// Matches the guest upload page's own film-reel filmstrip (app/event/[eventId]/page.jsx)
+// -- same 24-segment visual language, but a different meaning behind it. The
+// guest's version fills toward 24 raw uploads, a momentum cue with no cap
+// context a guest doesn't need. This one fills toward the tier's actual
+// upload limit (lib/uploadLimits.js), which is exactly the number this
+// page's DELETE-photo and close-uploads controls, and the
+// upload-cap-reached email, all exist to manage.
+const HOST_REEL_SEGMENTS = 24;
 const STYLES = [
   { id: "cinematic", label: "Cinematic" },
   { id: "upbeat", label: "Upbeat" },
@@ -391,6 +400,31 @@ export default function QrSharePage() {
               <p style={{ fontSize: 12.5, color: "#4a4642", margin: "0 0 12px", lineHeight: 1.5 }}>
                 Our AI picks the best shots for your main video automatically, but it can miss a beautiful photo that scores low on technical sharpness. Star any photo that absolutely has to be in the video, regardless of what the AI thinks of it.
               </p>
+
+              {/* Waits on the same photos.length this card's own grid below
+                  is already loading -- no extra fetch. Percent-of-cap, not a
+                  raw count against a fixed scale: a Free event and a Luxe
+                  event are managing completely different numbers (20 vs
+                  2000), so the bar has to represent "how full" rather than
+                  "how many" to mean the same thing on every tier. */}
+              {!photosLoading && eventInfo.tier && (() => {
+                const cap = getUploadLimit(eventInfo.tier);
+                const uploadCount = photos.length;
+                const filled = Math.min(HOST_REEL_SEGMENTS, Math.round((uploadCount / cap) * HOST_REEL_SEGMENTS));
+                const atCap = uploadCount >= cap;
+                return (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ display: "flex", gap: 2, marginBottom: 6 }}>
+                      {Array.from({ length: HOST_REEL_SEGMENTS }).map((_, i) => (
+                        <div key={i} style={{ flex: 1, height: 8, borderRadius: 1, background: i < filled ? "#C97A3D" : "#E4DED2", transition: "background 0.4s ease" }} />
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 11.5, color: atCap ? "#C97A3D" : "#8a857d", margin: 0, fontWeight: atCap ? 700 : 400 }}>
+                      {uploadCount} of {cap} photos uploaded{atCap ? " — event is full, see below to free up room or close uploads" : ""}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {photosLoading ? (
                 <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>Loading photos…</p>

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef, useId } from "react";
+import { fieldStyle } from "@/components/ui";
 import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame, AlertTriangle, Plus, Copy, Check, X } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
 
@@ -326,7 +327,7 @@ export default function Dashboard() {
   );
 }
 
-const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", boxSizing: "border-box" };
+const inputStyle = fieldStyle({ size: "md" });
 
 function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
   const containerRef = useRef(null);

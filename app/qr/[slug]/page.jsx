@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { buttonStyle } from "@/components/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause } from "lucide-react";
 
@@ -479,8 +480,11 @@ export default function QrSharePage() {
   );
 }
 
-const primaryBtnStyle = { display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 10, border: "none", background: "#C97A3D", color: "#211F1D", fontSize: 15, fontWeight: 700, cursor: "pointer" };
-const secondaryBtnStyle = { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 10, border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: 14, fontWeight: 600, cursor: "pointer" };
+// Shared button definitions now live one level up. Padding is overridden
+// because these are full-width buttons in a column, where the shared
+// horizontal padding would be doing nothing.
+const primaryBtnStyle = { ...buttonStyle({ variant: "primary", size: "lg" }), padding: "14px" };
+const secondaryBtnStyle = { ...buttonStyle({ variant: "secondary", size: "md" }), flex: 1, padding: "12px" };
 
 function formatDate(dateStr) {
   if (!dateStr) return "";

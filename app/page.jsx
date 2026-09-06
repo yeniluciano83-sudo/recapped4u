@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { cardStyle as sharedCardStyle } from "@/components/ui";
 import Link from "next/link";
 import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote, Play, Pause } from "lucide-react";
 
@@ -1064,10 +1065,8 @@ function Section({ id, refs, title, icon, children, subtitle, band, blob }) {
   );
 }
 
-const cardStyle = {
-  background: "#FFFFFF",
-  border: "1px solid #E4DED2",
-  borderRadius: 14,
-  padding: 20,
-};
+// Radius stays 14 rather than snapping to the lg token (16) -- unifying the
+// six rectangle radii in use is a real visual change and belongs in its own
+// commit, not smuggled into a refactor.
+const cardStyle = sharedCardStyle({ pad: 20, r: 14 });
 

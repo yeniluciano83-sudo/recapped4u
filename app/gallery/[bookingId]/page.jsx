@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { buttonStyle, radius } from "@/components/ui";
 import { useParams } from "next/navigation";
 import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
@@ -681,4 +682,5 @@ function LengthToggle({ active, onClick, label }) {
   );
 }
 
-const iconBtnStyle = { display: "flex", alignItems: "center", gap: "6px", padding: "8px 12px", borderRadius: "8px", border: "1px solid #D8CFC0", background: "transparent", color: "#4a4642", fontSize: "13px", cursor: "pointer", textDecoration: "none" };
+// Keeps the tighter 8px radius and 6px gap this toolbar already used.
+const iconBtnStyle = { ...buttonStyle({ variant: "quiet", size: "sm" }), borderRadius: radius.sm, gap: "6px" };

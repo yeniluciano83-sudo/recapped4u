@@ -107,17 +107,63 @@ describe("evaluate", () => {
     expect(checks.find((c) => c.name === "DMARC rua").status).toBe("warn");
   });
 
-  it("reflects today's actual production gap (SPF missing, DKIM ok, DMARC p=none, dead rua)", () => {
+  // SPF authenticates the envelope sender, and Resend bounces through
+  // send.<domain> -- so that is where receivers look, not the apex. Checking
+  // the apex alone produced a hard FAIL against a domain that was
+  // authenticating and delivering perfectly.
+  describe("SPF is read from the bounce domain, not the apex", () => {
+    it("passes on a bounce-domain record with an empty apex", () => {
+      const { checks } = evaluate({
+        ...GOOD,
+        rootTxt: [],
+        bounceTxt: ["v=spf1 include:amazonses.com ~all"],
+      });
+      const spf = checks.find((c) => c.name === "SPF");
+      expect(spf.status).toBe("pass");
+      expect(spf.detail).toContain(`send.${DOMAIN}`);
+    });
+
+    it("flags a missing apex record as an optional warning, never a failure", () => {
+      const { ok, checks } = evaluate({
+        ...GOOD,
+        rootTxt: [],
+        bounceTxt: ["v=spf1 include:amazonses.com ~all"],
+        dmarcTxt: ["v=DMARC1; p=reject; rua=mailto:dmarc@external-provider.com"],
+      });
+      expect(checks.find((c) => c.name === "SPF (apex, optional)").status).toBe("warn");
+      expect(ok).toBe(true);
+    });
+
+    it("stays quiet about the apex when the apex also has SPF", () => {
+      const { checks } = evaluate({
+        ...GOOD,
+        rootTxt: ["v=spf1 include:amazonses.com -all"],
+        bounceTxt: ["v=spf1 include:amazonses.com ~all"],
+      });
+      expect(checks.find((c) => c.name === "SPF (apex, optional)")).toBeUndefined();
+    });
+
+    it("still fails when neither the bounce domain nor the apex has a record", () => {
+      const { checks } = evaluate({ ...GOOD, rootTxt: [], bounceTxt: [] });
+      const spf = checks.find((c) => c.name === "SPF");
+      expect(spf.status).toBe("fail");
+      expect(spf.detail).toContain(`send.${DOMAIN}`);
+    });
+  });
+
+  it("reflects today's actual production state (SPF + DKIM good, DMARC p=none, dead rua)", () => {
     const { ok, checks } = evaluate({
       domain: DOMAIN,
       rootTxt: [],
+      bounceTxt: ["v=spf1 include:amazonses.com ~all"],
       dkimTxt: ["p=MIGfMA0GCSqGSIb3DQEB"],
       dmarcTxt: ["v=DMARC1; p=none; rua=mailto:hello@recappedforyou.com"],
       ruaDomainHasMx: { "recappedforyou.com": false },
     });
     expect(ok).toBe(false);
-    expect(checks.find((c) => c.name === "SPF").status).toBe("fail");
+    expect(checks.find((c) => c.name === "SPF").status).toBe("pass");
     expect(checks.find((c) => c.name === "DKIM").status).toBe("pass");
+    // The two things genuinely still outstanding.
     expect(checks.find((c) => c.name === "DMARC policy").status).toBe("fail");
     expect(checks.find((c) => c.name === "DMARC rua").status).toBe("fail");
   });

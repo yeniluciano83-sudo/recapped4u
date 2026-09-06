@@ -74,6 +74,8 @@ function ruaMailtoDomains(ruaValue) {
  * @param {object} input
  * @param {string}   input.domain
  * @param {string[]} input.rootTxt          TXT records on the apex
+ * @param {string[]} input.bounceTxt        TXT records on send.<domain>, the
+ *        Return-Path/bounce domain Resend actually sends from
  * @param {string[]} input.dkimTxt          TXT records on resend._domainkey.<domain>
  * @param {string[]} input.dmarcTxt         TXT records on _dmarc.<domain>
  * @param {Record<string, boolean>} input.ruaDomainHasMx
@@ -81,15 +83,31 @@ function ruaMailtoDomains(ruaValue) {
  *        it), whether it currently has an MX record. External report
  *        providers (cloudflare, dmarc aggregators, ...) are assumed reachable.
  */
-function evaluate({ domain, rootTxt = [], dkimTxt = [], dmarcTxt = [], ruaDomainHasMx = {} }) {
+function evaluate({ domain, rootTxt = [], bounceTxt = [], dkimTxt = [], dmarcTxt = [], ruaDomainHasMx = {} }) {
   const checks = [];
 
   // --- SPF ---
-  const spf = rootTxt.filter((t) => /^v=spf1\b/i.test(t.trim()));
+  //
+  // Checked on send.<domain>, not the apex. SPF authenticates the envelope
+  // sender (Return-Path), not the visible From: header, and Resend routes
+  // bounces through send.<domain> -- so that subdomain is the one receivers
+  // actually evaluate. This check previously looked at the apex alone and
+  // reported a hard FAIL against a domain whose mail was authenticating and
+  // delivering fine, which is worse than not checking: it sent us hunting a
+  // deliverability problem that did not exist.
+  //
+  // Alignment still holds for DMARC -- the default is relaxed, so an envelope
+  // domain one label below the From: domain passes.
+  const bounceDomain = `send.${domain}`;
+  const isSpf = (t) => /^v=spf1\b/i.test(t.trim());
+  const onBounce = bounceTxt.some(isSpf);
+  const spfHost = onBounce ? bounceDomain : domain;
+  const spf = (onBounce ? bounceTxt : rootTxt).filter(isSpf);
+
   if (spf.length === 0) {
-    checks.push({ name: "SPF", status: "fail", detail: `no v=spf1 record on ${domain}` });
+    checks.push({ name: "SPF", status: "fail", detail: `no v=spf1 record on ${bounceDomain} or ${domain}` });
   } else if (spf.length > 1) {
-    checks.push({ name: "SPF", status: "fail", detail: `${spf.length} SPF records (only one allowed): ${spf.join(" || ")}` });
+    checks.push({ name: "SPF", status: "fail", detail: `${spf.length} SPF records on ${spfHost} (only one allowed): ${spf.join(" || ")}` });
   } else {
     const rec = spf[0].trim();
     const hasSes = /include:amazonses\.com/i.test(rec);
@@ -98,8 +116,19 @@ function evaluate({ domain, rootTxt = [], dkimTxt = [], dmarcTxt = [], ruaDomain
       name: "SPF",
       status: hasSes ? "pass" : "warn",
       detail: hasSes
-        ? `${rec}  (${allMech})`
-        : `present but missing include:amazonses.com — Resend mail will not be authorized: ${rec}`,
+        ? `${spfHost}: ${rec}  (${allMech})`
+        : `${spfHost} has SPF but no include:amazonses.com — Resend mail will not be authorized: ${rec}`,
+    });
+  }
+
+  // Apex SPF is a separate concern from deliverability: nothing sends with an
+  // apex envelope, so its absence breaks nothing. It only denies a spoofer a
+  // domain with no published policy. Advisory, never build-failing.
+  if (onBounce && !rootTxt.some(isSpf)) {
+    checks.push({
+      name: "SPF (apex, optional)",
+      status: "warn",
+      detail: `no v=spf1 on ${domain} itself. Not needed for Resend — add "v=spf1 -all" only to explicitly deny apex-envelope spoofing.`,
     });
   }
 
@@ -154,8 +183,9 @@ async function main() {
   const domain = process.argv[2] || domainFromEnv();
   console.log(`Checking email authentication for ${domain}\n`);
 
-  const [rootTxt, dkimTxt, dmarcTxt, apexMx] = await Promise.all([
+  const [rootTxt, bounceTxt, dkimTxt, dmarcTxt, apexMx] = await Promise.all([
     safeResolveTxt(domain),
+    safeResolveTxt(`send.${domain}`),
     safeResolveTxt(`${DKIM_SELECTOR}.${domain}`),
     safeResolveTxt(`_dmarc.${domain}`),
     safeResolveMx(domain),
@@ -173,7 +203,7 @@ async function main() {
     }
   }
 
-  const { ok, checks } = evaluate({ domain, rootTxt, dkimTxt, dmarcTxt, ruaDomainHasMx });
+  const { ok, checks } = evaluate({ domain, rootTxt, bounceTxt, dkimTxt, dmarcTxt, ruaDomainHasMx });
 
   const mark = { pass: "PASS", warn: "WARN", fail: "FAIL" };
   for (const c of checks) console.log(`  [${mark[c.status]}] ${c.name}: ${c.detail}`);

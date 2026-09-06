@@ -12,22 +12,41 @@ Run `node scripts/check-email-auth.js` at any point to see current state.
 
 ---
 
-## Current state (2026-09-05)
+## Current state (2026-09-06)
 
 | Mechanism | State | Notes |
 |-----------|-------|-------|
 | **DKIM**  | ✅ configured | `resend._domainkey.recappedforyou.com` publishes a valid key; Resend signs `d=recappedforyou.com`. |
-| **SPF**   | ❌ missing | No `v=spf1` record on the root domain at all. |
-| **DMARC** | ⚠️ weak | `v=DMARC1; p=none; rua=mailto:hello@recappedforyou.com` — monitor-only, and `hello@` has no MX so aggregate reports are discarded. |
-| **MX**    | ❌ none | `hello@recappedforyou.com` cannot receive mail (the address the site lists as its contact). |
+| **SPF**   | ✅ configured | On the **bounce domain**, via the section 3 custom return-path: `send.recappedforyou.com` publishes `v=spf1 include:amazonses.com ~all` plus the SES feedback MX. Resend reports both as verified. |
+| **DMARC** | ⚠️ weak | `v=DMARC1; p=none; rua=mailto:hello@recappedforyou.com` — monitor-only, and `hello@` has no MX, so aggregate reports bounce. **The only real gap left.** |
+| **MX**    | ❌ none | `hello@recappedforyou.com` cannot receive mail (the address the site lists as its contact). Also why the `rua` above is dead. |
 
-DKIM already aligns, so DMARC is technically *passing* today on DKIM alone.
-The gaps that still hurt reputation: no SPF record, no policy enforcement, and
-a dead `rua` so we're blind to failures.
+Both mechanisms now pass *and* align, so DMARC rides on either one rather than
+DKIM alone. Evidence: the last 100 sends through Resend all report `delivered`.
+
+> **SPF lives on `send.`, not the apex — this trips people up.** SPF
+> authenticates the envelope sender (Return-Path), not the visible `From:`
+> header, and the section 3 return-path moves that envelope to
+> `send.recappedforyou.com`. Checking the apex therefore shows "no SPF" on a
+> domain whose mail authenticates perfectly. `scripts/check-email-auth.js`
+> made exactly that mistake and reported a hard FAIL for it; it now checks the
+> bounce domain. An apex `v=spf1` is optional hardening (it denies spoofers a
+> domain with no stated policy) and is not required for Resend delivery.
+
+The one gap that still costs us: `p=none` asks receivers to do nothing about
+failures, and the dead `rua` means we can't see them either.
 
 ---
 
-## 1. Add SPF (do this first)
+## 1. Apex SPF — optional, and NOT what fixes sending
+
+> **Superseded by section 3, which is already done.** Sending is authenticated
+> by the SPF record on `send.recappedforyou.com`, because that's the envelope
+> domain receivers evaluate. Adding an apex record does not improve Resend
+> deliverability. Its only value is denying a spoofer a domain with no
+> published policy, and if you want that, `v=spf1 -all` says it more honestly
+> than the SES include below — nothing legitimately sends with an apex
+> envelope. Skip to section 5 if you're here to fix DMARC.
 
 Cloudflare dashboard → **DNS → Records → Add record**:
 

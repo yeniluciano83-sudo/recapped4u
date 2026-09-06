@@ -8,6 +8,18 @@ on:
     - cron: "0 */3 * * *"
   workflow_dispatch: {} # allows manually triggering a run from the Actions tab
 
+# Only ever one scheduler run at a time. A cron tick landing on top of a
+# manual dispatch (or an operator dispatching twice) would otherwise put
+# two runs against the same in-progress render -- the per-booking render
+# lock in scripts/poll-and-recap.js mostly covers that, but its
+# stale-timeout is necessarily shorter than this job's 75-minute cap, so
+# there's a window where both could claim the same render. Queue instead
+# of overlapping; cancel-in-progress: false so a run that's mid-encode is
+# never killed to make way for a newer one.
+concurrency:
+  group: recap-scheduler
+  cancel-in-progress: false
+
 jobs:
   poll-and-recap:
     runs-on: ubuntu-latest

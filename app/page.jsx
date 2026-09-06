@@ -185,7 +185,7 @@ export default function HomePage() {
           </div>
         </div>
         {mobileMenuOpen && (
-          <div className="nav-mobile-panel" style={{ borderTop: "1px solid #E4DED2", background: "#FAF7F2", padding: "8px 20px 14px", display: "flex", flexDirection: "column" }}>
+          <div className="nav-mobile-panel nav-panel-enter" style={{ borderTop: "1px solid #E4DED2", background: "#FAF7F2", padding: "8px 20px 14px", display: "flex", flexDirection: "column" }}>
             {NAV_ITEMS.map((item) => (
               <button key={item.id} onClick={() => scrollTo(item.id)}
                 style={{ background: "none", border: "none", color: "#4a4642", fontSize: 14, padding: "10px 0", cursor: "pointer", textAlign: "left" }}>
@@ -203,6 +203,18 @@ export default function HomePage() {
         .nav-mobile-panel { display: none; }
         @media (max-width: 850px) {
           .nav-mobile-panel { display: flex !important; }
+        }
+        /* Entrance only, like the gallery lightbox's fade/pop-in -- the panel
+           is conditionally MOUNTED ({mobileMenuOpen && <div>...}), not just
+           hidden, so it naturally remounts fresh every time it opens and this
+           replays correctly with no extra state. Closing stays an instant
+           unmount, same reasoning as the lightbox: a menu opened and closed
+           this casually doesn't need the extra complexity of delaying the
+           real unmount behind a close animation. */
+        @keyframes nav-panel-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        .nav-panel-enter { animation: nav-panel-in 200ms ease-out; }
+        @media (prefers-reduced-motion: reduce) {
+          .nav-panel-enter { animation: none; }
         }
 
         .how-timeline { display: flex; flex-direction: column; }

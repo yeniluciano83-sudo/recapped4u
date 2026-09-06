@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fieldStyle, buttonStyle, cardStyle, radius, tone, shadow } from "./ui.jsx";
+import { fieldStyle, buttonStyle, cardStyle, toastStyle, radius, tone, shadow } from "./ui.jsx";
 
 // Locks the primitives to the hand-written styles they replaced.
 //
@@ -121,5 +121,26 @@ describe("tokens", () => {
   it("exposes three rectangle radii plus a pill, down from the six in use", () => {
     expect(Object.keys(radius).sort()).toEqual(["lg", "md", "pill", "sm"]);
     expect(radius.sm < radius.md && radius.md < radius.lg).toBe(true);
+  });
+});
+
+describe("toastStyle", () => {
+  // Replaced 9 native alert() calls across dashboard and the QR share page,
+  // both of which have several separate action buttons any one of which
+  // could fail -- fixed positioning is what lets one shared toast surface
+  // sit correctly regardless of which button (or which scroll position)
+  // triggered it.
+  it("is fixed-position, centered, and above the page content", () => {
+    const s = toastStyle();
+    expect(s.position).toBe("fixed");
+    expect(s.left).toBe("50%");
+    expect(s.transform).toBe("translateX(-50%)");
+    expect(s.zIndex).toBeGreaterThan(0);
+  });
+
+  it("uses the ink/surface pairing, not the coral accent -- this reports failure, not a call to action", () => {
+    const s = toastStyle();
+    expect(s.background).toBe(tone.ink);
+    expect(s.color).toBe(tone.surface);
   });
 });

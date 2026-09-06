@@ -155,6 +155,29 @@ export function Field({ as: Tag = "input", size, style, ...rest }) {
   return <Tag style={{ ...fieldStyle({ size }), ...style }} {...rest} />;
 }
 
+// Fixed-position, self-dismissing error surface for actions with no single
+// natural inline spot to anchor to -- several scattered buttons (QR share's
+// photo grid, close-uploads, extend-deadline; dashboard's per-row status
+// controls) can each fail, and pinning the message under any one of them
+// would be misleading when a different one caused it. Pages with exactly
+// one action per screen (booking, cancel, reschedule) don't use this -- an
+// inline <p role="alert"> right above that one button is clearer there than
+// something that pops up and fades.
+//
+// A style function, not a stateful component -- components/ui.jsx has no
+// hooks anywhere else, and the auto-dismiss timer is just the caller's own
+// setTimeout, the same pattern every "Link copied" confirmation on the site
+// already uses. Adopting this needs no new state-management idiom, just
+// this one shape.
+export function toastStyle() {
+  return {
+    position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+    background: tone.ink, color: tone.surface, padding: "12px 20px",
+    borderRadius: radius.pill, fontSize: 14, boxShadow: shadow.md,
+    maxWidth: "calc(100vw - 40px)", textAlign: "center", zIndex: 200,
+  };
+}
+
 // A branded loading placeholder: pulsing gradient badge + icon + message.
 // Extracted from the pattern app/gallery/[bookingId]/page.jsx already built
 // for its own initial load -- six other pages (qr share, qr upload, cancel,

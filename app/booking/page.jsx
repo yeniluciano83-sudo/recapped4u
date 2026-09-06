@@ -119,6 +119,7 @@ function BookingFormInner() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   // deliveryFormat starts unset (not "recap") so a Spotlight/Luxe host has
   // to make an actual choice on step 3 -- canProceed() below blocks
   // Continue until they do, rather than silently defaulting to "recap"
@@ -181,18 +182,19 @@ function BookingFormInner() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled, roastLevel: effectiveRoastLevel }) });
       const data = await res.json();
       if (!res.ok) {
-        alert("Submission failed: " + (data.error || "Unknown error"));
+        setSubmitError(data.error || "Submission failed. Please try again.");
         return;
       }
       if (data.checkoutUrl) { window.location.href = data.checkoutUrl; return; }
       setSubmitted(true);
     } catch (err) {
       console.error("Submission failed", err);
-      alert("Submission failed. Please try again.");
+      setSubmitError("Submission failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -450,6 +452,8 @@ function BookingFormInner() {
           </div>
         </StepBlock>
       )}
+
+      {submitError && <p role="alert" style={{ color: "#C97A3D", fontSize: 14, margin: "0 0 14px" }}>{submitError}</p>}
 
       <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
         {step > 1 && <button onClick={() => setStep(step - 1)} style={backBtn}><ArrowLeft size={16} /> Back</button>}

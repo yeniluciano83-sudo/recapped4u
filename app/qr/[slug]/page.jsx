@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { buttonStyle, shadow, radius, LoadingState } from "@/components/ui";
+import { buttonStyle, shadow, radius, LoadingState, toastStyle } from "@/components/ui";
 import { useParams, useSearchParams } from "next/navigation";
 import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2 } from "lucide-react";
 
@@ -64,6 +64,16 @@ export default function QrSharePage() {
   const [photosLoading, setPhotosLoading] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  // One shared toast for delete-photo, close-uploads, and extend-deadline --
+  // three separate buttons scattered across this page, any of which can
+  // fail. Pinning an error under just one would be misleading if a
+  // different action was the one that actually failed. See toastStyle in
+  // components/ui.jsx.
+  const [toast, setToast] = useState(null);
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 4000);
+  };
 
   // One shared <audio> element for every style preview button on this page --
   // starting a new preview stops whatever was already playing.
@@ -209,12 +219,12 @@ export default function QrSharePage() {
       const res = await fetch(`/api/events/${slug}/uploads/${photo.id}?t=${encodeURIComponent(hostToken)}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || "Failed to remove photo. Please try again.");
+        showToast(data.error || "Failed to remove photo. Please try again.");
         setPhotos(previous);
       }
     } catch (err) {
       console.error("Failed to delete photo", err);
-      alert("Failed to remove photo. Please try again.");
+      showToast("Failed to remove photo. Please try again.");
       setPhotos(previous);
     } finally {
       setDeletingId(null);
@@ -230,13 +240,13 @@ export default function QrSharePage() {
       const res = await fetch(`/api/events/${slug}/close-uploads?t=${encodeURIComponent(hostToken)}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to close uploads. Please try again.");
+        showToast(data.error || "Failed to close uploads. Please try again.");
         return;
       }
       setEventInfo((prev) => ({ ...prev, uploads_closed_at: data.uploadsClosedAt }));
     } catch (err) {
       console.error("Failed to close uploads", err);
-      alert("Failed to close uploads. Please try again.");
+      showToast("Failed to close uploads. Please try again.");
     } finally {
       setClosingUploads(false);
     }
@@ -251,13 +261,13 @@ export default function QrSharePage() {
       const res = await fetch(`/api/events/${slug}/extend-deadline?t=${encodeURIComponent(hostToken)}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to extend deadline. Please try again.");
+        showToast(data.error || "Failed to extend deadline. Please try again.");
         return;
       }
       setEventInfo((prev) => ({ ...prev, deadline_extension_hours: data.deadlineExtensionHours }));
     } catch (err) {
       console.error("Failed to extend deadline", err);
-      alert("Failed to extend deadline. Please try again.");
+      showToast("Failed to extend deadline. Please try again.");
     } finally {
       setExtendingDeadline(false);
     }
@@ -485,6 +495,8 @@ export default function QrSharePage() {
           )}
         </div>
       </main>
+
+      {toast && <p role="alert" style={toastStyle()}>{toast}</p>}
 
       {/* Printable card — hidden on screen, shown only when printing */}
       <div className="print-card">

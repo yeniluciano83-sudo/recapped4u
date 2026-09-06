@@ -88,6 +88,15 @@ export default function RootLayout({ children }) {
           button:not(:disabled), a {
             transition: filter 120ms ease, transform 120ms ease, outline-color 120ms ease;
           }
+
+          /* Without this, selecting text anywhere on the site highlights it
+             in the browser's default blue -- the one color on the page that
+             was never chosen to be here, clashing with the warm cream/clay
+             palette everywhere else. */
+          ::selection {
+            background: #C97A3D;
+            color: #FFFFFF;
+          }
         `}</style>
       </body>
     </html>

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef, useId } from "react";
-import { fieldStyle } from "@/components/ui";
+import { fieldStyle, toastStyle } from "@/components/ui";
 import { Calendar, Clock, CheckCircle2, Circle, Search, ChevronRight, Inbox, Flame, AlertTriangle, Plus, Copy, Check, X } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
 
@@ -131,6 +131,16 @@ export default function Dashboard() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Status can be changed from several places (the list, the detail panel),
+  // so a toast rather than an inline message pinned to one of them -- same
+  // reasoning as app/qr/[slug]/page.jsx's toast. See toastStyle in
+  // components/ui.jsx.
+  const [toast, setToast] = useState(null);
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const updateStatus = async (id, newStatus) => {
     const prevBookings = bookings;
     const prevSelected = selected;
@@ -150,7 +160,7 @@ export default function Dashboard() {
       console.error("Failed to save status change", err);
       setBookings(prevBookings);
       setSelected(prevSelected);
-      alert("Failed to save the status change. Please try again.");
+      showToast("Failed to save the status change. Please try again.");
     }
   };
 
@@ -323,6 +333,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {toast && <p role="alert" style={toastStyle()}>{toast}</p>}
     </main>
   );
 }

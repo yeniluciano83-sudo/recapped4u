@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { generateConfirmToken } from "@/lib/confirmToken";
-import { TIER_PRICES, SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents } from "@/lib/pricing";
+import { TIER_PRICES, SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents, defaultGalleryTemplate } from "@/lib/pricing";
 import { canProceedFromStyleStep } from "@/lib/bookingFormValidation";
 import { captureError } from "@/lib/sentry";
 
@@ -85,6 +85,7 @@ export async function POST(req) {
         roast_level: effectiveRoastLevel,
         delivery_format: effectiveDeliveryFormat,
         full_video_no_music: !!fullVideoNoMusic,
+        gallery_template: defaultGalleryTemplate(effectiveDeliveryFormat),
       })
       .select()
       .single();

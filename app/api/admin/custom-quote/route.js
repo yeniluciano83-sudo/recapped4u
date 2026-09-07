@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
-import { SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents } from "@/lib/pricing";
+import { SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents, defaultGalleryTemplate } from "@/lib/pricing";
 import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -59,6 +59,7 @@ export async function POST(req) {
       roast_level: effectiveRoastLevel,
       delivery_format: effectiveDeliveryFormat,
       full_video_no_music: !!fullVideoNoMusic,
+      gallery_template: defaultGalleryTemplate(effectiveDeliveryFormat),
       custom_price_cents: amountCents,
     };
 

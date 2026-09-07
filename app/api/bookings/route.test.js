@@ -84,6 +84,7 @@ describe("POST /api/bookings", () => {
     expect(res.status).toBe(200);
     const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
     expect(insertCall.args[0].delivery_format).toBe("recap");
+    expect(insertCall.args[0].gallery_template).toBe("grid");
   });
 
   // The form's own Continue button gates this too (lib/bookingFormValidation.js,
@@ -120,6 +121,12 @@ describe("POST /api/bookings", () => {
 
     const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "social_cuts", style: undefined, socialStyle: "retro" }));
     expect(res.status).toBe(200);
+    // Social-cuts-only puts every uploaded photo somewhere in the
+    // deliverable with nothing curated out -- Polaroid suits that better
+    // than the grid every other format defaults to. See defaultGalleryTemplate
+    // in lib/pricing.js.
+    const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+    expect(insertCall.args[0].gallery_template).toBe("polaroid");
   });
 
   it("persists video_only as-is for a social-cut-eligible tier", async () => {
@@ -131,6 +138,7 @@ describe("POST /api/bookings", () => {
     expect(res.status).toBe(200);
     const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
     expect(insertCall.args[0].delivery_format).toBe("video_only");
+    expect(insertCall.args[0].gallery_template).toBe("grid");
   });
 
   it("holds a free-tier booking at pending_confirmation, sends the confirm email, and never touches Stripe", async () => {

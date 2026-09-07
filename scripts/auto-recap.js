@@ -43,6 +43,7 @@ const { generateRoastScript } = require("../lib/roast");
 const { buildCardBackground } = require("../lib/card-background");
 const { buildSocialSelections } = require("../lib/socialSelections");
 const { computeGalleryExpiry } = require("../lib/galleryExpiry");
+const { resolveSocialPhotoStyle, socialPhotoNeedsSeparateGrade } = require("../lib/socialPhotoStyle");
 const {
   ANALYSIS_PROMPT,
   parseAnalysisJson,
@@ -747,6 +748,16 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
     throw new Error(`No usable photos (after moderation) for booking ${bookingId} -- reverted status to "collecting".`);
   }
 
+  // What a social cut's own photos should actually be graded with, and
+  // whether that requires a separate enhancement pass -- see
+  // lib/socialPhotoStyle.js for the reasoning and the bug this closes
+  // (enhancePhoto was called with booking.style at every call site, never
+  // booking.social_style, so a host's chosen social-cut theme was honored
+  // by that cut's music and pacing but not the color grade baked into its
+  // own photos).
+  const socialPhotoStyle = resolveSocialPhotoStyle({ style: booking.style, socialStyle: booking.social_style });
+  const socialNeedsSeparateGrade = socialPhotoNeedsSeparateGrade({ style: booking.style, socialStyle: booking.social_style, useAllPhotoSocialCuts });
+
   // The gallery always shows every non-flagged uploaded photo -- see
   // buildGallerySelection. This is a superset of videoShortlist (which stays
   // quality-gated for the actual video), so the video's local files below
@@ -768,7 +779,10 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
     const gallerySelection = buildGallerySelection(analyzed, SHORTLIST_CAP[booking.tier] || Infinity);
     for (let i = 0; i < gallerySelection.length; i++) {
       const { buffer, upload } = gallerySelection[i];
-      const enhanced = await enhancePhoto(buffer, booking.style);
+      // useAllPhotoSocialCuts: this loop is the only enhancement pass that
+      // runs at all (no separate full video), so it has to use
+      // socialPhotoStyle directly -- booking.style is null in that mode.
+      const enhanced = await enhancePhoto(buffer, useAllPhotoSocialCuts ? socialPhotoStyle : booking.style);
       const key = `deliverable/${bookingId}/photo-${i + 1}.jpg`;
       await uploadToR2(key, enhanced, "image/jpeg");
       enhancedKeys.push(key);
@@ -824,7 +838,16 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
     for (let cutIndex = 0; cutIndex < socialSelections.length; cutIndex++) {
       for (let i = 0; i < socialSelections[cutIndex].length; i++) {
         const { buffer, upload } = socialSelections[cutIndex][i];
-        const enhanced = enhancedByUploadId.get(upload.id) || (await enhancePhoto(buffer, booking.style));
+        // socialNeedsSeparateGrade: a "recap" booking whose social_style
+        // genuinely diverges from its main style -- the cached gallery/
+        // full-video buffer was graded with the WRONG style for a social
+        // cut, so it can't be reused here; re-enhance with socialPhotoStyle
+        // instead. Otherwise (styles match, or useAllPhotoSocialCuts already
+        // enhanced everything with socialPhotoStyle above) the existing
+        // cache is already correct and reused as before.
+        const enhanced = socialNeedsSeparateGrade
+          ? await enhancePhoto(buffer, socialPhotoStyle)
+          : enhancedByUploadId.get(upload.id) || (await enhancePhoto(buffer, useAllPhotoSocialCuts ? socialPhotoStyle : booking.style));
         // "social-{n}-photo-", not "social-" -- a plain "social-" prefix
         // also matches the rendered "social-cut-{n}.mp4" outputs further
         // down (an S3 prefix listing has no concept of "photos only").

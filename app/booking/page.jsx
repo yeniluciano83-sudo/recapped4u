@@ -536,6 +536,29 @@ function Shell({ children }) {
           <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: 0 }}>Recapped For You</p>
         </div>
         {children}
+        <style>{`
+          /* Every step (1-4) is only ever conditionally rendered
+             ({step === N && <StepBlock>...}), so each one already mounts
+             fresh the moment it becomes the active step and unmounts the
+             moment it stops being -- no key trick or extra state needed for
+             this to replay correctly on every step change, forward or back.
+             This was the one flow on the site with no motion anywhere in it:
+             every individual field on this form got its own polish pass this
+             session (the theme requirement, the roast choice, the back
+             button), but moving between steps still hard-cut. Kept
+             non-directional (fade + a small vertical lift, not a
+             left/right slide) rather than trying to distinguish Continue
+             from Back -- every other entrance animation on the site
+             (the mobile nav panel, the gallery lightbox) is the same family,
+             and a directional slide that's wrong half the time (sliding in
+             from the "forward" side on a Back click) would be worse than
+             no direction at all. */
+          .step-fade-in { animation: step-fade-in 260ms ease-out; }
+          @keyframes step-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+          @media (prefers-reduced-motion: reduce) {
+            .step-fade-in { animation: none; }
+          }
+        `}</style>
       </div>
     </main>
   );
@@ -543,7 +566,7 @@ function Shell({ children }) {
 
 function StepBlock({ icon, title, children }) {
   return (
-    <div>
+    <div className="step-fade-in">
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>{icon}<h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(19px, 2.1vw, 23px)", margin: 0 }}>{title}</h2></div>
       {children}
     </div>

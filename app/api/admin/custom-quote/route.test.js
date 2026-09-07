@@ -78,15 +78,16 @@ describe("POST /api/admin/custom-quote", () => {
 
     const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
     expect(insertCall.args[0].custom_price_cents).toBe(50000);
-    expect(insertCall.args[0].gallery_template).toBe("grid");
+    expect(insertCall.args[0].gallery_template).toBe("polaroid");
   });
 
   // No UI in the dashboard's custom-quote form actually sends social_cuts
   // today, but the route itself accepts it as a real value (a
-  // social-cut-eligible tier + deliveryFormat: "social_cuts"), and the same
-  // default should apply wherever that combination can legitimately land --
-  // see defaultGalleryTemplate in lib/pricing.js.
-  it('defaults gallery_template to polaroid for a "social_cuts" quote', async () => {
+  // social-cut-eligible tier + deliveryFormat: "social_cuts") -- worth its
+  // own regression check even though gallery_template no longer varies by
+  // format at all (see defaultGalleryTemplate in lib/pricing.js), so this
+  // stays covered if that ever changes back.
+  it('defaults gallery_template to polaroid for a "social_cuts" quote too', async () => {
     sb.mockResponse({ data: { id: "quote-sc" }, error: null });
     sb.mockResponse({ data: null, error: null });
     stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_sc", url: "https://checkout.stripe.com/sc" });

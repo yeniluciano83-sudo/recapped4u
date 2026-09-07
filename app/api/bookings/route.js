@@ -102,7 +102,7 @@ export async function POST(req) {
         roast_level: effectiveRoastLevel,
         delivery_format: effectiveDeliveryFormat,
         full_video_no_music: !!fullVideoNoMusic,
-        gallery_template: defaultGalleryTemplate(effectiveDeliveryFormat),
+        gallery_template: defaultGalleryTemplate(),
       })
       .select()
       .single();

@@ -218,6 +218,26 @@ describe("POST /api/bookings", () => {
     expect(sessionArgs.line_items).toHaveLength(1);
   });
 
+  // Social cuts render caption-free in every delivery format
+  // (scripts/auto-recap.js's renderOneSocialCut), and "social cuts of every
+  // photo" bookings have no full video left to caption either -- so a Hot
+  // pick there can't change anything about the deliverable. Charging
+  // Spotlight's Lukewarm/Hot upcharge anyway would bill for an effect the
+  // booking can never receive.
+  it("clamps roast intensity to Light on social-cuts-only, even on Spotlight with Hot selected -- no upcharge", async () => {
+    sb.mockResponse({ data: { id: "booking-5" }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_5", url: "https://checkout.stripe.com/jkl" });
+
+    await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "social_cuts", socialStyle: "cinematic", roastEnabled: true, roastLevel: "hot" }));
+
+    const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+    expect(insertCall.args[0].roast_level).toBe("light");
+
+    const sessionArgs = stripeMocks.sessionsCreate.mock.calls[0][0];
+    expect(sessionArgs.line_items).toHaveLength(1); // no Roast Reel line item
+  });
+
   it("returns 500 and never calls Stripe when the booking insert fails", async () => {
     sb.mockResponse({ data: null, error: new Error("db down") });
 

@@ -124,6 +124,24 @@ describe("POST /api/admin/custom-quote", () => {
     expect(sessionArgs.line_items[1].price_data.unit_amount).toBe(2000);
   });
 
+  // Same clamp as app/api/bookings/route.js -- social cuts render
+  // caption-free in every delivery format, so a social-cuts-only quote
+  // can't be billed for a Lukewarm/Hot upcharge it has no full video left
+  // to actually caption.
+  it("clamps roast intensity to Light on a social-cuts-only quote, even with Hot selected -- no upcharge", async () => {
+    sb.mockResponse({ data: { id: "quote-5" }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_5", url: "https://checkout.stripe.com/quote5" });
+
+    await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "social_cuts", roastEnabled: true, roastLevel: "hot" }));
+
+    const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+    expect(insertCall.args[0].roast_level).toBe("light");
+
+    const sessionArgs = stripeMocks.sessionsCreate.mock.calls[0][0];
+    expect(sessionArgs.line_items).toHaveLength(1); // no Roast Reel line item
+  });
+
   it("retries the insert without event_end_date when migration 023 hasn't run yet (PGRST204)", async () => {
     sb.mockResponse({ data: null, error: { code: "PGRST204" } }); // first insert, with event_end_date, fails
     sb.mockResponse({ data: { id: "quote-4" }, error: null }); // retry insert, without event_end_date, succeeds

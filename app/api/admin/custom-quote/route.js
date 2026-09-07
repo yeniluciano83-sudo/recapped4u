@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
-import { SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents, defaultGalleryTemplate } from "@/lib/pricing";
+import { SOCIAL_CUT_ELIGIBLE_TIERS, isRoastLevelSelectable, roastAddonPriceCents, defaultGalleryTemplate } from "@/lib/pricing";
 import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -39,8 +39,13 @@ export async function POST(req) {
     const uploadSlug = randomUUID();
     const effectiveDeliveryFormat = SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) && deliveryFormat === "social_cuts" ? "social_cuts" : "recap";
     const effectiveRoastEnabled = !!roastEnabled;
+    // Social cuts are caption-free in every delivery format (see
+    // scripts/auto-recap.js's renderOneSocialCut) -- clamp intensity to
+    // Light there the same as a tier that doesn't get full levels at all,
+    // so a social-cuts-only quote can't be charged for a Lukewarm/Hot
+    // upcharge the booking has no full video left to actually caption.
     const effectiveRoastLevel = effectiveRoastEnabled
-      ? (ROAST_FULL_LEVELS_TIERS.includes(tier) ? (roastLevel || "light") : "light")
+      ? (isRoastLevelSelectable(tier, effectiveDeliveryFormat) ? (roastLevel || "light") : "light")
       : null;
 
     const bookingFields = {

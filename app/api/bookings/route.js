@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { generateConfirmToken } from "@/lib/confirmToken";
-import { TIER_PRICES, SOCIAL_CUT_ELIGIBLE_TIERS, ROAST_FULL_LEVELS_TIERS, roastAddonPriceCents, defaultGalleryTemplate } from "@/lib/pricing";
+import { TIER_PRICES, SOCIAL_CUT_ELIGIBLE_TIERS, isRoastLevelSelectable, roastAddonPriceCents, defaultGalleryTemplate } from "@/lib/pricing";
 import { canProceedFromStyleStep } from "@/lib/bookingFormValidation";
 import { captureError } from "@/lib/sentry";
 
@@ -53,15 +53,19 @@ export async function POST(req) {
     const uploadSlug = randomUUID();
 
     const effectiveDeliveryFormat = SOCIAL_CUT_ELIGIBLE_TIERS.includes(tier) ? deliveryFormat : "recap";
-    // Roast Reel works on "social cuts of every photo" bookings too --
-    // scripts/auto-recap.js generates a separate roast script per social
-    // cut in that mode, since there's no full video there to caption.
+    // Roast Reel only ever captions the full video -- social cuts are
+    // caption-free in every delivery format (see scripts/auto-recap.js's
+    // renderOneSocialCut), so "social cuts of every photo" bookings have
+    // no full video to caption at all. roast_enabled still gets recorded
+    // there (harmless, matches nothing), but the intensity picker is
+    // clamped below since it's the only part of this that can charge money.
     const effectiveRoastEnabled = !!roastEnabled;
-    // Free/Highlight only ever get Light -- clamp server-side rather than
-    // trust whatever level the client sent (the UI already restricts this,
-    // but this is the actual source of truth for what gets charged below).
+    // Free/Highlight (and social-cuts-only, any tier) only ever get Light --
+    // clamp server-side rather than trust whatever level the client sent
+    // (the UI already restricts this, but this is the actual source of
+    // truth for what gets charged below).
     const effectiveRoastLevel = effectiveRoastEnabled
-      ? (ROAST_FULL_LEVELS_TIERS.includes(tier) ? (roastLevel || "light") : "light")
+      ? (isRoastLevelSelectable(tier, effectiveDeliveryFormat) ? (roastLevel || "light") : "light")
       : null;
 
     const { data: booking, error } = await supabase

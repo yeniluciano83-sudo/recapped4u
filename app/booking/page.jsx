@@ -2,6 +2,7 @@
 import React, { useState, useId, useRef } from "react";
 import { fieldStyle, buttonStyle } from "@/components/ui";
 import { canProceedFromStyleStep, hasMadeRequiredRoastChoice } from "@/lib/bookingFormValidation";
+import { isRoastLevelSelectable } from "@/lib/pricing";
 import { useSearchParams } from "next/navigation";
 import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame, AlertTriangle, Play, Pause } from "lucide-react";
 
@@ -83,9 +84,6 @@ const STEP_LABELS = { 1: "Tell us about the event", 2: "Choose your package", 3:
 const SOCIAL_CUT_ELIGIBLE_TIERS = ["premium", "keepsake"];
 // Every tier gets Roast Reel now, not just Spotlight/Luxe.
 const ROAST_ELIGIBLE_TIERS = ["free", "standard", "premium", "keepsake"];
-// Free and Highlight only ever get the Light intensity -- Lukewarm/Hot stay a
-// Spotlight/Luxe perk (see roastAddonPrice below for what each costs).
-const ROAST_FULL_LEVELS_TIERS = ["premium", "keepsake"];
 // Light is complimentary on every tier. Spotlight is the only tier that
 // ever charges for Roast Reel -- stepping up to Lukewarm/Hot there is
 // +$20. Luxe is complimentary at every intensity.
@@ -149,10 +147,14 @@ function BookingFormInner() {
   };
 
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
-  const isRoastFullLevelEligible = ROAST_FULL_LEVELS_TIERS.includes(form.tier);
-  // Free/Highlight can only ever get Light -- clamp here rather than trust
-  // form.roastLevel, which can be stale (e.g. picked Hot on Spotlight, then
-  // switched the tier down to Highlight without touching the level picker).
+  // Also false on social-cuts-only, any tier -- intensity only changes the
+  // full video's captions, and that format has no full video at all (see
+  // isRoastLevelSelectable in lib/pricing.js).
+  const isRoastFullLevelEligible = isRoastLevelSelectable(form.tier, form.deliveryFormat);
+  // Free/Highlight (and social-cuts-only) can only ever get Light -- clamp
+  // here rather than trust form.roastLevel, which can be stale (e.g. picked
+  // Hot on Spotlight's "recap" format, then switched to "social cuts of
+  // every photo" without touching the level picker).
   const effectiveRoastLevel = isRoastFullLevelEligible ? form.roastLevel : "light";
   const isSocialCutEligible = SOCIAL_CUT_ELIGIBLE_TIERS.includes(form.tier);
   const isSocialCutsFormat = isSocialCutEligible && form.deliveryFormat === "social_cuts";
@@ -438,7 +440,7 @@ function BookingFormInner() {
               )}
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "8px 0 0", lineHeight: 1.5 }}>
                 {isSocialCutsFormat
-                  ? "Witty commentary layered over your social cuts. Each cut comes with both a captioned and a caption-free version. Since social cuts here use every uploaded photo with nothing curated out, this sets the tone for the whole deliverable, so pick one to continue."
+                  ? "Social cuts here always render caption-free right now, regardless of this choice — we're keeping it required so your pick is already on file if roasted social cuts ship later."
                   : "Witty commentary layered over your photos. You'll get both a captioned cut and a caption-free version of the same video."}
               </p>
               {form.roastEnabled && (isRoastFullLevelEligible ? (

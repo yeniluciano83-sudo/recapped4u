@@ -289,6 +289,14 @@ export default function GalleryDeliveryPage() {
         @media (prefers-reduced-motion: reduce) {
           .gallery-reveal { animation: none; }
         }
+
+        /* Poster fades out to reveal the video already playing underneath,
+           instead of the poster being unmounted the instant playback
+           starts. */
+        .video-poster-fade { transition: opacity 350ms ease; }
+        @media (prefers-reduced-motion: reduce) {
+          .video-poster-fade { transition: none; }
+        }
       `}</style>
       <div {...(lightbox ? { inert: true } : {})} className="gallery-reveal" style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
@@ -303,12 +311,15 @@ export default function GalleryDeliveryPage() {
               width: isSocialSelected ? "min(360px, 60vw)" : "100%",
               margin: isSocialSelected ? "0 auto" : 0,
               background: "#000",
-              backgroundImage: !videoPlaying && activeVideoPosterUrl ? `url(${activeVideoPosterUrl})` : undefined,
-              backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat",
               display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: videoPlaying ? "default" : "pointer",
             }}
             onClick={() => { if (!videoPlaying && activeVideoUrl) setVideoPlaying(true); }}>
-            {videoPlaying && activeVideoUrl ? (
+            {/* Mounted as soon as it starts playing and left mounted --
+                this is what the poster layer below fades out to reveal.
+                This is often someone's first look at their finished recap,
+                so that reveal gets a real transition instead of the poster
+                being yanked away the instant the video mounts underneath. */}
+            {videoPlaying && activeVideoUrl && (
               // Plays right here, filling the box (the box already carries
               // the cut's real aspect ratio), instead of dumping the raw
               // .mp4 into a new browser tab where it rendered tiny and
@@ -319,26 +330,32 @@ export default function GalleryDeliveryPage() {
                 controls
                 autoPlay
                 playsInline
-                style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000", display: "block" }}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", background: "#000", display: "block" }}
               />
-            ) : (
-              <>
-                {/* Posters are an arbitrary frame from the actual cut, so a
-                    white play button needs a floor of contrast under it no
-                    matter how bright that frame happens to be -- the gradient
-                    fallback never needed this. */}
-                {activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.18)" }} />}
-                {!activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #FBEEE0, #FAF7F2)" }} />}
-                {isRoastCut && (
-                  <span style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 5, background: "#C97A3D", color: "#211F1D", fontSize: 12, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
-                    🔥 Roast Reel cut
-                  </span>
-                )}
-                <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: activeVideoPosterUrl ? "0 4px 18px rgba(0,0,0,0.4)" : "none", position: "relative" }}>
-                  <Play size={26} color="#211F1D" fill="#211F1D" style={{ marginLeft: "3px" }} />
-                </div>
-              </>
             )}
+            <div aria-hidden={videoPlaying || undefined} className="video-poster-fade" style={{
+                position: "absolute", inset: 0,
+                backgroundImage: activeVideoPosterUrl ? `url(${activeVideoPosterUrl})` : undefined,
+                backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                opacity: videoPlaying ? 0 : 1,
+                pointerEvents: videoPlaying ? "none" : "auto",
+              }}>
+              {/* Posters are an arbitrary frame from the actual cut, so a
+                  white play button needs a floor of contrast under it no
+                  matter how bright that frame happens to be -- the gradient
+                  fallback never needed this. */}
+              {activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.18)" }} />}
+              {!activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #FBEEE0, #FAF7F2)" }} />}
+              {isRoastCut && (
+                <span style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 5, background: "#C97A3D", color: "#211F1D", fontSize: 12, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
+                  🔥 Roast Reel cut
+                </span>
+              )}
+              <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: activeVideoPosterUrl ? "0 4px 18px rgba(0,0,0,0.4)" : "none", position: "relative" }}>
+                <Play size={26} color="#211F1D" fill="#211F1D" style={{ marginLeft: "3px" }} />
+              </div>
+            </div>
           </div>
           <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>

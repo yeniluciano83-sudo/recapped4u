@@ -889,8 +889,29 @@ export default function HomePage() {
       </Section>
       </main>
 
-      <footer style={{ textAlign: "center", padding: "40px 20px", color: "#8a857d", fontSize: 12.5, borderTop: "1px solid #E4DED2" }}>
-        © {new Date().getFullYear()} Recapped For You LLC · <a href="/privacy" style={{ color: "#8a857d", textDecoration: "underline" }}>Privacy Policy</a> · <a href="/terms" style={{ color: "#8a857d", textDecoration: "underline" }}>Terms of Service</a>
+      {/* The one section of the page that had no design treatment at all --
+          every other section gets an icon, a card, a decorative blob; this
+          was one flat gray line. Echoes the nav's own brand mark (same
+          gradient badge + wordmark) so the page ends the way it began,
+          instead of just trailing off into fine print. Links drop the
+          underline for the same reason nothing else on the site uses one --
+          color, weight and the site-wide hover/focus treatment (see
+          app/layout.js) already carry that job everywhere else. */}
+      <footer style={{ padding: "44px 20px 40px", borderTop: "1px solid #E4DED2" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, textAlign: "center" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", color: "#211F1D" }}>
+            <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 8, background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              <Camera size={14} color="#FFFFFF" />
+            </span>
+            Recapped For You
+          </span>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center", fontSize: 13, fontWeight: 600 }}>
+            <a href="/privacy" style={{ color: "#4a4642", textDecoration: "none" }}>Privacy Policy</a>
+            <a href="/terms" style={{ color: "#4a4642", textDecoration: "none" }}>Terms of Service</a>
+            <a href="https://wa.me/16465129151" target="_blank" rel="noopener noreferrer" style={{ color: "#4a4642", textDecoration: "none" }}>Contact</a>
+          </div>
+          <p style={{ fontSize: 12, color: "#8a857d", margin: 0 }}>© {new Date().getFullYear()} Recapped For You LLC</p>
+        </div>
       </footer>
     </div>
   );

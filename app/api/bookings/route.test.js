@@ -64,6 +64,16 @@ describe("POST /api/bookings", () => {
     expect(res.status).toBe(400);
   });
 
+  // Without this check, an unrecognized tier used to sail through to the
+  // insert, then crash reading TIER_PRICES[tier].amount off undefined --
+  // caught by the outer try/catch as a generic 500, but only after an
+  // orphaned booking row with a garbage tier was already in the database.
+  it("rejects an unrecognized tier, without touching the database", async () => {
+    const res = await POST(jsonRequest({ ...BASE_BODY, tier: "platinum" }));
+    expect(res.status).toBe(400);
+    expect(sb.callLog.length).toBe(0);
+  });
+
   it("requires a delivery format on a social-cut-eligible tier, without touching the database", async () => {
     const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium" })); // no deliveryFormat
     expect(res.status).toBe(400);

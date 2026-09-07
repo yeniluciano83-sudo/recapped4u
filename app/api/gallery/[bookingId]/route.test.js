@@ -3,9 +3,11 @@ import { createSupabaseMock } from "@/test/helpers/mockSupabase";
 
 vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
 vi.mock("@/lib/storage", () => ({ getSignedDownloadUrl: vi.fn() }));
+vi.mock("@/lib/rateLimit", () => ({ checkRateLimit: vi.fn() }));
 
 import { supabase } from "@/lib/supabase";
 import { getSignedDownloadUrl } from "@/lib/storage";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { GET } from "./route";
 
 const BOOKING = {
@@ -29,6 +31,19 @@ describe("GET /api/gallery/[bookingId]", () => {
     supabase.from.mockImplementation(sb.from);
     getSignedDownloadUrl.mockReset();
     getSignedDownloadUrl.mockImplementation(async (key) => `https://signed.example/${key}`);
+    checkRateLimit.mockReset();
+    checkRateLimit.mockResolvedValue({ success: true });
+  });
+
+  // The heaviest route in its family (a Luxe gallery's ~2000 photos each
+  // get a view + download signed URL below) but, until now, the only one
+  // in this family with no rate limit at all -- download-all and template
+  // both already had one.
+  it("returns 429 and never queries the database when rate-limited", async () => {
+    checkRateLimit.mockResolvedValue({ success: false });
+    const res = await GET({}, { params: { bookingId: "b1" } });
+    expect(res.status).toBe(429);
+    expect(sb.callLog.length).toBe(0);
   });
 
   it("returns 404 when the booking can't be found", async () => {

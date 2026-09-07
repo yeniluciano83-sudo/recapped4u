@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getSignedDownloadUrl } from "@/lib/storage";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req, { params }) {
   const { bookingId } = await params;
+
+  // The one route in this family that had been missing this (download-all
+  // and template both already have it) -- and the heaviest per request of
+  // any of them: a Luxe gallery's ~2000 photos each get a view AND a
+  // download signed URL below, so a single unauthenticated call here can
+  // generate on the order of 4000 R2 signing operations with nothing to
+  // throttle repeated hits.
+  const { success } = await checkRateLimit("gallery-view", req, { requests: 30, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
 
   // Public, unauthenticated route (this is the link hosts share with guests)
   // -- select only the fields the gallery view actually renders, not "*".

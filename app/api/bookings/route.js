@@ -22,6 +22,19 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Without this, an unrecognized tier sailed straight through to the
+    // insert below, then crashed on `price.amount` (TIER_PRICES[tier] is
+    // undefined) -- caught by the outer try/catch as a generic 500, but
+    // only after an orphaned booking row with a garbage tier was already
+    // sitting in the database with no way to clean it up. Checked before
+    // the insert, unlike that crash was. app/api/admin/custom-quote/route.js
+    // already validates its own tier list this way -- this is the same
+    // check for the tier list that route doesn't cover (it excludes Free,
+    // which has nothing to quote).
+    if (!Object.prototype.hasOwnProperty.call(TIER_PRICES, tier)) {
+      return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
+    }
+
     const VALID_DELIVERY_FORMATS = ["recap", "video_only", "social_cuts"];
     // Only Spotlight/Luxe ever choose this -- every other tier only ever
     // gets a full video, so the UI never shows the picker and there's

@@ -49,6 +49,12 @@ export async function POST(req, { params }) {
   if (booking.status === "pending_confirmation") {
     return NextResponse.json({ error: "This event hasn't been activated yet." }, { status: 400 });
   }
+  // Same defense-in-depth reasoning as presign/route.js's identical check --
+  // re-checked here too since status can change in the window between
+  // presign and confirm.
+  if (booking.status === "booked") {
+    return NextResponse.json({ error: "This event hasn't been activated yet." }, { status: 400 });
+  }
   if (booking.status === "analyzing" || booking.status === "editing" || booking.status === "delivered") {
     return NextResponse.json(
       { error: "This event's recap has already started processing -- new uploads can no longer be added." },
@@ -171,7 +177,11 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 });
   }
 
-  // First guest upload moves the event from "booked"/"collecting" if not already there
+  // Ensures the event is "collecting" regardless of which non-terminal
+  // status it was already at -- harmless/idempotent once a booking can only
+  // ever reach this point already "collecting" (the "booked" guard above
+  // means it can't still be "booked" here), but left as an update rather
+  // than an assert in case that ever changes again.
   await supabase
     .from("bookings")
     .update({ status: "collecting" })

@@ -53,6 +53,18 @@ describe("POST /api/events/[eventId]/upload/confirm -- status guards", () => {
     expect(res.status).toBe(400);
     expect(json.error).toMatch(/already started processing/);
   });
+
+  // Defense in depth -- the upload_slug a guest would need to reach this
+  // route is only ever handed out post-payment (both the Stripe webhook and
+  // the free-tier confirm route move status to "collecting" before ever
+  // sending it), so this is unreachable in practice, but a booking still at
+  // "booked" shouldn't accept uploads regardless.
+  it('rejects an event whose payment hasn\'t been confirmed yet (still "booked"), without ever checking the object', async () => {
+    sb.mockResponse({ data: { id: "b1", uploads_closed_at: null, status: "booked" }, error: null });
+    const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(400);
+    expect(getObjectSize).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /api/events/[eventId]/upload/confirm -- object verification and insert", () => {
@@ -85,7 +97,7 @@ describe("POST /api/events/[eventId]/upload/confirm -- object verification and i
   });
 
   it("inserts the upload row and marks the booking collecting on success", async () => {
-    sb.mockResponse({ data: { id: "b1", uploads_closed_at: null, status: "booked" }, error: null }); // booking lookup
+    sb.mockResponse({ data: { id: "b1", uploads_closed_at: null, status: "collecting" }, error: null }); // booking lookup
     getObjectSize.mockResolvedValue(1024);
     sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null }); // insert
     sb.mockResponse({ data: null, error: null }); // status update

@@ -27,6 +27,10 @@
  *      retention window after delivery -- 7 days Free, 2/4/6 months
  *      Highlight/Spotlight/Luxe) has passed, matching the retention policy
  *      promised in the Privacy Policy/FAQ.
+ *   6. Cancels any booking still "booked" (checkout started, never
+ *      completed) after ABANDONED_BOOKING_HOURS -- otherwise these sit
+ *      forever with no upload link ever sent, cluttering the dashboard's
+ *      "booked" filter with dead rows nobody will ever pay for.
  *
  * If any booking's pipeline run fails, it's logged and the run moves on to
  * the next one -- at the end, if ADMIN_ALERT_EMAIL is set, one summary
@@ -494,6 +498,54 @@ async function purgeExpiredGalleries(failures) {
   }
 }
 
+// Stripe's own Checkout Session already expires 24h after creation (the
+// customer's link is dead by then regardless -- they'd need to start a new
+// booking to try again), but the webhook that would confirm a payment made
+// just before that expiry can itself keep retrying for "up to ~3 days" per
+// Stripe's own redelivery policy (see app/api/webhooks/stripe/route.js).
+// Cutting this off at the session's own 24h would risk cancelling a booking
+// out from under a payment that's genuinely still in flight, arriving via a
+// delayed webhook retry -- the .eq("status", "booked") guard on that
+// webhook's update would then match zero rows and silently drop a real
+// payment on the floor. Comfortably past that 3-day retry window instead.
+const ABANDONED_BOOKING_HOURS = 24 * 4;
+
+async function cancelAbandonedBookings(failures) {
+  const cutoff = new Date(Date.now() - ABANDONED_BOOKING_HOURS * 60 * 60 * 1000).toISOString();
+  const { data: abandoned, error } = await supabase
+    .from("bookings")
+    .select("id, host_name")
+    .eq("status", "booked")
+    .lte("created_at", cutoff)
+    .limit(200); // batched -- a single run only needs to make a dent, not clear a backlog in one shot
+
+  if (error) {
+    console.error("Failed to query abandoned bookings:", error.message);
+    captureError(error, { tags: { script: "poll-and-recap", step: "query-abandoned-bookings" } });
+    return;
+  }
+  if (!abandoned || abandoned.length === 0) return;
+
+  console.log(`\nCancelling ${abandoned.length} abandoned booking(s) whose checkout was never completed (still "booked" after ${ABANDONED_BOOKING_HOURS}h)...`);
+  for (const booking of abandoned) {
+    // Scoped to .eq("status", "booked") -- same reasoning as the comment
+    // above ABANDONED_BOOKING_HOURS: if a delayed webhook retry lands in
+    // the narrow window between the query above and this update, it will
+    // have already moved status off "booked", so this just matches zero
+    // rows instead of clobbering a booking that just got paid for.
+    const { error: updateError } = await supabase
+      .from("bookings")
+      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+      .eq("id", booking.id)
+      .eq("status", "booked");
+    if (updateError) {
+      console.error(`Failed to cancel abandoned booking ${booking.id}:`, updateError.message);
+      captureError(updateError, { tags: { script: "poll-and-recap", step: "cancel-abandoned-booking" }, extra: { bookingId: booking.id } });
+      failures.push({ bookingId: booking.id, error: `Failed to auto-cancel abandoned booking: ${updateError.message}` });
+    }
+  }
+}
+
 async function main() {
   console.log(`[${new Date().toISOString()}] Checking for bookings to process...`);
   const failures = [];
@@ -507,6 +559,7 @@ async function main() {
   await processCollectingBookings(failures);
   await purgeExpiredUploads(failures);
   await purgeExpiredGalleries(failures);
+  await cancelAbandonedBookings(failures);
 
   if (failures.length > 0 && process.env.ADMIN_ALERT_EMAIL) {
     console.log(`Sending failure alert for ${failures.length} booking(s) to ${process.env.ADMIN_ALERT_EMAIL}...`);

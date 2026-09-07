@@ -37,6 +37,16 @@ describe("POST /api/events/[eventId]/upload/presign -- status guards", () => {
     expect(res.status).toBe(400);
   });
 
+  // Defense in depth -- the upload_slug a guest would need to reach this
+  // route is only ever handed out post-payment, so this is unreachable in
+  // practice, but a booking still at "booked" (payment not yet confirmed)
+  // shouldn't accept uploads regardless.
+  it("rejects an event whose payment hasn't been confirmed yet (still \"booked\")", async () => {
+    sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "booked" }, error: null });
+    const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(400);
+  });
+
   it("rejects an event that's already processing (analyzing)", async () => {
     sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "analyzing" }, error: null });
     const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });

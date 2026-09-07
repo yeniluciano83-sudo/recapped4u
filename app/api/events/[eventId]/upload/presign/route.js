@@ -47,6 +47,17 @@ export async function POST(req, { params }) {
     return NextResponse.json({ error: "This event hasn't been activated yet." }, { status: 400 });
   }
 
+  // Defense in depth, not a gap this has ever actually hit: the upload_slug
+  // a guest would need to reach this route is only ever handed out in the
+  // post-payment confirmation email (sent from the Stripe webhook, once
+  // status moves to "collecting"), never before -- so a booking still
+  // sitting at "booked" has no guest who could know its link yet. Still
+  // worth rejecting explicitly rather than relying on that distribution
+  // model alone to keep an unpaid booking from accepting uploads.
+  if (booking.status === "booked") {
+    return NextResponse.json({ error: "This event hasn't been activated yet." }, { status: 400 });
+  }
+
   // "analyzing" specifically: its raw photos were already pulled into a
   // Claude batch by submitAnalysisBatch (scripts/auto-recap.js) at the
   // moment of submission -- an upload landing after that would silently

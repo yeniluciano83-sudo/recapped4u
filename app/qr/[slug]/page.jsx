@@ -543,7 +543,9 @@ export default function QrSharePage() {
         <p className="print-eyebrow">You're invited to add to the story</p>
         <h1 className="print-title">{eventName}</h1>
         <p className="print-date">{formatDate(eventInfo.event_date)}</p>
-        <img src={qrImageUrl} alt="Guest upload QR code" width={280} height={280} />
+        <div className="print-qr-frame">
+          <img src={qrImageUrl} alt="Guest upload QR code" width={280} height={280} />
+        </div>
         <p className="print-url">{uploadUrl}</p>
         <p className="print-footer">Scan to add your photos — no app needed</p>
       </div>
@@ -577,6 +579,12 @@ export default function QrSharePage() {
           .print-eyebrow { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A8B76; font-weight: 600; margin-bottom: 12px; }
           .print-title { font-size: 32px; margin: 0 0 6px; }
           .print-date { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; color: #555; margin-bottom: 28px; }
+          /* The QR code used to float bare on the page -- the one physical,
+             tangible thing this product produces (a host prints and tapes
+             this up at the actual event), but the only place on the site
+             with no card treatment at all. Matches the border color/radius
+             every on-screen card already uses. */
+          .print-qr-frame { padding: 22px; border: 2px solid #E4DED2; border-radius: 20px; background: #FAF7F2; }
           .print-url { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: #777; margin-top: 20px; word-break: break-all; }
           .print-footer { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; color: #C97A3D; font-weight: 600; margin-top: 8px; }
         }

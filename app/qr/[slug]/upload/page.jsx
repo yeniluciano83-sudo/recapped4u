@@ -275,9 +275,14 @@ export default function HostUploadPage() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>
-      <div style={{ width: "100%", height: "10px", display: "flex", gap: "3px", padding: "0 12px", background: "#F0EAE0" }}>
+      {/* justUploaded (already tracked for the button's "Added -- thank
+          you!" state) doubles as the trigger window for both this glow and
+          the counter bump below -- matches app/event/[eventId]/page.jsx's
+          own upload-success treatment, which this page had been missing
+          despite having the identical reel bar and counter already. */}
+      <div className={justUploaded ? "reel-glow" : undefined} style={{ width: "100%", height: "10px", display: "flex", gap: "3px", padding: "0 12px", background: "#F0EAE0" }}>
         {Array.from({ length: 24 }).map((_, i) => (
-          <div key={i} style={{ flex: 1, height: "10px", borderRadius: "1px", background: i < reelSegments ? "#C97A3D" : "#E4DED2", transition: "background 0.4s ease" }} />
+          <div key={i} className={i < reelSegments ? "reel-segment-filled" : undefined} style={{ flex: 1, height: "10px", borderRadius: "1px", background: i < reelSegments ? "#C97A3D" : "#E4DED2", transition: "background 0.4s ease" }} />
         ))}
       </div>
 
@@ -293,7 +298,7 @@ export default function HostUploadPage() {
         </div>
 
         <div style={{ textAlign: "center", marginBottom: "32px", fontSize: "14px", color: "#7A8B76" }}>
-          <strong style={{ color: "#C97A3D", fontSize: "16px" }}>{uploadCount}</strong> {uploadCount === 1 ? "moment" : "moments"} captured so far
+          <strong className={justUploaded ? "count-pop" : undefined} style={{ color: "#C97A3D", fontSize: "16px", display: "inline-block" }}>{uploadCount}</strong> {uploadCount === 1 ? "moment" : "moments"} captured so far
         </div>
 
         <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2", boxShadow: shadow.md }}>
@@ -355,7 +360,19 @@ export default function HostUploadPage() {
         </p>
       </div>
 
-      <style>{`.spin { animation: spin 1s linear infinite; } @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }`}</style>
+      <style>{`
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+        .count-pop { animation: count-pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes count-pop-in { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
+        .reel-glow .reel-segment-filled { animation: reel-segment-glow 0.7s ease-out; }
+        @keyframes reel-segment-glow {
+          0% { box-shadow: 0 0 0 rgba(201,122,61,0); }
+          35% { box-shadow: 0 0 6px 1px rgba(201,122,61,0.85); }
+          100% { box-shadow: 0 0 0 rgba(201,122,61,0); }
+        }
+        @media (prefers-reduced-motion: reduce) { .count-pop, .reel-glow .reel-segment-filled { animation: none; } }
+      `}</style>
     </main>
   );
 }

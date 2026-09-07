@@ -297,6 +297,22 @@ export default function GalleryDeliveryPage() {
         @media (prefers-reduced-motion: reduce) {
           .video-poster-fade { transition: none; }
         }
+
+        /* The Polaroid frame itself appears instantly (a real Polaroid card
+           exists before the image on it resolves) -- only the photo inside
+           develops, washed-out and pale at first, gradually gaining
+           contrast and color the way actual instant film does. Each tile
+           gets its own animation-delay (set inline per photo) so a whole
+           gallery doesn't resolve in one flat, synchronized flash. */
+        .polaroid-photo { animation: polaroid-develop 2.4s ease-out both; }
+        @keyframes polaroid-develop {
+          0% { opacity: 0.55; filter: brightness(1.9) contrast(0.45) saturate(0); }
+          55% { opacity: 1; filter: brightness(1.2) contrast(0.75) saturate(0.5); }
+          100% { opacity: 1; filter: brightness(1) contrast(1) saturate(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .polaroid-photo { animation: none; }
+        }
       `}</style>
       <div {...(lightbox ? { inert: true } : {})} className="gallery-reveal" style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
@@ -676,7 +692,11 @@ function PolaroidLayout({ photos, selectMode, selected, onSelect }) {
       {photos.map((url, i) => (
         <button key={i} onClick={() => onSelect(i)} aria-label={selectMode ? `${selected?.has(i) ? "Deselect" : "Select"} photo ${i + 1} of ${photos.length}` : `View photo ${i + 1} of ${photos.length}`}
           style={{ position: "relative", background: "#FFFFFF", padding: "10px 10px 14px", borderRadius: "4px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.15)", width: "150px" }}>
-          <img src={url} alt="" loading="lazy" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block" }} />
+          {/* Staggered, not simultaneous -- capped at 1.2s so a large
+              gallery's last tile isn't left waiting several seconds behind
+              its first. animation-delay lives inline (per-photo, computed),
+              the animation itself in the shared .polaroid-photo class. */}
+          <img src={url} alt="" loading="lazy" className="polaroid-photo" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block", animationDelay: `${Math.min(i * 70, 1200)}ms` }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
         </button>
       ))}

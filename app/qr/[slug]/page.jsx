@@ -450,7 +450,7 @@ export default function QrSharePage() {
                           padding: 0, cursor: "pointer", overflow: "hidden", backgroundImage: `url(${photo.url})`, backgroundSize: "cover", backgroundPosition: "center",
                         }}>
                         {photo.mustInclude && (
-                          <div style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div className="star-badge-in" style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <Star size={11} color="#211F1D" fill="#211F1D" />
                           </div>
                         )}
@@ -518,7 +518,7 @@ export default function QrSharePage() {
                         padding: 0, cursor: "pointer", overflow: "hidden", backgroundImage: `url(${photo.url})`, backgroundSize: "cover", backgroundPosition: "center",
                       }}>
                       {photo.mustIncludeSocial && (
-                        <div style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div className="star-badge-in" style={{ position: "absolute", top: 3, right: 3, background: "#C97A3D", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <Star size={11} color="#211F1D" fill="#211F1D" />
                         </div>
                       )}
@@ -549,6 +549,16 @@ export default function QrSharePage() {
       </div>
 
       <style>{`
+        /* The star badge is only ever conditionally rendered
+           ({photo.mustInclude && <div>...}), so it already mounts fresh
+           each time a host marks a photo as a must-include favorite --
+           the same entrance-only shape used for the lightbox and mobile
+           nav panel elsewhere on the site. */
+        .star-badge-in { animation: star-badge-in 240ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes star-badge-in { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+        @media (prefers-reduced-motion: reduce) {
+          .star-badge-in { animation: none; }
+        }
         .print-card { display: none; }
         @media print {
           .no-print { display: none !important; }

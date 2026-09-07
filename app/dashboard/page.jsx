@@ -173,6 +173,24 @@ export default function Dashboard() {
 
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+      {/* The quote-form modal and the event-detail drawer below were the
+          last two fixed-position overlays on the site with no entrance
+          animation -- the mobile nav panel and gallery lightbox both have
+          one. The drawer's slide is deliberately directional (it's a real
+          drawer, always opening from the same closed state, so there's no
+          ambiguity a direction could get wrong -- unlike the booking form's
+          steps, which can be entered from either Back or Continue). */}
+      <style>{`
+        @keyframes dashboard-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+        .dashboard-overlay-in { animation: dashboard-overlay-in 160ms ease-out; }
+        @keyframes dashboard-modal-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        .dashboard-modal-in { animation: dashboard-modal-in 200ms ease-out; }
+        @keyframes dashboard-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .dashboard-drawer-in { animation: dashboard-drawer-in 220ms ease-out; }
+        @media (prefers-reduced-motion: reduce) {
+          .dashboard-overlay-in, .dashboard-modal-in, .dashboard-drawer-in { animation: none; }
+        }
+      `}</style>
       <div {...(selected ? { inert: true } : {})} style={{ maxWidth: "900px", margin: "0 auto", padding: "32px 20px 60px" }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "28px" }}>
           <div>
@@ -243,8 +261,8 @@ export default function Dashboard() {
       )}
 
       {showQuoteForm && (
-        <div onClick={closeQuoteForm} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: "20px" }}>
-          <div ref={quoteModalRef} role="dialog" aria-modal="true" aria-labelledby={quoteModalTitleId} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "440px", maxHeight: "90vh", overflowY: "auto", background: "#FFFFFF", borderRadius: "16px", padding: "26px 24px", boxSizing: "border-box" }}>
+        <div onClick={closeQuoteForm} className="dashboard-overlay-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: "20px" }}>
+          <div ref={quoteModalRef} role="dialog" aria-modal="true" aria-labelledby={quoteModalTitleId} onClick={(e) => e.stopPropagation()} className="dashboard-modal-in" style={{ width: "100%", maxWidth: "440px", maxHeight: "90vh", overflowY: "auto", background: "#FFFFFF", borderRadius: "16px", padding: "26px 24px", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
               <h2 id={quoteModalTitleId} style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(19px, 2.1vw, 23px)", margin: 0 }}>Custom quote</h2>
               <button onClick={closeQuoteForm} aria-label="Close" style={{ background: "none", border: "none", cursor: "pointer", color: "#8a857d", padding: "4px" }}><X size={18} /></button>
@@ -347,8 +365,8 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
   useModalDialog(containerRef, onClose);
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", justifyContent: "flex-end", zIndex: 50 }}>
-      <div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: "380px", height: "100%", background: "#FFFFFF", borderLeft: "1px solid #E4DED2", padding: "28px 22px", overflowY: "auto", boxSizing: "border-box" }}>
+    <div onClick={onClose} className="dashboard-overlay-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", justifyContent: "flex-end", zIndex: 50 }}>
+      <div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby={titleId} onClick={(e) => e.stopPropagation()} className="dashboard-drawer-in" style={{ width: "100%", maxWidth: "380px", height: "100%", background: "#FFFFFF", borderLeft: "1px solid #E4DED2", padding: "28px 22px", overflowY: "auto", boxSizing: "border-box" }}>
         <button onClick={onClose} style={{ background: "none", border: "none", color: "#8a857d", fontSize: "13px", cursor: "pointer", marginBottom: "18px", padding: 0 }}>← Back to list</button>
         <h2 id={titleId} style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(19px, 2.1vw, 23px)", margin: "0 0 4px" }}>{booking.host_name}</h2>
         <p style={{ color: "#6b655c", fontSize: 15, margin: "0 0 22px" }}>

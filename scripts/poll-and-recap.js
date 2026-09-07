@@ -211,6 +211,16 @@ async function processCollectingBookings(failures) {
       }
 
       console.log(`Sending upload reminder for booking ${booking.id}...`);
+      // Best-effort, in its own try/catch -- a failure here shouldn't block
+      // the actual reminder email below; it just sends without the "X
+      // photos so far" line instead.
+      let uploadCount;
+      try {
+        const { count } = await supabase.from("uploads").select("id", { count: "exact", head: true }).eq("booking_id", booking.id);
+        uploadCount = count ?? undefined;
+      } catch (err) {
+        console.error(`Failed to fetch upload count for booking ${booking.id} (reminder will omit it): ${err.message}`);
+      }
       try {
         // Lazy require: constructing the Resend client throws synchronously
         // when RESEND_API_KEY is unset, which would otherwise crash this
@@ -225,6 +235,7 @@ async function processCollectingBookings(failures) {
           uploadSlug: booking.upload_slug,
           bookingId: booking.id,
           tier: booking.tier,
+          uploadCount,
         });
       } catch (err) {
         console.error(`Reminder email failed for booking ${booking.id}: ${err.message}`);

@@ -1343,6 +1343,12 @@ async function finalizeFullDelivery(bookingId, rs) {
       hostName: spec.hostName,
       galleryUrl: `${process.env.APP_URL}/gallery/${bookingId}`,
       expiresDate: expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+      // rs.full / rs.social.done reflect what was actually rendered, not
+      // just what was planned -- more reliable than re-deriving this from
+      // spec.skipFullVideo/socialCutCount (the latter is Infinity in
+      // useAllPhotoSocialCuts mode, not a real count).
+      hasFullVideo: !!rs.full,
+      socialCutCount: rs.social.done,
     });
   } catch (err) {
     console.error(`Delivery email failed (booking is still marked delivered): ${err.message}`);

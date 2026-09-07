@@ -130,6 +130,7 @@ export async function POST(req, { params }) {
     await sendCancellationConfirmation({
       to: booking.email,
       hostName: booking.host_name,
+      eventType: booking.event_type,
       eventDate: booking.event_date,
       refunded,
       amountRefunded,

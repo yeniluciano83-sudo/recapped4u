@@ -43,6 +43,19 @@ async function main() {
     process.exit(1);
   }
 
+  // Best-effort -- an older deliverable row (or one this query otherwise
+  // can't find) just means the resent email falls back to the generic
+  // "your video and photo gallery are ready" line instead of a specific one.
+  const { data: deliverable } = await supabase
+    .from("deliverables")
+    .select("full_video_key, social_video_keys")
+    .eq("booking_id", bookingId)
+    .order("delivered_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const hasFullVideo = deliverable ? Boolean(deliverable.full_video_key) : undefined;
+  const socialCutCount = deliverable ? (deliverable.social_video_keys || []).length : undefined;
+
   // Only ever for a booking that really is delivered -- telling a host their
   // recap is ready when it isn't would be worse than the missing email.
   if (booking.status !== "delivered" || !booking.delivered_at) {
@@ -60,6 +73,8 @@ async function main() {
   console.log(`galleryUrl : ${galleryUrl}`);
   console.log(`expires    : ${expiresDate}`);
   console.log(`delivered  : ${booking.delivered_at}`);
+  console.log(`hasFullVideo   : ${hasFullVideo}`);
+  console.log(`socialCutCount : ${socialCutCount}`);
 
   if (!send) {
     console.log("\nDry run -- nothing sent. Re-run with --send to deliver it.");
@@ -72,6 +87,8 @@ async function main() {
     hostName: booking.host_name,
     galleryUrl,
     expiresDate,
+    hasFullVideo,
+    socialCutCount,
   });
   console.log("\nSent.");
 }

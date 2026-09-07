@@ -429,7 +429,10 @@ export default function QrSharePage() {
               {photosLoading ? (
                 <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>Loading photos…</p>
               ) : photos.length === 0 ? (
-                <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Camera size={14} color="#8a857d" />
+                  <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
+                </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                   {/* A sibling delete button, not part of the star-toggle
@@ -502,7 +505,10 @@ export default function QrSharePage() {
               {photosLoading ? (
                 <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>Loading photos…</p>
               ) : photos.length === 0 ? (
-                <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Camera size={14} color="#8a857d" />
+                  <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
+                </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
                   {photos.map((photo) => (

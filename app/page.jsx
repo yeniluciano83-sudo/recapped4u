@@ -198,7 +198,17 @@ export default function HomePage() {
             <button className="nav-hamburger" onClick={() => setMobileMenuOpen((o) => !o)}
               style={{ display: "none", background: "none", border: "1px solid #E4DED2", borderRadius: 8, padding: 8, cursor: "pointer", color: "#211F1D" }}
               aria-label="Toggle menu">
-              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+              {/* Menu/X are two different icons, not one shape morphing into
+                  another -- rotating the outgoing/incoming icon (not just
+                  crossfading opacity) sells the swap as one continuous
+                  motion rather than a flat dissolve. Both stay permanently
+                  mounted, one on top of the other, so the transition on
+                  .hamburger-icon actually animates instead of restarting on
+                  every mount the way a conditionally-rendered icon would. */}
+              <span style={{ position: "relative", width: 18, height: 18, display: "inline-block" }}>
+                <Menu size={18} className="hamburger-icon" style={{ position: "absolute", inset: 0, opacity: mobileMenuOpen ? 0 : 1, transform: mobileMenuOpen ? "rotate(90deg) scale(0.5)" : "rotate(0deg) scale(1)" }} />
+                <X size={18} className="hamburger-icon" style={{ position: "absolute", inset: 0, opacity: mobileMenuOpen ? 1 : 0, transform: mobileMenuOpen ? "rotate(0deg) scale(1)" : "rotate(-90deg) scale(0.5)" }} />
+              </span>
             </button>
           </div>
         </div>
@@ -233,6 +243,25 @@ export default function HomePage() {
         .nav-panel-enter { animation: nav-panel-in 200ms ease-out; }
         @media (prefers-reduced-motion: reduce) {
           .nav-panel-enter { animation: none; }
+        }
+
+        /* Both Menu and X icons stay mounted (see the nav-hamburger button)
+           so this transition actually animates on toggle instead of
+           restarting on every mount. */
+        .hamburger-icon { transition: opacity 180ms ease, transform 180ms ease; }
+        @media (prefers-reduced-motion: reduce) {
+          .hamburger-icon { transition: none; }
+        }
+
+        /* Entrance only, same reasoning as nav-panel-in above -- the answer
+           is conditionally mounted ({isOpen && <p>...}), so it naturally
+           replays on every open with no extra state. The chevron rotation
+           and border/background above this already transition smoothly;
+           this was the one piece of the accordion that still hard-cut. */
+        @keyframes faq-answer-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .faq-answer-in { animation: faq-answer-in 200ms ease-out; }
+        @media (prefers-reduced-motion: reduce) {
+          .faq-answer-in { animation: none; }
         }
 
         /* Crossfade for the hero before/after pair -- previously a hard
@@ -821,7 +850,7 @@ export default function HomePage() {
                 <span style={{ flex: 1 }}>{f.q}</span>
                 <ChevronRight size={16} color={isOpen ? "#C97A3D" : "#211F1D"} style={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }} />
               </button>
-              {isOpen && <p style={{ padding: "0 18px 18px 54px", fontSize: 15, color: "#4a4642", lineHeight: 1.6, margin: 0 }}>{f.a}</p>}
+              {isOpen && <p className="faq-answer-in" style={{ padding: "0 18px 18px 54px", fontSize: 15, color: "#4a4642", lineHeight: 1.6, margin: 0 }}>{f.a}</p>}
             </div>
             );
           })}

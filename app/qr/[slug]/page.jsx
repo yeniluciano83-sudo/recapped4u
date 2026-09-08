@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { buttonStyle, shadow, radius, LoadingState, toastStyle } from "@/components/ui";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2 } from "lucide-react";
 import { getUploadLimit } from "@/lib/uploadLimits";
 
@@ -58,10 +58,12 @@ function StylePreviewButton({ styleId, playingId, onToggle }) {
 export default function QrSharePage() {
   const params = useParams();
   const slug = params?.slug;
+  const router = useRouter();
+  const searchParams = useSearchParams();
   // This is the host's own management page, reached from the emailed link.
   // The slug in the URL is a guest credential (it's what the QR encodes), so
   // every host-only call below carries this token instead. See lib/hostToken.js.
-  const hostToken = useSearchParams().get("t") || "";
+  const hostToken = searchParams.get("t") || "";
 
   const [eventInfo, setEventInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,26 @@ export default function QrSharePage() {
     setToast(message);
     setTimeout(() => setToast(null), 4000);
   };
+
+  // Lands here on the way back from Stripe after clicking "Upgrade" in the
+  // cap-reached email (app/api/events/[eventId]/upgrade/route.js sets these
+  // query params on its success/cancel/error redirects, since a raw email
+  // link is a real browser navigation, not a fetch() call this page could
+  // read a JSON response from directly). Stripped from the URL right after
+  // so refreshing this page doesn't re-show the same toast. Deliberately
+  // run-once (empty deps) -- the router.replace below changes searchParams
+  // itself, and re-running on that change would just toast the same thing
+  // again right after clearing it.
+  useEffect(() => {
+    const upgraded = searchParams.get("upgraded");
+    const upgradeError = searchParams.get("upgrade_error");
+    if (!upgraded && !upgradeError) return;
+    showToast(upgraded ? "Upgrade complete — your new upload limit is live now." : upgradeError);
+    const next = new URLSearchParams(searchParams);
+    next.delete("upgraded");
+    next.delete("upgrade_error");
+    router.replace(`/qr/${slug}?${next.toString()}`);
+  }, []);
 
   // One shared <audio> element for every style preview button on this page --
   // starting a new preview stops whatever was already playing.

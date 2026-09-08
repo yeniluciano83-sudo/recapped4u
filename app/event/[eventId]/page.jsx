@@ -190,7 +190,23 @@ export default function EventUploadPage() {
     return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
   }, [files]);
 
-  const handleFiles = (e) => setFiles(Array.from(e.target.files || []));
+  // A native <input type="file"> replaces its own selection every time,
+  // not adds to it -- picking 5 photos, then tapping "add photos" again to
+  // grab 3 more before hitting the upload button, silently dropped the
+  // first 5 with no warning. Merges into whatever's already pending
+  // instead, deduped by the same identity uploadOneFile's own retry logic
+  // already uses, so re-picking a photo already in the queue doesn't queue
+  // it twice. Clearing the input's value afterward means picking the exact
+  // same file(s) again later still fires a change event -- browsers won't
+  // if the selection didn't change from the input's own perspective.
+  const handleFiles = (e) => {
+    const newFiles = Array.from(e.target.files || []);
+    setFiles((prev) => {
+      const alreadyPending = new Set(prev.map(clientUploadIdFor));
+      return [...prev, ...newFiles.filter((f) => !alreadyPending.has(clientUploadIdFor(f)))];
+    });
+    e.target.value = "";
+  };
 
   const handleUpload = async () => {
     if (files.length === 0) return;
@@ -251,7 +267,9 @@ export default function EventUploadPage() {
       // silently re-upload duplicates on retry), and the one that failed
       // will just fail identically again since the rejection reason won't
       // change. Whatever's left after it is still untried and worth
-      // keeping selected.
+      // keeping selected -- including anything picked while this batch was
+      // still in flight, since handleFiles always appends after it, never
+      // splices into it.
       setFiles((prev) => prev.slice(stoppedAtIndex + 1));
     } else if (stillFailed.length > 0 || rejected.length > 0) {
       setUploadError(
@@ -259,18 +277,40 @@ export default function EventUploadPage() {
           ? `${uploadedCount} of ${files.length} added.`
           : stillFailed.length > 0 ? `Upload failed after retrying.` : `Upload failed.`
         ) + rejectedMsg +
-        (stillFailed.length > 0 ? ` ${stillFailed.length} didn't make it after retrying -- check your connection and tap "Add to the recap" again to retry just those.` : "")
+        (stillFailed.length > 0 ? ` ${stillFailed.length} didn't make it after retrying -- check your connection and tap Retry to try just those again.` : "")
       );
-      setFiles(stillFailed); // rejected files are dropped for good; only the network-failed ones stay selected for an easy retry
+      // Keep the retryable ones, drop the rejected ones for good, and keep
+      // anything picked mid-upload too -- same reasoning as above, it always
+      // lands after this batch rather than inside it.
+      setFiles((prev) => [...stillFailed, ...prev.slice(files.length)]);
     } else {
       setJustUploaded(true);
-      setFiles([]);
+      // Only clear the batch this run actually processed -- a fresh pick
+      // made while this upload was still in flight lands after it in the
+      // array and starts its own run the moment this one flips uploading
+      // back off (see the effect below).
+      setFiles((prev) => prev.slice(files.length));
       setUploaderName("");
       setTimeout(() => setJustUploaded(false), 3500);
     }
 
     setUploading(false);
   };
+
+  // Auto-send the moment a batch is ready to go -- fires when a fresh pick
+  // lands (files grows) or the previous run just finished (uploading flips
+  // back to false), so a picked photo never sits waiting on a second tap to
+  // actually reach the server. Skipped while uploadError is set: those files
+  // already failed once (network issue, or the event itself rejecting
+  // uploads) and auto-retrying them forever with no backoff between attempts
+  // would just hammer the same failure -- that case waits for the explicit
+  // Retry tap below instead.
+  useEffect(() => {
+    if (files.length > 0 && !uploading && !uploadError) {
+      handleUpload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, uploading]);
 
   const notActivated = status === "pending_confirmation";
   const isCancelled = status === "cancelled";
@@ -374,11 +414,17 @@ export default function EventUploadPage() {
                 </div>
               )}
 
-              <button onClick={handleUpload} disabled={files.length === 0 || uploading}
-                role="status" aria-live="polite"
-                style={{ width: "100%", marginTop: "20px", padding: "14px", borderRadius: "10px", border: "none", background: files.length === 0 ? "#E4DED2" : "#C97A3D", color: files.length === 0 ? "#8a857d" : "#211F1D", fontSize: "15px", fontWeight: 700, cursor: files.length === 0 || uploading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                {uploading ? <><Loader2 size={17} className="spin" /> Adding to the reel…</> : justUploaded ? <><Check size={17} /> Added — thank you!</> : <><Upload size={17} /> Add to the recap</>}
-              </button>
+              {/* Hidden the rest of the time -- picking photos now sends them
+                  on its own (see the auto-upload effect above). This only
+                  reappears to show progress, confirm success, or offer a
+                  manual Retry once something's actually failed. */}
+              {(uploading || justUploaded || uploadError) && (
+                <button onClick={handleUpload} disabled={files.length === 0 || uploading}
+                  role="status" aria-live="polite"
+                  style={{ width: "100%", marginTop: "20px", padding: "14px", borderRadius: "10px", border: "none", background: files.length === 0 ? "#E4DED2" : "#C97A3D", color: files.length === 0 ? "#8a857d" : "#211F1D", fontSize: "15px", fontWeight: 700, cursor: files.length === 0 || uploading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                  {uploading ? <><Loader2 size={17} className="spin" /> Adding to the reel…</> : justUploaded ? <><Check size={17} /> Added — thank you!</> : <><Upload size={17} /> Retry</>}
+                </button>
+              )}
 
               {uploadError && (
                 <p role="alert" style={{ fontSize: "12.5px", color: "#C97A3D", marginTop: "12px", textAlign: "center" }}>{uploadError}</p>

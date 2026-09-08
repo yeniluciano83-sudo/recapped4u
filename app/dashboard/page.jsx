@@ -12,6 +12,8 @@ const STATUS_FLOW = ["booked", "collecting", "analyzing", "editing", "delivered"
 const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", analyzing: "Analyzing photos", editing: "Editing", delivered: "Delivered", awaiting_roast_approval: "Awaiting Roast Reel approval", pending_confirmation: "Awaiting email confirmation", cancelled: "Cancelled" };
 const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", analyzing: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76", awaiting_roast_approval: "#C97A3D", pending_confirmation: "#8a857d", cancelled: "#8a857d" };
 const TIER_LABEL = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
+// Keep in sync with STYLE_LABELS in lib/email.js and STYLES in app/booking/page.jsx.
+const STYLE_LABEL = { cinematic: "Cinematic", upbeat: "Upbeat", documentary: "Documentary", retro: "Nostalgic / Retro", highlight: "Highlight Reel" };
 // Free is already $0 -- nothing to quote a custom price against.
 const QUOTABLE_TIERS = ["standard", "premium", "keepsake"];
 const EMPTY_QUOTE_FORM = { hostName: "", email: "", eventType: "", eventDate: "", eventEndDate: "", guestCount: "", tier: "standard", amount: "", label: "", description: "", notes: "", roastEnabled: false, roastLevel: "light" };
@@ -164,6 +166,42 @@ export default function Dashboard() {
     }
   };
 
+  // Shared save path for every editor in DetailPanel below (package/price,
+  // event details, style) -- for tier changes specifically, this is the
+  // dashboard's own equivalent of app/api/events/[eventId]/upgrade
+  // route.js's self-service upgrade, minus the Stripe checkout, since a
+  // phone-negotiated change or a comp isn't a self-service purchase. Same
+  // optimistic-update-then-rollback shape as updateStatus above, returning
+  // whether it actually succeeded so each editor knows whether to close
+  // itself back up.
+  const updateBooking = async (id, patch) => {
+    const prevBookings = bookings;
+    const prevSelected = selected;
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+    if (selected?.id === id) setSelected((s) => ({ ...s, ...patch }));
+    try {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        // Surfaces the route's own real reason (e.g. "Can't change style
+        // once a booking is 'delivered'...") instead of a generic failure
+        // message that would leave staff guessing why.
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Request failed with status ${res.status}`);
+      }
+      return true;
+    } catch (err) {
+      console.error("Failed to save booking change", err);
+      setBookings(prevBookings);
+      setSelected(prevSelected);
+      showToast(err.message || "Failed to save the change. Please try again.");
+      return false;
+    }
+  };
+
   const filtered = bookings
     .filter((b) => (filter === "all" ? true : b.status === filter))
     .filter((b) => (b.host_name || "").toLowerCase().includes(query.toLowerCase()) || (b.event_type || "").toLowerCase().includes(query.toLowerCase()))
@@ -257,7 +295,7 @@ export default function Dashboard() {
       </div>
 
       {selected && (
-        <DetailPanel booking={selected} analysisFailures={analysisFailures} onUpdateStatus={updateStatus} onClose={() => setSelected(null)} />
+        <DetailPanel booking={selected} analysisFailures={analysisFailures} onUpdateStatus={updateStatus} onUpdateBooking={updateBooking} onClose={() => setSelected(null)} />
       )}
 
       {showQuoteForm && (
@@ -359,10 +397,106 @@ export default function Dashboard() {
 
 const inputStyle = fieldStyle({ size: "md" });
 
-function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
+function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBooking, onClose }) {
   const containerRef = useRef(null);
   const titleId = useId();
   useModalDialog(containerRef, onClose);
+
+  // Three separate editors, not one generic "edit any field" form -- each
+  // group of fields has its own real rules (a package change is the
+  // dashboard's admin equivalent of the self-service upgrade; event date
+  // can optionally notify the host the way the self-service reschedule
+  // does; style is locked once the pipeline's already read it), so keeping
+  // them apart keeps each one's Save button doing exactly what it says.
+  // Every one is collapsed by default, same as the plain DetailRow view
+  // every other field still uses.
+  const [editingPackage, setEditingPackage] = useState(false);
+  const [pendingTier, setPendingTier] = useState(booking.tier);
+  const [pendingPrice, setPendingPrice] = useState(booking.custom_price_cents != null ? String(booking.custom_price_cents / 100) : "");
+  const [savingPackage, setSavingPackage] = useState(false);
+
+  const openPackageEditor = () => {
+    setPendingTier(booking.tier);
+    setPendingPrice(booking.custom_price_cents != null ? String(booking.custom_price_cents / 100) : "");
+    setEditingPackage(true);
+  };
+
+  const savePackage = async () => {
+    const trimmed = pendingPrice.trim();
+    const priceCents = trimmed === "" ? null : Math.round(parseFloat(trimmed) * 100);
+    if (trimmed !== "" && (!Number.isFinite(priceCents) || priceCents < 0)) return;
+    setSavingPackage(true);
+    const ok = await onUpdateBooking(booking.id, { tier: pendingTier, custom_price_cents: priceCents });
+    setSavingPackage(false);
+    if (ok) setEditingPackage(false);
+  };
+
+  // Event details -- host identity/logistics, none of it read by the
+  // render pipeline in a way that's unsafe to change mid-stream, so no
+  // status gate here the way style has below.
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [pendingDetails, setPendingDetails] = useState(null);
+  const [notifyReschedule, setNotifyReschedule] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+
+  const openDetailsEditor = () => {
+    setPendingDetails({
+      host_name: booking.host_name || "",
+      email: booking.email || "",
+      event_type: booking.event_type || "",
+      event_date: booking.event_date || "",
+      guest_count: booking.guest_count != null ? String(booking.guest_count) : "",
+      notes: booking.notes || "",
+    });
+    setNotifyReschedule(false);
+    setEditingDetails(true);
+  };
+
+  const saveDetails = async () => {
+    const guestCount = pendingDetails.guest_count.trim() === "" ? null : parseInt(pendingDetails.guest_count, 10);
+    if (pendingDetails.guest_count.trim() !== "" && !Number.isFinite(guestCount)) return;
+    const dateChanged = pendingDetails.event_date !== booking.event_date;
+    setSavingDetails(true);
+    const ok = await onUpdateBooking(booking.id, {
+      host_name: pendingDetails.host_name,
+      email: pendingDetails.email,
+      event_type: pendingDetails.event_type,
+      event_date: pendingDetails.event_date,
+      guest_count: guestCount,
+      notes: pendingDetails.notes,
+      // previousEventDate/notifyReschedule are only meaningful to the
+      // route when the date actually changed -- sending them unconditionally
+      // is harmless (the route only acts on notifyReschedule), but only
+      // offering the checkbox when dateChanged keeps the UI honest about
+      // what it'll actually do.
+      ...(dateChanged && notifyReschedule ? { notifyReschedule: true, previousEventDate: booking.event_date } : {}),
+    });
+    setSavingDetails(false);
+    if (ok) setEditingDetails(false);
+  };
+
+  // Style/social style -- the one pair the render pipeline reads
+  // throughout analysis and enhancement (see the route's own comment), so
+  // this is disabled outright once that's already begun, rather than
+  // letting staff attempt a save the API would just reject.
+  const STYLE_LOCKED = ["analyzing", "editing", "awaiting_roast_approval", "delivered"].includes(booking.status);
+  const [editingStyle, setEditingStyle] = useState(false);
+  const [pendingStyle, setPendingStyle] = useState(booking.style || "cinematic");
+  const [pendingSocialStyle, setPendingSocialStyle] = useState(booking.social_style || "");
+  const [savingStyleField, setSavingStyleField] = useState(false);
+
+  const openStyleEditor = () => {
+    setPendingStyle(booking.style || "cinematic");
+    setPendingSocialStyle(booking.social_style || "");
+    setEditingStyle(true);
+  };
+
+  const saveStyle = async () => {
+    setSavingStyleField(true);
+    const ok = await onUpdateBooking(booking.id, { style: pendingStyle, social_style: pendingSocialStyle || null });
+    setSavingStyleField(false);
+    if (ok) setEditingStyle(false);
+  };
 
   return (
     <div onClick={onClose} className="dashboard-overlay-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", justifyContent: "flex-end", zIndex: 50 }}>
@@ -373,9 +507,89 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
           {booking.event_type} · {formatDate(booking.event_date)}{booking.event_end_date ? ` – ${formatDate(booking.event_end_date)}` : ""}
         </p>
 
-        <DetailRow label="Package" value={TIER_LABEL[booking.tier] || booking.tier} />
-        {booking.custom_price_cents != null && (
-          <DetailRow label="Custom price" value={`$${(booking.custom_price_cents / 100).toFixed(2)}`} />
+        {editingDetails ? (
+          <div style={{ padding: "12px 0", borderBottom: "1px solid #E4DED2" }}>
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Host name</div>
+            <input value={pendingDetails.host_name} onChange={(e) => setPendingDetails((d) => ({ ...d, host_name: e.target.value }))} disabled={savingDetails}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", boxSizing: "border-box" }} />
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Email</div>
+            <input type="email" value={pendingDetails.email} onChange={(e) => setPendingDetails((d) => ({ ...d, email: e.target.value }))} disabled={savingDetails}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", boxSizing: "border-box" }} />
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Event type</div>
+            <input value={pendingDetails.event_type} onChange={(e) => setPendingDetails((d) => ({ ...d, event_type: e.target.value }))} disabled={savingDetails}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", boxSizing: "border-box" }} />
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Event date</div>
+            <input type="date" value={pendingDetails.event_date} onChange={(e) => setPendingDetails((d) => ({ ...d, event_date: e.target.value }))} disabled={savingDetails}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", boxSizing: "border-box" }} />
+            {pendingDetails.event_date !== booking.event_date && (
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#4a4642", marginBottom: "8px", cursor: "pointer" }}>
+                <input type="checkbox" checked={notifyReschedule} onChange={(e) => setNotifyReschedule(e.target.checked)} disabled={savingDetails} style={{ accentColor: "#C97A3D" }} />
+                Email the host a reschedule confirmation
+              </label>
+            )}
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Guests</div>
+            <input type="number" min="0" value={pendingDetails.guest_count} onChange={(e) => setPendingDetails((d) => ({ ...d, guest_count: e.target.value }))} disabled={savingDetails}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", boxSizing: "border-box" }} />
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Notes</div>
+            <textarea value={pendingDetails.notes} onChange={(e) => setPendingDetails((d) => ({ ...d, notes: e.target.value }))} disabled={savingDetails} rows={3}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "10px", boxSizing: "border-box", fontFamily: "inherit", resize: "vertical" }} />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={saveDetails} disabled={savingDetails}
+                style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "13px", fontWeight: 700, cursor: savingDetails ? "default" : "pointer", opacity: savingDetails ? 0.6 : 1 }}>
+                {savingDetails ? "Saving…" : "Save"}
+              </button>
+              <button onClick={() => setEditingDetails(false)} disabled={savingDetails}
+                style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#4a4642", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
+            <div style={{ flex: 1 }}>
+              {booking.email && <DetailRow label="Email" value={booking.email} inline />}
+              {booking.guest_count != null && <DetailRow label="Guests" value={booking.guest_count} inline />}
+              {booking.notes && <DetailRow label="Notes" value={booking.notes} inline />}
+            </div>
+            <button onClick={openDetailsEditor} style={{ background: "none", border: "1px solid #E4DED2", borderRadius: "8px", padding: "5px 10px", fontSize: "12px", fontWeight: 600, color: "#C97A3D", cursor: "pointer", flexShrink: 0, marginLeft: "10px" }}>
+              Edit
+            </button>
+          </div>
+        )}
+
+        {editingPackage ? (
+          <div style={{ padding: "12px 0", borderBottom: "1px solid #E4DED2" }}>
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Package</div>
+            <select value={pendingTier} onChange={(e) => setPendingTier(e.target.value)} disabled={savingPackage}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", background: "#FFFFFF" }}>
+              {Object.entries(TIER_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            </select>
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Custom price (optional -- blank uses the plan's normal price)</div>
+            <input type="number" min="0" step="0.01" value={pendingPrice} onChange={(e) => setPendingPrice(e.target.value)} disabled={savingPackage}
+              placeholder="e.g. 150.00" style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "10px", boxSizing: "border-box" }} />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={savePackage} disabled={savingPackage}
+                style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "13px", fontWeight: 700, cursor: savingPackage ? "default" : "pointer", opacity: savingPackage ? 0.6 : 1 }}>
+                {savingPackage ? "Saving…" : "Save"}
+              </button>
+              <button onClick={() => setEditingPackage(false)} disabled={savingPackage}
+                style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#4a4642", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
+            <div>
+              <DetailRow label="Package" value={TIER_LABEL[booking.tier] || booking.tier} inline />
+              {booking.custom_price_cents != null && (
+                <DetailRow label="Custom price" value={`$${(booking.custom_price_cents / 100).toFixed(2)}`} inline />
+              )}
+            </div>
+            <button onClick={openPackageEditor} style={{ background: "none", border: "1px solid #E4DED2", borderRadius: "8px", padding: "5px 10px", fontSize: "12px", fontWeight: 600, color: "#C97A3D", cursor: "pointer", flexShrink: 0 }}>
+              Edit
+            </button>
+          </div>
         )}
         {booking.upload_slug && (
           <div style={{ padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
@@ -393,17 +607,54 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onClose }) {
             </a>
           </div>
         )}
-        <DetailRow label="Style" value={booking.style} />
-        {booking.email && <DetailRow label="Email" value={booking.email} />}
-        {booking.guest_count && <DetailRow label="Guests" value={booking.guest_count} />}
+        {editingStyle ? (
+          <div style={{ padding: "12px 0", borderBottom: "1px solid #E4DED2" }}>
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Style</div>
+            <select value={pendingStyle} onChange={(e) => setPendingStyle(e.target.value)} disabled={savingStyleField}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", background: "#FFFFFF" }}>
+              {Object.entries(STYLE_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            </select>
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Social cut style (optional -- blank falls back to the style above)</div>
+            <select value={pendingSocialStyle} onChange={(e) => setPendingSocialStyle(e.target.value)} disabled={savingStyleField}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "10px", background: "#FFFFFF" }}>
+              <option value="">Same as style above</option>
+              {Object.entries(STYLE_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+              <option value="none">No theme (no music)</option>
+            </select>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={saveStyle} disabled={savingStyleField}
+                style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "13px", fontWeight: 700, cursor: savingStyleField ? "default" : "pointer", opacity: savingStyleField ? 0.6 : 1 }}>
+                {savingStyleField ? "Saving…" : "Save"}
+              </button>
+              <button onClick={() => setEditingStyle(false)} disabled={savingStyleField}
+                style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#4a4642", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
+            <div>
+              <DetailRow label="Style" value={STYLE_LABEL[booking.style] || booking.style} inline />
+              {booking.social_style && (
+                <DetailRow label="Social cut style" value={booking.social_style === "none" ? "No theme (no music)" : STYLE_LABEL[booking.social_style] || booking.social_style} inline />
+              )}
+            </div>
+            {STYLE_LOCKED ? (
+              <span title={`Can't change once a booking is "${STATUS_LABEL[booking.status] || booking.status}"`} style={{ fontSize: "11px", color: "#8a857d", fontStyle: "italic", flexShrink: 0, marginLeft: "10px" }}>Locked</span>
+            ) : (
+              <button onClick={openStyleEditor} style={{ background: "none", border: "1px solid #E4DED2", borderRadius: "8px", padding: "5px 10px", fontSize: "12px", fontWeight: 600, color: "#C97A3D", cursor: "pointer", flexShrink: 0, marginLeft: "10px" }}>
+                Edit
+              </button>
+            )}
+          </div>
+        )}
         {booking.roast_enabled && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #E4DED2", fontSize: "14px" }}>
             <span style={{ color: "#6b655c", display: "flex", alignItems: "center", gap: "5px" }}><Flame size={13} color="#C97A3D" /> Roast Reel</span>
             <span style={{ fontWeight: 500, color: "#C97A3D" }}>{ROAST_LABEL[booking.roast_level] || booking.roast_level}</span>
           </div>
         )}
-        {booking.notes && <DetailRow label="Notes" value={booking.notes} />}
-
         {analysisFailures.length > 0 && (
           <div style={{ marginTop: "16px", padding: "12px 14px", background: "#FBE9E7", border: "1px solid #B3402A44", borderRadius: "10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600, color: "#B3402A", marginBottom: "6px" }}>
@@ -469,8 +720,11 @@ function FormField({ label, children, style }) {
   );
 }
 
-function DetailRow({ label, value }) {
-  return <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E4DED2", fontSize: "14px" }}><span style={{ color: "#6b655c" }}>{label}</span><span style={{ fontWeight: 500, textAlign: "right", maxWidth: "60%" }}>{value}</span></div>;
+// inline drops the padding/border -- for stacking more than one of these
+// inside a single already-bordered parent row (see the Package editor
+// above), instead of each one bringing its own border and doubling up.
+function DetailRow({ label, value, inline = false }) {
+  return <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", padding: inline ? 0 : "10px 0", borderBottom: inline ? "none" : "1px solid #E4DED2", fontSize: "14px" }}><span style={{ color: "#6b655c" }}>{label}</span><span style={{ fontWeight: 500, textAlign: "right", maxWidth: "60%" }}>{value}</span></div>;
 }
 
 function formatDate(dateStr) {

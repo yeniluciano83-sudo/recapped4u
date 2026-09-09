@@ -1,8 +1,33 @@
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
+import sharp from "sharp";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { captureError } from "@/lib/sentry";
+
+const QR_SIZE = 600;
+
+// A center logo only stays reliably scannable at high error-correction
+// ("H" tolerates roughly 30% of the code being damaged or covered -- enough
+// to punch a logo-sized hole in the middle without breaking a scan). Kept
+// deliberately simple -- a plain rounded square in the brand's accent color,
+// no text or icon glyph -- since font rendering inside sharp/librsvg isn't
+// guaranteed consistent across environments; a missing font falls back
+// silently to something else, while a flat shape renders identically
+// everywhere this runs. This is printed and scanned at real events, so
+// reliability wins over cleverness here.
+async function addCenterLogo(qrBuffer) {
+  const logoSize = Math.round(QR_SIZE * 0.16);
+  const quietZone = Math.round(logoSize * 1.35);
+  const logoSvg = `
+    <svg width="${quietZone}" height="${quietZone}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="${quietZone}" height="${quietZone}" rx="${Math.round(quietZone * 0.22)}" fill="#FFFFFF"/>
+      <rect x="${Math.round((quietZone - logoSize) / 2)}" y="${Math.round((quietZone - logoSize) / 2)}" width="${logoSize}" height="${logoSize}" rx="${Math.round(logoSize * 0.24)}" fill="#C97A3D"/>
+    </svg>
+  `;
+  const logoBuffer = await sharp(Buffer.from(logoSvg)).png().toBuffer();
+  return sharp(qrBuffer).composite([{ input: logoBuffer, gravity: "center" }]).png().toBuffer();
+}
 
 // Generates a QR code PNG pointing to this event's guest upload page.
 // Usage: GET /api/qrcode/[slug]  -> returns a PNG image
@@ -29,14 +54,16 @@ export async function GET(req, { params }) {
   const uploadUrl = `${process.env.APP_URL}/event/${slug}`;
 
   try {
-    const qrBuffer = await QRCode.toBuffer(uploadUrl, {
-      width: 600,
+    const qrRaw = await QRCode.toBuffer(uploadUrl, {
+      width: QR_SIZE,
       margin: 2,
+      errorCorrectionLevel: "H",
       color: {
         dark: "#211F1D",
         light: "#FFFFFF",
       },
     });
+    const qrBuffer = await addCenterLogo(qrRaw);
 
     return new NextResponse(qrBuffer, {
       status: 200,

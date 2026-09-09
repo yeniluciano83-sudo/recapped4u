@@ -191,6 +191,37 @@ export function toastStyle() {
 // <main style={{minHeight:"100vh",...}}>, others need to sit inside an
 // existing <PageShell>. This renders just the badge and message; the caller
 // supplies the surrounding layout, same as before.
+// The same gradient circle LoadingState pulses, extracted so a page can lead
+// with one branded icon for a *settled* moment -- a result, an error, an
+// empty state -- without the pulse implying something's still in progress.
+// variant "sage" is for a success/complete moment (matches the sage accent
+// used for that everywhere else on the site); "clay" (default) matches the
+// primary accent used for attention/action moments.
+export function IconBadge({ icon: Icon, variant = "clay", size = 52, className, style }) {
+  const backgrounds = {
+    clay: `linear-gradient(135deg, ${tone.clay}, ${tone.clayLight})`,
+    sage: `linear-gradient(135deg, ${tone.sage}, #96A691)`,
+  };
+  const glows = {
+    clay: "0 4px 14px rgba(201,122,61,0.32)",
+    sage: "0 4px 14px rgba(122,139,118,0.32)",
+  };
+  return (
+    <div
+      className={className}
+      style={{
+        width: size, height: size, borderRadius: "50%", margin: "0 auto 16px",
+        background: backgrounds[variant] || backgrounds.clay,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        boxShadow: glows[variant] || glows.clay,
+        ...style,
+      }}
+    >
+      {Icon && <Icon size={Math.round(size * 0.42)} color={tone.surface} />}
+    </div>
+  );
+}
+
 export function LoadingState({ icon: Icon, label = "Loading…" }) {
   return (
     <>
@@ -204,17 +235,7 @@ export function LoadingState({ icon: Icon, label = "Loading…" }) {
           .ui-loading-badge { animation: none; }
         }
       `}</style>
-      <div
-        className="ui-loading-badge"
-        style={{
-          width: 52, height: 52, borderRadius: "50%", margin: "0 auto 16px",
-          background: `linear-gradient(135deg, ${tone.clay}, ${tone.clayLight})`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 4px 14px rgba(201,122,61,0.32)",
-        }}
-      >
-        {Icon && <Icon size={22} color={tone.surface} />}
-      </div>
+      <IconBadge icon={Icon} className="ui-loading-badge" />
       <p style={{ fontSize: 15, color: tone.muted, textAlign: "center", margin: 0 }}>{label}</p>
     </>
   );

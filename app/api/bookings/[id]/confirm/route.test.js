@@ -7,11 +7,12 @@ vi.mock("@/lib/confirmToken", () => ({
 }));
 vi.mock("@/lib/email", () => ({
   sendBookingConfirmation: vi.fn(),
+  sendNewBookingAlert: vi.fn(),
 }));
 
 import { supabase } from "@/lib/supabase";
 import { isValidConfirmToken } from "@/lib/confirmToken";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, sendNewBookingAlert } from "@/lib/email";
 import { GET } from "./route";
 
 function makeRequest(token) {
@@ -48,7 +49,9 @@ describe("GET /api/bookings/[id]/confirm", () => {
     supabase.from.mockImplementation(sb.from);
     isValidConfirmToken.mockReset();
     sendBookingConfirmation.mockReset();
+    sendNewBookingAlert.mockReset();
     process.env.APP_URL = "https://test.example";
+    delete process.env.BOOKING_ALERT_EMAIL;
   });
 
   it("redirects to the error page on an invalid token, without touching the database", async () => {
@@ -96,6 +99,9 @@ describe("GET /api/bookings/[id]/confirm", () => {
     const emailArgs = sendBookingConfirmation.mock.calls[0][0];
     expect(emailArgs.amountPaid).toBe("$0.00");
     expect(emailArgs.to).toBe("jordan@example.com");
+
+    // Opt-in, unset by default -- see beforeEach's delete of this env var.
+    expect(sendNewBookingAlert).not.toHaveBeenCalled();
   });
 
   it("still redirects to success even if sending the confirmation email throws", async () => {
@@ -107,5 +113,33 @@ describe("GET /api/bookings/[id]/confirm", () => {
     const res = await GET(makeRequest("good-token"), { params: { id: "booking-1" } });
 
     expect(locationOf(res)).toContain("/booking/success?booking_id=booking-1");
+  });
+
+  it("also alerts staff when BOOKING_ALERT_EMAIL is configured", async () => {
+    process.env.BOOKING_ALERT_EMAIL = "ops@example.com";
+    isValidConfirmToken.mockReturnValue(true);
+    sb.mockResponse({ data: PENDING_BOOKING, error: null });
+    sb.mockResponse({ data: null, error: null });
+
+    await GET(makeRequest("good-token"), { params: { id: "booking-1" } });
+
+    expect(sendNewBookingAlert).toHaveBeenCalledTimes(1);
+    const alertArgs = sendNewBookingAlert.mock.calls[0][0];
+    expect(alertArgs.to).toBe("ops@example.com");
+    expect(alertArgs.amountPaid).toBe("$0.00");
+    expect(alertArgs.bookingId).toBe("booking-1");
+  });
+
+  it("still redirects to success even if the staff alert itself throws", async () => {
+    process.env.BOOKING_ALERT_EMAIL = "ops@example.com";
+    isValidConfirmToken.mockReturnValue(true);
+    sb.mockResponse({ data: PENDING_BOOKING, error: null });
+    sb.mockResponse({ data: null, error: null });
+    sendNewBookingAlert.mockRejectedValue(new Error("resend down"));
+
+    const res = await GET(makeRequest("good-token"), { params: { id: "booking-1" } });
+
+    expect(locationOf(res)).toContain("/booking/success?booking_id=booking-1");
+    expect(sendBookingConfirmation).toHaveBeenCalledTimes(1);
   });
 });

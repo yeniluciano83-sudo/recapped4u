@@ -14,10 +14,11 @@ vi.mock("stripe", () => ({
 vi.mock("@/lib/email", () => ({
   sendBookingConfirmation: vi.fn(),
   sendUpgradeConfirmation: vi.fn(),
+  sendNewBookingAlert: vi.fn(),
 }));
 
 import { supabase } from "@/lib/supabase";
-import { sendBookingConfirmation, sendUpgradeConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, sendUpgradeConfirmation, sendNewBookingAlert } from "@/lib/email";
 import { POST } from "./route";
 
 function webhookRequest(rawBody, signature = "sig_test") {
@@ -55,7 +56,9 @@ describe("POST /api/webhooks/stripe", () => {
     stripeMocks.constructEvent.mockReset();
     sendBookingConfirmation.mockReset();
     sendUpgradeConfirmation.mockReset();
+    sendNewBookingAlert.mockReset();
     process.env.APP_URL = "https://test.example";
+    delete process.env.BOOKING_ALERT_EMAIL;
   });
 
   it("rejects a request with an invalid signature, writing nothing to the database", async () => {
@@ -104,6 +107,42 @@ describe("POST /api/webhooks/stripe", () => {
     expect(emailArgs.amountPaid).toBe("$75.00");
     expect(emailArgs.uploadUrl).toContain("slug-123");
     expect(emailArgs.to).toBe("jordan@example.com");
+
+    // Opt-in, unset by default -- see beforeEach's delete of this env var.
+    expect(sendNewBookingAlert).not.toHaveBeenCalled();
+  });
+
+  it("also alerts staff when BOOKING_ALERT_EMAIL is configured", async () => {
+    process.env.BOOKING_ALERT_EMAIL = "ops@example.com";
+    stripeMocks.constructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      data: { object: SESSION },
+    });
+    sb.mockResponse({ data: BOOKED_ROW, error: null });
+
+    await POST(webhookRequest("{}"));
+
+    expect(sendNewBookingAlert).toHaveBeenCalledTimes(1);
+    const alertArgs = sendNewBookingAlert.mock.calls[0][0];
+    expect(alertArgs.to).toBe("ops@example.com");
+    expect(alertArgs.hostName).toBe("Jordan");
+    expect(alertArgs.amountPaid).toBe("$75.00");
+    expect(alertArgs.bookingId).toBe("booking-1");
+  });
+
+  it("still emails the host and still returns 200 when the staff alert itself fails", async () => {
+    process.env.BOOKING_ALERT_EMAIL = "ops@example.com";
+    stripeMocks.constructEvent.mockReturnValue({
+      type: "checkout.session.completed",
+      data: { object: SESSION },
+    });
+    sb.mockResponse({ data: BOOKED_ROW, error: null });
+    sendNewBookingAlert.mockRejectedValue(new Error("resend down"));
+
+    const res = await POST(webhookRequest("{}"));
+
+    expect(res.status).toBe(200);
+    expect(sendBookingConfirmation).toHaveBeenCalledTimes(1);
   });
 
   it("is idempotent on a redelivered webhook -- no duplicate email, still a 200", async () => {
@@ -122,6 +161,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(res.status).toBe(200);
     expect(json).toEqual({ received: true });
     expect(sendBookingConfirmation).not.toHaveBeenCalled();
+    expect(sendNewBookingAlert).not.toHaveBeenCalled();
   });
 
   it("does nothing when the session has no booking_id in its metadata", async () => {
@@ -142,6 +182,10 @@ describe("POST /api/webhooks/stripe", () => {
     const COLLECTING_ROW = { id: "booking-1", email: "jordan@example.com", host_name: "Jordan", tier: "premium" };
 
     it("applies the new tier, resets the cap-notified flag, and emails the upgrade confirmation", async () => {
+      // Set even here (not just left unset) to prove the upgrade branch
+      // never alerts staff as if it were a new booking, rather than merely
+      // happening to skip it because this env var isn't configured.
+      process.env.BOOKING_ALERT_EMAIL = "ops@example.com";
       stripeMocks.constructEvent.mockReturnValue({ type: "checkout.session.completed", data: { object: UPGRADE_SESSION } });
       sb.mockResponse({ data: COLLECTING_ROW, error: null });
 
@@ -150,6 +194,7 @@ describe("POST /api/webhooks/stripe", () => {
 
       expect(res.status).toBe(200);
       expect(json).toEqual({ received: true });
+      expect(sendNewBookingAlert).not.toHaveBeenCalled();
 
       const updateCall = sb.callLog[0].calls.find((c) => c.method === "update");
       expect(updateCall.args[0]).toEqual({ tier: "premium", upload_cap_notified_at: null });

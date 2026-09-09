@@ -34,8 +34,9 @@ export async function GET(req, { params }) {
 
   await supabase.from("bookings").update({ status: "collecting" }).eq("id", id);
 
+  const { sendBookingConfirmation, sendNewBookingAlert } = await import("@/lib/email");
+
   try {
-    const { sendBookingConfirmation } = await import("@/lib/email");
     await sendBookingConfirmation({
       to: booking.email,
       hostName: booking.host_name,
@@ -54,6 +55,28 @@ export async function GET(req, { params }) {
   } catch (err) {
     console.error("Confirmation email failed:", err.message);
     captureError(err, { tags: { route: "bookings.confirm", email: "booking-confirmation" }, extra: { bookingId: booking.id } });
+  }
+
+  // Independent of the host's own confirmation above -- see the same
+  // BOOKING_ALERT_EMAIL gate in app/api/webhooks/stripe/route.js, which
+  // covers every paid tier; this covers the free tier's own activation path.
+  if (process.env.BOOKING_ALERT_EMAIL) {
+    try {
+      await sendNewBookingAlert({
+        to: process.env.BOOKING_ALERT_EMAIL,
+        hostName: booking.host_name,
+        email: booking.email,
+        eventType: booking.event_type,
+        eventDate: booking.event_date,
+        tier: booking.tier,
+        guestCount: booking.guest_count,
+        amountPaid: "$0.00",
+        bookingId: booking.id,
+      });
+    } catch (err) {
+      console.error("New-booking alert failed:", err.message);
+      captureError(err, { tags: { route: "bookings.confirm", email: "new-booking-alert" }, extra: { bookingId: booking.id } });
+    }
   }
 
   return NextResponse.redirect(new URL(`/booking/success?booking_id=${booking.id}&type=email`, req.url));

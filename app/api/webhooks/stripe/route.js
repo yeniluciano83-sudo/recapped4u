@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
-import { sendBookingConfirmation, sendUpgradeConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, sendUpgradeConfirmation, sendNewBookingAlert } from "@/lib/email";
 import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -109,6 +109,27 @@ export async function POST(req) {
         } catch (err) {
           console.error(`Confirmation email failed for booking ${bookingId}:`, err.message);
           captureError(err, { tags: { route: "webhooks.stripe", email: "booking-confirmation" }, extra: { bookingId } });
+        }
+        // Independent of the host's own confirmation above -- a staff alert
+        // failing (or being unconfigured) should never affect, or be
+        // affected by, whether the host got theirs.
+        if (process.env.BOOKING_ALERT_EMAIL) {
+          try {
+            await sendNewBookingAlert({
+              to: process.env.BOOKING_ALERT_EMAIL,
+              hostName: booking.host_name,
+              email: booking.email,
+              eventType: booking.event_type,
+              eventDate: booking.event_date,
+              tier: booking.tier,
+              guestCount: booking.guest_count,
+              amountPaid,
+              bookingId: booking.id,
+            });
+          } catch (err) {
+            console.error(`New-booking alert failed for booking ${bookingId}:`, err.message);
+            captureError(err, { tags: { route: "webhooks.stripe", email: "new-booking-alert" }, extra: { bookingId } });
+          }
         }
       } else if (error) {
         // Expected on a Stripe retry of an already-processed event -- the

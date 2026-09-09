@@ -168,6 +168,9 @@ describe("POST /api/events/[eventId]/cancel", () => {
 
     expect(json).toEqual({ success: true, refunded: false, amountRefunded: null });
     expect(stripeMocks.retrieve).not.toHaveBeenCalled();
+    // tier is passed through so the email can say "nothing to refund"
+    // instead of blaming 24h timing for a booking that was never charged.
+    expect(sendCancellationConfirmation).toHaveBeenCalledWith(expect.objectContaining({ tier: "free" }));
   });
 
   it("refunds a paid, refund-eligible booking and marks it refunded", async () => {
@@ -195,6 +198,19 @@ describe("POST /api/events/[eventId]/cancel", () => {
 
     expect(json).toEqual({ success: true, refunded: false, amountRefunded: null });
     expect(stripeMocks.retrieve).not.toHaveBeenCalled();
+    // refundEligible (the real timing-based reason) is passed through
+    // distinctly from tier, so the email can tell "too late" apart from
+    // "nothing was ever charged" and "the refund itself failed".
+    expect(sendCancellationConfirmation).toHaveBeenCalledWith(expect.objectContaining({ tier: "standard", refundEligible: false }));
+  });
+
+  it("passes refundEligible: true through when a paid, timing-eligible refund still didn't happen", async () => {
+    sb.mockResponse({ data: { ...PAID_BOOKING, stripe_session_id: null }, error: null });
+    sb.mockResponse({ data: { id: "b1" }, error: null });
+
+    await POST(makeRequest(), { params: { eventId: "slug-1" } });
+
+    expect(sendCancellationConfirmation).toHaveBeenCalledWith(expect.objectContaining({ tier: "standard", refundEligible: true, refunded: false }));
   });
 
   it("does not refund when stripe_payment_status isn't actually 'paid'", async () => {

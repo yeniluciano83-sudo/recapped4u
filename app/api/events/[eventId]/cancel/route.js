@@ -132,7 +132,9 @@ export async function POST(req, { params }) {
       hostName: booking.host_name,
       eventType: booking.event_type,
       eventDate: booking.event_date,
+      tier: booking.tier,
       refunded,
+      refundEligible,
       amountRefunded,
     });
   } catch (err) {

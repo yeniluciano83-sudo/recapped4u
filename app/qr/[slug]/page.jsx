@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { buttonStyle, shadow, radius, LoadingState, toastStyle } from "@/components/ui";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2 } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2, ArrowUp } from "lucide-react";
 import { getUploadLimit } from "@/lib/uploadLimits";
 
 // Spotlight/Luxe only, matching what those tiers actually advertise.
@@ -84,6 +84,24 @@ export default function QrSharePage() {
   const showToast = (message) => {
     setToast(message);
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // A Spotlight/Luxe host can be managing up to 2000 uploaded photos across
+  // two separate star-picker grids on this one page (the main video's grid
+  // and, further down, the social cut's own) -- once scrolled that far,
+  // getting back to the QR code or the upload-count reel bar up top
+  // otherwise means scrolling all the way back by hand.
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 600);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   };
 
   // Lands here on the way back from Stripe after clicking "Upgrade" in the
@@ -560,6 +578,23 @@ export default function QrSharePage() {
 
       {toast && <p role="alert" style={toastStyle()}>{toast}</p>}
 
+      <button
+        onClick={scrollToTop}
+        aria-label="Back to top"
+        aria-hidden={!showBackToTop}
+        tabIndex={showBackToTop ? 0 : -1}
+        className="back-to-top no-print"
+        style={{
+          position: "fixed", right: 20, bottom: 20, width: 46, height: 46, borderRadius: "50%",
+          background: "#C97A3D", border: "none", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: shadow.md, cursor: "pointer", zIndex: 40,
+          opacity: showBackToTop ? 1 : 0, pointerEvents: showBackToTop ? "auto" : "none",
+          transform: showBackToTop ? "translateY(0)" : "translateY(10px)",
+        }}
+      >
+        <ArrowUp size={20} />
+      </button>
+
       {/* Printable card — hidden on screen, shown only when printing */}
       <div className="print-card">
         <p className="print-eyebrow">You're invited to add to the story</p>
@@ -582,6 +617,10 @@ export default function QrSharePage() {
         @keyframes star-badge-in { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
         @media (prefers-reduced-motion: reduce) {
           .star-badge-in { animation: none; }
+        }
+        .back-to-top { transition: opacity 220ms ease, transform 220ms ease; }
+        @media (prefers-reduced-motion: reduce) {
+          .back-to-top { transition: opacity 220ms ease; }
         }
         .print-card { display: none; }
         @media print {

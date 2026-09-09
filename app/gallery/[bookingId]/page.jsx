@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { buttonStyle, radius, shadow, LoadingState } from "@/components/ui";
 import { useParams } from "next/navigation";
-import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight, ArrowUp } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
 
 // Keep in sync with GALLERY_RETENTION in app/booking/page.jsx.
@@ -44,6 +44,27 @@ export default function GalleryDeliveryPage() {
   // toggles always drops back to the poster for the new cut.
   const [videoPlaying, setVideoPlaying] = useState(false);
   useEffect(() => { setVideoPlaying(false); }, [videoLength]);
+
+  // A Spotlight/Luxe gallery can run into the thousands of photos (see
+  // GridLayout/MasonryLayout's own "up to 2000 photos" comments) -- once
+  // someone's scrolled that far down, getting back to the video or the
+  // template switcher up top otherwise means scrolling all the way back by
+  // hand.
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 600);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    // matchMedia, not the CSS-only approach -- scrollTo's behavior is a JS
+    // argument, not something a stylesheet can gate the way every other
+    // reduced-motion check on this page does.
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  };
 
   useEffect(() => {
     if (!bookingId) return;
@@ -313,6 +334,11 @@ export default function GalleryDeliveryPage() {
         @media (prefers-reduced-motion: reduce) {
           .polaroid-photo { animation: none; }
         }
+
+        .back-to-top { transition: opacity 220ms ease, transform 220ms ease; }
+        @media (prefers-reduced-motion: reduce) {
+          .back-to-top { transition: opacity 220ms ease; }
+        }
       `}</style>
       <div {...(lightbox ? { inert: true } : {})} className="gallery-reveal" style={{ maxWidth: "760px", margin: "0 auto", padding: "48px 20px 80px" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
@@ -495,6 +521,25 @@ export default function GalleryDeliveryPage() {
           </div>
         </div>
       </div>
+
+      {lightbox === null && (
+        <button
+          onClick={scrollToTop}
+          aria-label="Back to top"
+          aria-hidden={!showBackToTop}
+          tabIndex={showBackToTop ? 0 : -1}
+          className="back-to-top"
+          style={{
+            position: "fixed", right: 20, bottom: 20, width: 46, height: 46, borderRadius: "50%",
+            background: "#C97A3D", border: "none", color: "#211F1D", display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: shadow.md, cursor: "pointer", zIndex: 40,
+            opacity: showBackToTop ? 1 : 0, pointerEvents: showBackToTop ? "auto" : "none",
+            transform: showBackToTop ? "translateY(0)" : "translateY(10px)",
+          }}
+        >
+          <ArrowUp size={20} />
+        </button>
+      )}
 
       {lightbox !== null && (
         <Lightbox photos={photos} index={lightbox} onClose={() => setLightbox(null)} />

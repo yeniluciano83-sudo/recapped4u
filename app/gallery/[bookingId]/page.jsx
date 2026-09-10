@@ -696,12 +696,13 @@ function Lightbox({ photos, index, onClose, template }) {
               swipe page-through, which would look frantic browsing quickly
               through a large gallery. */}
           {template === "polaroid" ? (
-            // Same cream card + inset square photo PolaroidLayout uses on
-            // screen (and lib/photo-frame.js bakes into a download) --
-            // straight, not tilted, since a single focused view isn't the
-            // scattered-pile moment the tilt is for.
-            <div onClick={(e) => e.stopPropagation()} className="lightbox-pop" style={{ background: "#F7F3E9", padding: "18px 18px 64px", borderRadius: "2px", boxShadow: "0 20px 50px rgba(0,0,0,0.4)", width: "min(500px, 90vw)", boxSizing: "border-box" }}>
-              <img src={photos[cur]} alt={`Photo ${cur + 1} of ${photos.length}`} style={{ width: "100%", aspectRatio: "1", objectFit: "contain", background: "#FFFFFF", display: "block" }} />
+            // The same card PolaroidLayout shows in the grid (and
+            // lib/photo-frame.js bakes into a download, and the recap video
+            // renders) -- carried through here too, tilted by the same
+            // per-photo amount this photo has in the grid so the two views
+            // stay consistent.
+            <div onClick={(e) => e.stopPropagation()} className="lightbox-pop" style={{ background: POLAROID_CARD_COLOR, padding: polaroidPadding(500), borderRadius: "2px", boxShadow: "0 20px 50px rgba(0,0,0,0.4)", width: "min(500px, 90vw)", boxSizing: "border-box", transform: `rotate(${POLAROID_TILTS_DEG[cur % POLAROID_TILTS_DEG.length]}deg)` }}>
+              <img src={photos[cur]} alt={`Photo ${cur + 1} of ${photos.length}`} style={{ width: "100%", height: "auto", background: "#FFFFFF", display: "block" }} />
             </div>
           ) : (
             <img
@@ -801,36 +802,47 @@ function DownloadOnlyLayout({ photos, bookingId, downloadStyle }) {
   );
 }
 
-// Cream card colour (not stark white), a caption strip along the bottom
-// roughly 4x the side/top border, and near-square corners -- the same real
-// instant-film proportions lib/photo-frame.js bakes into a Polaroid
-// download and the render pipeline's own polaroid video mode
-// (lib/video-assemble.js) already use, so browsing, the lightbox, and a
-// downloaded file all read as the same physical object rather than three
-// different approximations of "polaroid".
+// Every number here is lifted straight from lib/video-assemble.js's
+// photoBackground === "polaroid" branch, so browsing, the lightbox, and a
+// polaroid download all show the exact same card the recap video does:
+//   - cream card colour #F7F3E9 (0xF7F3E9 in the ffmpeg chain)
+//   - side + top border 2.333% of the card width (the video's polaroidBorder
+//     is 0.014 of the frame width, its photo fills 0.6 of it)
+//   - bottom caption strip (0.185/0.014)*(9/16) ~= 7.43x that
+//   - the photo's own aspect ratio, never cropped to a square
+//   - a per-photo tilt from the video's own POLAROID_TILT_PATTERN x
+//     POLAROID_TILT_RAD (0.052 rad ~= 2.98 deg), some cards dead straight
 const POLAROID_CARD_COLOR = "#F7F3E9";
+const POLAROID_SIDE_RATIO = 0.014 / 0.6;
+const POLAROID_BOTTOM_TO_SIDE = (0.185 / 0.014) * (9 / 16);
+// POLAROID_TILT_PATTERN * POLAROID_TILT_RAD from lib/video-assemble.js,
+// pre-converted from radians to degrees for CSS rotate().
+const POLAROID_TILTS_DEG = [0, 1, -0.7, 0, -1, 0.55, 0, 0.85, -0.45, 0.7].map((m) => +(m * 0.052 * (180 / Math.PI)).toFixed(3));
+function polaroidPadding(cardWidthPx) {
+  const side = Math.round(cardWidthPx * POLAROID_SIDE_RATIO);
+  return `${side}px ${side}px ${Math.round(side * POLAROID_BOTTOM_TO_SIDE)}px`;
+}
 
 function PolaroidLayout({ photos, selectMode, selected, onSelect }) {
-  const rotations = [-3, 2, -1.5, 3, -2, 1.5];
+  const CARD_WIDTH = 210;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "28px", justifyContent: "center", padding: "10px 0" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "28px", justifyContent: "center", alignItems: "flex-start", padding: "10px 0" }}>
       {photos.map((url, i) => (
         <button key={i} onClick={() => onSelect(i)} aria-label={selectMode ? `${selected?.has(i) ? "Deselect" : "Select"} photo ${i + 1} of ${photos.length}` : `View photo ${i + 1} of ${photos.length}`}
           style={{
-            position: "relative", background: POLAROID_CARD_COLOR, padding: "14px 14px 56px", borderRadius: "2px",
+            position: "relative", background: POLAROID_CARD_COLOR, padding: polaroidPadding(CARD_WIDTH), borderRadius: "2px",
             border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer",
-            transform: `rotate(${rotations[i % rotations.length]}deg)`,
+            transform: `rotate(${POLAROID_TILTS_DEG[i % POLAROID_TILTS_DEG.length]}deg)`,
             boxShadow: "0 1px 2px rgba(33,31,29,0.12), 0 12px 24px rgba(33,31,29,0.2)",
-            width: "200px",
+            width: `${CARD_WIDTH}px`,
           }}>
           {/* Staggered, not simultaneous -- capped at 1.2s so a large
               gallery's last tile isn't left waiting several seconds behind
               its first. animation-delay lives inline (per-photo, computed),
               the animation itself in the shared .polaroid-photo class.
-              White behind the photo (not the card's cream) -- any
-              letterboxed sliver from a non-square photo reads as a real
-              print's paper edge, not a colour mismatch. */}
-          <img src={url} alt="" loading="lazy" className="polaroid-photo" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block", background: "#FFFFFF", animationDelay: `${Math.min(i * 70, 1200)}ms` }} />
+              The photo keeps its own aspect ratio (no forced square), same
+              as the video's card. */}
+          <img src={url} alt="" loading="lazy" className="polaroid-photo" style={{ width: "100%", height: "auto", display: "block", background: "#FFFFFF", animationDelay: `${Math.min(i * 70, 1200)}ms` }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
         </button>
       ))}

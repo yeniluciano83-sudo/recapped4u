@@ -93,7 +93,15 @@ export default function GalleryDeliveryPage() {
       .then((res) => res.json())
       .then((d) => {
         setData(d);
-        setTemplate(d?.booking?.gallery_template || "grid");
+        const tmpl = d?.booking?.gallery_template || "grid";
+        setTemplate(tmpl);
+        // If the host set the gallery to the Polaroid template, default
+        // downloads to Polaroid too -- "my gallery looks like polaroids, so
+        // my downloads should" is the obvious expectation, and Polaroid is
+        // the one template that maps cleanly to a per-photo download style.
+        // Grid/Masonry are collage exports, not what someone expects from a
+        // plain "Download all", so those keep the plain default.
+        if (tmpl === "polaroid") setDownloadStyle("polaroid");
         // videoLength defaults to "full", but a "social cuts of every
         // photo" delivery (booking.delivery_format === "social_cuts") has
         // no full video at all -- defaulting to it left the page opening

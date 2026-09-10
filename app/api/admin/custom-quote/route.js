@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 import { SOCIAL_CUT_ELIGIBLE_TIERS, isRoastLevelSelectable, roastAddonPriceCents, defaultGalleryTemplate } from "@/lib/pricing";
+import { sendCustomQuoteEmail } from "@/lib/email";
 import { captureError } from "@/lib/sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -122,7 +123,30 @@ export async function POST(req) {
 
     await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
 
-    return NextResponse.json({ bookingId: booking.id, checkoutUrl: session.url });
+    // Best-effort -- the checkout link still comes back in the response
+    // either way (see the dashboard's own copy-link fallback), so a Resend
+    // hiccup here shouldn't block quote creation or hide the link from staff.
+    let emailSent = false;
+    try {
+      const amountFormatted = new Intl.NumberFormat("en-US", { style: "currency", currency: "usd" }).format(amountCents / 100);
+      await sendCustomQuoteEmail({
+        to: bookingFields.email,
+        hostName,
+        eventType,
+        eventDate,
+        tier,
+        amount: amountFormatted,
+        checkoutUrl: session.url,
+        label,
+        description,
+      });
+      emailSent = true;
+    } catch (err) {
+      console.error(`Custom quote email failed for booking ${booking.id}:`, err.message);
+      captureError(err, { tags: { route: "admin.custom-quote", email: "custom-quote" }, extra: { bookingId: booking.id } });
+    }
+
+    return NextResponse.json({ bookingId: booking.id, checkoutUrl: session.url, emailSent });
   } catch (err) {
     console.error("Custom quote creation failed:", err);
     captureError(err, { tags: { route: "admin.custom-quote" } });

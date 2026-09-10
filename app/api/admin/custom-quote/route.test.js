@@ -11,8 +11,12 @@ vi.mock("stripe", () => ({
     return { checkout: { sessions: { create: stripeMocks.sessionsCreate } } };
   }),
 }));
+vi.mock("@/lib/email", () => ({
+  sendCustomQuoteEmail: vi.fn(),
+}));
 
 import { supabase } from "@/lib/supabase";
+import { sendCustomQuoteEmail } from "@/lib/email";
 import { POST } from "./route";
 
 function jsonRequest(body) {
@@ -35,6 +39,7 @@ describe("POST /api/admin/custom-quote", () => {
     sb = createSupabaseMock();
     supabase.from.mockImplementation(sb.from);
     stripeMocks.sessionsCreate.mockReset();
+    sendCustomQuoteEmail.mockReset();
     process.env.APP_URL = "https://test.example";
   });
 
@@ -71,7 +76,7 @@ describe("POST /api/admin/custom-quote", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json).toEqual({ bookingId: "quote-1", checkoutUrl: "https://checkout.stripe.com/quote1" });
+    expect(json).toEqual({ bookingId: "quote-1", checkoutUrl: "https://checkout.stripe.com/quote1", emailSent: true });
 
     const sessionArgs = stripeMocks.sessionsCreate.mock.calls[0][0];
     expect(sessionArgs.line_items[0].price_data.unit_amount).toBe(50000); // $500.00 in cents
@@ -79,6 +84,27 @@ describe("POST /api/admin/custom-quote", () => {
     const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
     expect(insertCall.args[0].custom_price_cents).toBe(50000);
     expect(insertCall.args[0].gallery_template).toBe("polaroid");
+
+    // The whole point of this feature -- the host gets a real email with the
+    // payment link instead of depending on staff to paste it somewhere.
+    expect(sendCustomQuoteEmail).toHaveBeenCalledTimes(1);
+    const emailArgs = sendCustomQuoteEmail.mock.calls[0][0];
+    expect(emailArgs.to).toBe("host@example.com");
+    expect(emailArgs.checkoutUrl).toBe("https://checkout.stripe.com/quote1");
+    expect(emailArgs.amount).toBe("$500.00");
+  });
+
+  it("still returns the checkout link (with emailSent: false) when the confirmation email fails to send", async () => {
+    sb.mockResponse({ data: { id: "quote-1" }, error: null });
+    sb.mockResponse({ data: null, error: null });
+    stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_1", url: "https://checkout.stripe.com/quote1" });
+    sendCustomQuoteEmail.mockRejectedValue(new Error("resend down"));
+
+    const res = await POST(jsonRequest(BASE_BODY));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json).toEqual({ bookingId: "quote-1", checkoutUrl: "https://checkout.stripe.com/quote1", emailSent: false });
   });
 
   // No UI in the dashboard's custom-quote form actually sends social_cuts

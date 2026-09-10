@@ -97,7 +97,7 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create quote");
-      setQuoteResult({ checkoutUrl: data.checkoutUrl });
+      setQuoteResult({ checkoutUrl: data.checkoutUrl, emailSent: data.emailSent });
       load();
     } catch (err) {
       setQuoteError(err.message || "Failed to create quote");
@@ -309,7 +309,9 @@ export default function Dashboard() {
             {quoteResult ? (
               <div>
                 <p style={{ fontSize: 15, color: "#4a4642", lineHeight: 1.6, margin: "0 0 14px" }}>
-                  Booking created. Send this checkout link to the host — they'll pay and their event goes live automatically.
+                  {quoteResult.emailSent
+                    ? "Booking created, and a confirmation email with the payment link is on its way to the host — they'll pay and their event goes live automatically."
+                    : "Booking created, but the confirmation email failed to send — copy this checkout link and send it to the host yourself."}
                 </p>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   <input readOnly value={quoteResult.checkoutUrl} onFocus={(e) => e.target.select()}
@@ -318,6 +320,9 @@ export default function Dashboard() {
                     {quoteLinkCopied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy</>}
                   </button>
                 </div>
+                {quoteResult.emailSent && (
+                  <p style={{ fontSize: 12.5, color: "#8a857d", margin: "8px 0 0" }}>Still here if you'd rather send it yourself too — a call, WhatsApp, whatever reaches this host fastest.</p>
+                )}
                 <button onClick={closeQuoteForm} style={{ marginTop: "18px", width: "100%", padding: "12px", borderRadius: "10px", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Done</button>
               </div>
             ) : (

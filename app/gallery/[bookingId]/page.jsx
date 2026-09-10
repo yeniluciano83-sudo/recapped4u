@@ -37,29 +37,17 @@ export default function GalleryDeliveryPage() {
   // light up the "Share this gallery" button further down the page.
   const [videoShareCopied, setVideoShareCopied] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
-  // Grid/Masonry/Slideshow/Polaroid up in `template` picks how photos are
-  // BROWSED on this page -- purely CSS, no pixels touched (see
-  // PolaroidLayout below). This is a separate choice for what DOWNLOADING
-  // actually produces: "plain" hands back the untouched original (same as
-  // always); "polaroid" routes a single photo through
-  // api/gallery/[bookingId]/photo/[index], which frames it with
-  // lib/photo-frame.js before serving it; "grid"/"masonry" aren't per-photo
-  // styles at all (see lib/photo-collage.js's own comment) and only apply
-  // to "Download all", which composites a contact-sheet-style collage
-  // instead of zipping individual photos.
+  // The layout in `template` picks how photos are BROWSED here -- purely
+  // CSS. This is the separate per-photo choice for what a DOWNLOADED photo
+  // looks like: "plain" hands back the untouched original; "polaroid" routes
+  // it through api/gallery/[bookingId]/photo/[index], which frames it with
+  // lib/photo-frame.js. It applies to a single download and "Download all"
+  // alike. The Grid/Masonry contact-sheet collages are a different thing
+  // entirely -- a whole-gallery export, offered as their own links below,
+  // not a per-photo style you switch into.
   const [downloadStyle, setDownloadStyle] = useState("plain");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState(new Set());
-  // Selecting individual photos has no meaning once the download choice is
-  // a collage (see the comment above) -- drop out of select mode rather
-  // than leaving it active with a "Download selected" action that no
-  // longer makes sense.
-  useEffect(() => {
-    if (downloadStyle === "grid" || downloadStyle === "masonry") {
-      setSelectMode(false);
-      setSelectedIndices(new Set());
-    }
-  }, [downloadStyle]);
   // Whether the recap video is playing inline (vs. showing its poster +
   // play button). Reset whenever the selected cut changes so switching
   // toggles always drops back to the poster for the new cut.
@@ -478,26 +466,26 @@ export default function GalleryDeliveryPage() {
                   </button>
                 );
               })}
-              {/* Selecting individual photos to download doesn't apply to
-                  Grid/Masonry -- those export one collage of many photos,
-                  not a per-photo file, so there's nothing for a selection
-                  to attach to. */}
-              {downloadStyle !== "grid" && downloadStyle !== "masonry" && (
-                <button onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
-                    fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
-                    border: selectMode ? "1px solid #C97A3D" : "1px solid #E4DED2",
-                    background: selectMode ? "#FBEEE0" : "transparent",
-                    color: selectMode ? "#C97A3D" : "#6b655c",
-                  }}>
-                  {selectMode ? "Cancel" : "Select photos"}
-                </button>
-              )}
+              <button onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
+                style={{
+                  display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
+                  fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
+                  border: selectMode ? "1px solid #C97A3D" : "1px solid #E4DED2",
+                  background: selectMode ? "#FBEEE0" : "transparent",
+                  color: selectMode ? "#C97A3D" : "#6b655c",
+                }}>
+                {selectMode ? "Cancel" : "Select photos"}
+              </button>
             </div>
           )}
         </div>
         {savingTemplate && <p style={{ fontSize: "11.5px", color: "#8a857d", marginTop: "-8px", marginBottom: "14px" }}>Saving your layout choice…</p>}
+
+        {!isDownloadOnly && photos.length > 0 && (
+          <p style={{ fontSize: "13px", color: "#6b655c", lineHeight: 1.65, margin: "0 0 18px" }}>
+            The buttons above just change how you <em>browse</em> — every photo's still yours to keep. Set <strong>Downloads</strong> below to <strong>Plain</strong> for the untouched shots, or <strong>Polaroid</strong> to save each one tucked in its own cream frame. Want the whole set as one keepsake? Scroll down for a <strong>Grid</strong> or <strong>Masonry</strong> collage sheet — the full gallery laid out on printable pages, ready to frame or hand out.
+          </p>
+        )}
 
         {isDownloadOnly ? (
           <div style={{ marginBottom: "36px" }}>
@@ -515,21 +503,18 @@ export default function GalleryDeliveryPage() {
           </div>
         )}
 
-        {/* Independent of `template` above -- that's how photos are BROWSED
-            here (pure CSS, see PolaroidLayout), this is what DOWNLOADING
-            actually produces. Plain/Polaroid are per-photo styles (apply to
-            a single download or "Download all" alike); Grid/Masonry are
-            page layouts, not photo styles, so they only apply to
-            "Download all" -- see the comment on downloadStyle's own
-            declaration above. */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+        {/* Per-photo look for what DOWNLOADING produces -- independent of the
+            browsing layout above. "plain" is the untouched original;
+            "polaroid" routes each photo through
+            api/gallery/[bookingId]/photo/[index] to frame it. Applies to a
+            single download and "Download all" alike. The Grid/Masonry
+            collage sheets are their own whole-gallery export, below. */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12.5px", color: "#6b655c", fontWeight: 600 }}>Downloads:</span>
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             {[
               { id: "plain", label: "Plain" },
               { id: "polaroid", label: "Polaroid" },
-              { id: "grid", label: "Grid collage" },
-              { id: "masonry", label: "Masonry collage" },
             ].map((opt) => (
               <button key={opt.id} onClick={() => setDownloadStyle(opt.id)} aria-pressed={downloadStyle === opt.id}
                 style={{
@@ -543,11 +528,6 @@ export default function GalleryDeliveryPage() {
             ))}
           </div>
         </div>
-        {(downloadStyle === "grid" || downloadStyle === "masonry") && (
-          <p style={{ fontSize: "12px", color: "#8a857d", margin: "-6px 0 12px" }}>
-            Downloads as one or more collage sheets (several photos composited together), not individual photos — use "Download all" below.
-          </p>
-        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div style={{ display: "flex", gap: "10px" }}>
@@ -577,6 +557,23 @@ export default function GalleryDeliveryPage() {
               </>
             )}
           </div>
+          {!selectMode && !isDownloadOnly && photos.length > 0 && (
+            <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2" }}>
+              <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "0 0 10px", lineHeight: 1.6 }}>
+                <strong>Keepsake collage sheets.</strong> The whole gallery arranged on printable pages — a tidy <strong>Grid</strong>, or a flowing <strong>Masonry</strong> wall. This is on top of your individual photos above, not instead of them.
+              </p>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <a href={`/api/gallery/${bookingId}/download-all?style=grid`} download
+                  style={{ flex: "1 1 150px", padding: "12px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", textDecoration: "none", cursor: "pointer" }}>
+                  <Download size={15} /> Grid collage
+                </a>
+                <a href={`/api/gallery/${bookingId}/download-all?style=masonry`} download
+                  style={{ flex: "1 1 150px", padding: "12px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "transparent", color: "#211F1D", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", textDecoration: "none", cursor: "pointer" }}>
+                  <Download size={15} /> Masonry collage
+                </a>
+              </div>
+            </div>
+          )}
           <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2", display: "flex", gap: "10px" }}>
             <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>

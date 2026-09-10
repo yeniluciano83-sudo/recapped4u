@@ -45,7 +45,7 @@
  */
 require("dotenv").config({ path: require("path").join(__dirname, "..", ".env.local"), quiet: true });
 const path = require("path");
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 const { createClient } = require("@supabase/supabase-js");
 const { hoursSinceEvent, sortByProcessingPriority } = require("../lib/processingPriority");
 const { captureError, flushSentry } = require("../lib/sentry");
@@ -64,25 +64,23 @@ const TIER_SCHEDULE = {
   keepsake: { processHours: 24 * 14, reminderHours: 24 * 7 },
 };
 
+// execFileSync, not execSync -- args are passed as a real argv array with no
+// shell in between, so bookingId (a bookings.id UUID today, but this is the
+// defensive line, not the guarantee) can never be interpreted as shell
+// metacharacters even if a non-UUID value ever reached this.
+const AUTO_RECAP = path.join(__dirname, "auto-recap.js");
+const RUN_OPTS = { stdio: "inherit", cwd: path.join(__dirname, "..") };
+
 function runSubmitAnalysis(bookingId) {
-  execSync(`node "${path.join(__dirname, "auto-recap.js")}" submit ${bookingId}`, {
-    stdio: "inherit",
-    cwd: path.join(__dirname, ".."),
-  });
+  execFileSync("node", [AUTO_RECAP, "submit", bookingId], RUN_OPTS);
 }
 
 function runResumeAnalysis(bookingId) {
-  execSync(`node "${path.join(__dirname, "auto-recap.js")}" resume ${bookingId}`, {
-    stdio: "inherit",
-    cwd: path.join(__dirname, ".."),
-  });
+  execFileSync("node", [AUTO_RECAP, "resume", bookingId], RUN_OPTS);
 }
 
 function runContinueRender(bookingId, budgetMs) {
-  execSync(`node "${path.join(__dirname, "auto-recap.js")}" continue-render ${bookingId} ${Math.round(budgetMs)}`, {
-    stdio: "inherit",
-    cwd: path.join(__dirname, ".."),
-  });
+  execFileSync("node", [AUTO_RECAP, "continue-render", bookingId, String(Math.round(budgetMs))], RUN_OPTS);
 }
 
 // The render phase (advancing in-progress 4K renders) runs first in main()

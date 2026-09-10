@@ -62,7 +62,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // generateRoastScript/finalizeDelivery call -- to leak the downloaded/
 // enhanced JPEGs on disk). Safe as a module-level variable only because
 // this script processes one booking per process invocation (see
-// poll-and-recap.js's execSync calls), never concurrent bookings in the
+// poll-and-recap.js's execFileSync calls), never concurrent bookings in the
 // same process.
 let currentTmpDir = null;
 

@@ -698,10 +698,8 @@ function Lightbox({ photos, index, onClose, template }) {
           {template === "polaroid" ? (
             // The same card PolaroidLayout shows in the grid (and
             // lib/photo-frame.js bakes into a download, and the recap video
-            // renders) -- carried through here too, tilted by the same
-            // per-photo amount this photo has in the grid so the two views
-            // stay consistent.
-            <div onClick={(e) => e.stopPropagation()} className="lightbox-pop" style={{ background: POLAROID_CARD_COLOR, padding: polaroidPadding(500), borderRadius: "2px", boxShadow: "0 20px 50px rgba(0,0,0,0.4)", width: "min(500px, 90vw)", boxSizing: "border-box", transform: `rotate(${POLAROID_TILTS_DEG[cur % POLAROID_TILTS_DEG.length]}deg)` }}>
+            // renders) -- held straight here too, matching the grid.
+            <div onClick={(e) => e.stopPropagation()} className="lightbox-pop" style={{ background: POLAROID_CARD_COLOR, padding: polaroidPadding(500), borderRadius: "2px", boxShadow: "0 20px 50px rgba(0,0,0,0.4)", width: "min(500px, 90vw)", boxSizing: "border-box" }}>
               <img src={photos[cur]} alt={`Photo ${cur + 1} of ${photos.length}`} style={{ width: "100%", height: "auto", background: "#FFFFFF", display: "block" }} />
             </div>
           ) : (
@@ -802,7 +800,7 @@ function DownloadOnlyLayout({ photos, bookingId, downloadStyle }) {
   );
 }
 
-// Every number here is lifted straight from lib/video-assemble.js's
+// Card geometry is lifted straight from lib/video-assemble.js's
 // photoBackground === "polaroid" branch, so browsing, the lightbox, and a
 // polaroid download all show the exact same card the recap video does:
 //   - cream card colour #F7F3E9 (0xF7F3E9 in the ffmpeg chain)
@@ -810,14 +808,12 @@ function DownloadOnlyLayout({ photos, bookingId, downloadStyle }) {
 //     is 0.014 of the frame width, its photo fills 0.6 of it)
 //   - bottom caption strip (0.185/0.014)*(9/16) ~= 7.43x that
 //   - the photo's own aspect ratio, never cropped to a square
-//   - a per-photo tilt from the video's own POLAROID_TILT_PATTERN x
-//     POLAROID_TILT_RAD (0.052 rad ~= 2.98 deg), some cards dead straight
+// The video also tilts each card over its backdrop; the gallery deliberately
+// doesn't -- cards sit straight here, so a large grid stays scannable rather
+// than looking like a knocked-over pile.
 const POLAROID_CARD_COLOR = "#F7F3E9";
 const POLAROID_SIDE_RATIO = 0.014 / 0.6;
 const POLAROID_BOTTOM_TO_SIDE = (0.185 / 0.014) * (9 / 16);
-// POLAROID_TILT_PATTERN * POLAROID_TILT_RAD from lib/video-assemble.js,
-// pre-converted from radians to degrees for CSS rotate().
-const POLAROID_TILTS_DEG = [0, 1, -0.7, 0, -1, 0.55, 0, 0.85, -0.45, 0.7].map((m) => +(m * 0.052 * (180 / Math.PI)).toFixed(3));
 function polaroidPadding(cardWidthPx) {
   const side = Math.round(cardWidthPx * POLAROID_SIDE_RATIO);
   return `${side}px ${side}px ${Math.round(side * POLAROID_BOTTOM_TO_SIDE)}px`;
@@ -832,7 +828,6 @@ function PolaroidLayout({ photos, selectMode, selected, onSelect }) {
           style={{
             position: "relative", background: POLAROID_CARD_COLOR, padding: polaroidPadding(CARD_WIDTH), borderRadius: "2px",
             border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer",
-            transform: `rotate(${POLAROID_TILTS_DEG[i % POLAROID_TILTS_DEG.length]}deg)`,
             boxShadow: "0 1px 2px rgba(33,31,29,0.12), 0 12px 24px rgba(33,31,29,0.2)",
             width: `${CARD_WIDTH}px`,
           }}>

@@ -209,7 +209,11 @@ describe("PATCH /api/bookings/[id]", () => {
   });
 
   describe("event_date", () => {
-    it("rejects a missing or unparseable date", async () => {
+    it("rejects a missing or unparseable date without ever touching the database", async () => {
+      // Validated before the fresh-status fetch this field now also
+      // triggers -- a malformed date is a pure input error, same as every
+      // other field's own validation, not something that should cost (or
+      // ever depend on) a DB round-trip to reject.
       for (const bad of [null, "", "not-a-date"]) {
         const res = await PATCH(jsonRequest({ event_date: bad }), { params: { id: "b1" } });
         expect(res.status).toBe(400);
@@ -218,13 +222,15 @@ describe("PATCH /api/bookings/[id]", () => {
     });
 
     it("updates the date without emailing the host when notifyReschedule isn't set -- a plain correction", async () => {
-      sb.mockResponse({ data: { id: "b1", event_date: "2026-12-25", email: "jordan@example.com", host_name: "Jordan" }, error: null });
+      sb.mockResponse({ data: { status: "collecting", event_date: "2026-12-01", style: "cinematic", social_style: null }, error: null }); // fresh-status fetch
+      sb.mockResponse({ data: { id: "b1", event_date: "2026-12-25", email: "jordan@example.com", host_name: "Jordan" }, error: null }); // update
       const res = await PATCH(jsonRequest({ event_date: "2026-12-25" }), { params: { id: "b1" } });
       expect(res.status).toBe(200);
       expect(sendRescheduleConfirmation).not.toHaveBeenCalled();
     });
 
     it("emails the host the reschedule confirmation when notifyReschedule is explicitly set", async () => {
+      sb.mockResponse({ data: { status: "collecting", event_date: "2026-12-25", style: "cinematic", social_style: null }, error: null });
       sb.mockResponse({ data: { id: "b1", event_date: "2027-01-15", email: "jordan@example.com", host_name: "Jordan" }, error: null });
       const res = await PATCH(
         jsonRequest({ event_date: "2027-01-15", notifyReschedule: true, previousEventDate: "2026-12-25" }),
@@ -241,9 +247,46 @@ describe("PATCH /api/bookings/[id]", () => {
 
     it("still succeeds even if the reschedule email fails to send", async () => {
       sendRescheduleConfirmation.mockRejectedValue(new Error("resend is down"));
+      sb.mockResponse({ data: { status: "collecting", event_date: "2026-12-25", style: "cinematic", social_style: null }, error: null });
       sb.mockResponse({ data: { id: "b1", event_date: "2027-01-15", email: "jordan@example.com", host_name: "Jordan" }, error: null });
       const res = await PATCH(jsonRequest({ event_date: "2027-01-15", notifyReschedule: true }), { params: { id: "b1" } });
       expect(res.status).toBe(200);
+    });
+
+    // The actual ask this locking exists for: once the pipeline has claimed
+    // a booking, it's already computed deadlines/schedule timing off the
+    // event_date it read at that moment (TIER_SCHEDULE in
+    // scripts/poll-and-recap.js) -- moving the date afterward would desync
+    // that math, the same risk style/social_style already guard against.
+    it.each(["analyzing", "editing", "awaiting_roast_approval", "delivered"])(
+      'rejects changing the event date once a booking is "%s" -- processing already read it',
+      async (status) => {
+        sb.mockResponse({ data: { status, event_date: "2026-12-01", style: "cinematic", social_style: null }, error: null });
+        const res = await PATCH(jsonRequest({ event_date: "2026-12-25" }), { params: { id: "b1" } });
+        expect(res.status).toBe(400);
+        expect(sb.callLog.filter((c) => c.calls.some((call) => call.method === "update")).length).toBe(0);
+      }
+    );
+
+    it.each(["booked", "collecting"])("allows changing the event date while %s -- nothing has read it yet", async (status) => {
+      sb.mockResponse({ data: { status, event_date: "2026-12-01", style: "cinematic", social_style: null }, error: null });
+      sb.mockResponse({ data: { id: "b1", event_date: "2026-12-25" }, error: null });
+      const res = await PATCH(jsonRequest({ event_date: "2026-12-25" }), { params: { id: "b1" } });
+      expect(res.status).toBe(200);
+    });
+
+    // The bug this guards against: the dashboard's "Event details" save
+    // always resends event_date alongside host_name/notes/etc. in one
+    // request, even when only fixing a typo elsewhere. Keying the lock off
+    // "is event_date actually changing" rather than "is event_date present"
+    // means a locked booking can still have its other fields corrected.
+    it("doesn't block other fields in the same request when event_date rides along unchanged on a locked booking", async () => {
+      sb.mockResponse({ data: { status: "delivered", event_date: "2026-12-25", style: "cinematic", social_style: null }, error: null });
+      sb.mockResponse({ data: { id: "b1", host_name: "Corrected Name", event_date: "2026-12-25" }, error: null });
+      const res = await PATCH(jsonRequest({ host_name: "Corrected Name", event_date: "2026-12-25" }), { params: { id: "b1" } });
+      expect(res.status).toBe(200);
+      const updateCall = sb.callLog[1].calls.find((c) => c.method === "update");
+      expect(updateCall.args[0]).toEqual({ host_name: "Corrected Name", event_date: "2026-12-25" });
     });
   });
 

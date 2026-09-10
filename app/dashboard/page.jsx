@@ -494,11 +494,14 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBookin
     if (ok) setEditingDetails(false);
   };
 
-  // Style/social style -- the one pair the render pipeline reads
-  // throughout analysis and enhancement (see the route's own comment), so
-  // this is disabled outright once that's already begun, rather than
-  // letting staff attempt a save the API would just reject.
-  const STYLE_LOCKED = ["analyzing", "editing", "awaiting_roast_approval", "delivered"].includes(booking.status);
+  // Style/social style and event_date -- the fields the render pipeline
+  // has already read once processing claims a booking (style/social_style
+  // throughout analysis and enhancement; event_date for TIER_SCHEDULE's own
+  // deadline math), so all three are disabled outright once that's already
+  // begun, rather than letting staff attempt a save the API would just
+  // reject. See the matching PROCESSING_STARTED_STATUSES gate in
+  // app/api/bookings/[id]/route.js.
+  const PROCESSING_LOCKED = ["analyzing", "editing", "awaiting_roast_approval", "delivered"].includes(booking.status);
   const [editingStyle, setEditingStyle] = useState(false);
   const [pendingStyle, setPendingStyle] = useState(booking.style || "cinematic");
   const [pendingSocialStyle, setPendingSocialStyle] = useState(booking.social_style || "");
@@ -537,10 +540,15 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBookin
             <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Event type</div>
             <input value={pendingDetails.event_type} onChange={(e) => setPendingDetails((d) => ({ ...d, event_type: e.target.value }))} disabled={savingDetails}
               style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", boxSizing: "border-box" }} />
-            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Event date</div>
-            <input type="date" value={pendingDetails.event_date} onChange={(e) => setPendingDetails((d) => ({ ...d, event_date: e.target.value }))} disabled={savingDetails}
-              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", boxSizing: "border-box" }} />
-            {pendingDetails.event_date !== booking.event_date && (
+            <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+              Event date
+              {PROCESSING_LOCKED && (
+                <span title={`Can't change once a booking is "${STATUS_LABEL[booking.status] || booking.status}" -- processing has already read it`} style={{ fontSize: "11px", color: "#8a857d", fontStyle: "italic" }}>(locked)</span>
+              )}
+            </div>
+            <input type="date" value={pendingDetails.event_date} onChange={(e) => setPendingDetails((d) => ({ ...d, event_date: e.target.value }))} disabled={savingDetails || PROCESSING_LOCKED}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "8px", boxSizing: "border-box", background: PROCESSING_LOCKED ? "#F5F2ED" : "#FFFFFF", color: PROCESSING_LOCKED ? "#8a857d" : "#211F1D" }} />
+            {!PROCESSING_LOCKED && pendingDetails.event_date !== booking.event_date && (
               <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#4a4642", marginBottom: "8px", cursor: "pointer" }}>
                 <input type="checkbox" checked={notifyReschedule} onChange={(e) => setNotifyReschedule(e.target.checked)} disabled={savingDetails} style={{ accentColor: "#C97A3D" }} />
                 Email the host a reschedule confirmation
@@ -665,7 +673,7 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBookin
                 <DetailRow label="Social cut style" value={booking.social_style === "none" ? "No theme (no music)" : STYLE_LABEL[booking.social_style] || booking.social_style} inline />
               )}
             </div>
-            {STYLE_LOCKED ? (
+            {PROCESSING_LOCKED ? (
               <span title={`Can't change once a booking is "${STATUS_LABEL[booking.status] || booking.status}"`} style={{ fontSize: "11px", color: "#8a857d", fontStyle: "italic", flexShrink: 0, marginLeft: "10px" }}>Locked</span>
             ) : (
               <button onClick={openStyleEditor} style={{ background: "none", border: "1px solid #E4DED2", borderRadius: "8px", padding: "5px 10px", fontSize: "12px", fontWeight: 600, color: "#C97A3D", cursor: "pointer", flexShrink: 0, marginLeft: "10px" }}>

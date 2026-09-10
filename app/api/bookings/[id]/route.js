@@ -16,8 +16,16 @@ const VALID_SOCIAL_STYLES = [...VALID_STYLES, "none"];
 // scripts/auto-recap.js reads style/social_style throughout analysis and
 // enhancement, not just once at submission -- changing either mid-pipeline
 // could grade some photos with the old style and some with the new one.
-// Safe only before that starts.
-const STYLE_LOCKED_STATUSES = ["analyzing", "editing", "awaiting_roast_approval", "delivered"];
+// event_date feeds the same pipeline's own scheduling math (TIER_SCHEDULE in
+// scripts/poll-and-recap.js computes hours-since-event to decide when to
+// claim and process a booking) -- moving it out from under an already-
+// claimed booking would desync deadlines it's already mid-run against, the
+// same underlying risk as changing style mid-pipeline. All three are safe
+// only before that starts -- matches RESCHEDULABLE_STATUSES' own threshold
+// in the self-service reschedule route (app/api/events/[eventId]/reschedule
+// /route.js), just without that route's separate 24-hour-before-event rule,
+// which is a guest-facing notice period a staff correction isn't bound by.
+const PROCESSING_STARTED_STATUSES = ["analyzing", "editing", "awaiting_roast_approval", "delivered"];
 
 // Staff-only (gated by proxy.js's dashboard_auth check on the whole
 // /api/bookings/:path* matcher, same as the GET on the parent route) --
@@ -26,13 +34,6 @@ const STYLE_LOCKED_STATUSES = ["analyzing", "editing", "awaiting_roast_approval"
 // validation against the tier's list price, because a phone-negotiated
 // change or a comp isn't a self-service purchase. Whatever price staff
 // enters here is trusted outright, the same way custom-quote's amount is.
-//
-// Deliberately does NOT cover every column: event_date has its own
-// self-service reschedule flow (app/api/events/[eventId]/reschedule
-// /route.js) this mirrors for the notification email, but this route lets
-// staff move it unconditionally (a data correction shouldn't be bound by
-// the guest-facing 24-hour-notice rule); style/social_style are the one
-// pair actually gated below, for the reason above.
 export async function PATCH(req, { params }) {
   const { id } = await params;
 
@@ -89,13 +90,6 @@ export async function PATCH(req, { params }) {
       update.event_type = type;
     }
 
-    if ("event_date" in body) {
-      if (!body.event_date || Number.isNaN(new Date(`${body.event_date}T00:00:00`).getTime())) {
-        return NextResponse.json({ error: "Enter a valid date" }, { status: 400 });
-      }
-      update.event_date = body.event_date;
-    }
-
     if ("guest_count" in body) {
       const count = body.guest_count;
       if (count !== null && (!Number.isFinite(count) || count < 0)) {
@@ -108,15 +102,38 @@ export async function PATCH(req, { params }) {
       update.notes = body.notes || null;
     }
 
-    if ("style" in body || "social_style" in body) {
+    // Validated here, before the fetch-and-lock-check block below, rather
+    // than inside it -- a malformed date is a pure input error that
+    // shouldn't cost a DB round-trip (or ever depend on one) to reject,
+    // same as every other field's own validation above.
+    if ("event_date" in body && (!body.event_date || Number.isNaN(new Date(`${body.event_date}T00:00:00`).getTime()))) {
+      return NextResponse.json({ error: "Enter a valid date" }, { status: 400 });
+    }
+
+    if ("style" in body || "social_style" in body || "event_date" in body) {
       // Fetched fresh rather than trusting a status the dashboard might be
       // holding stale in its own state -- this is the actual gate, not a
-      // client-side nicety.
-      const { data: current, error: fetchError } = await supabase.from("bookings").select("status").eq("id", id).single();
+      // client-side nicety. Includes the current values of every field this
+      // block might lock, not just status: the dashboard's "Event details"
+      // save always resends event_date alongside host_name/notes/etc. in one
+      // request even when only fixing a typo elsewhere, so the lock has to
+      // key off whether a field is actually CHANGING, not merely present in
+      // the body -- otherwise a locked booking couldn't have its host name
+      // corrected either, just because event_date rode along unchanged.
+      const { data: current, error: fetchError } = await supabase.from("bookings").select("status, event_date, style, social_style").eq("id", id).single();
       if (fetchError || !current) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
-      if (STYLE_LOCKED_STATUSES.includes(current.status)) {
+
+      const styleChangeRequested =
+        ("style" in body && body.style !== current.style) ||
+        ("social_style" in body && (body.social_style ?? null) !== (current.social_style ?? null));
+      const dateChangeRequested = "event_date" in body && body.event_date !== current.event_date;
+
+      if (PROCESSING_STARTED_STATUSES.includes(current.status) && (styleChangeRequested || dateChangeRequested)) {
+        const lockedFields = [];
+        if (styleChangeRequested) lockedFields.push("style");
+        if (dateChangeRequested) lockedFields.push("event date");
         return NextResponse.json(
-          { error: `Can't change style once a booking is "${current.status}" -- processing has already used it.` },
+          { error: `Can't change ${lockedFields.join(" or ")} once a booking is "${current.status}" -- processing has already started.` },
           { status: 400 }
         );
       }
@@ -129,6 +146,9 @@ export async function PATCH(req, { params }) {
           return NextResponse.json({ error: "Invalid social style" }, { status: 400 });
         }
         update.social_style = body.social_style;
+      }
+      if ("event_date" in body) {
+        update.event_date = body.event_date;
       }
     }
 

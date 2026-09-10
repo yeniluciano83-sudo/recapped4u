@@ -86,6 +86,25 @@ describe("POST /api/events/[eventId]/upload/presign -- validation and issuance",
     expect(json.scope).toBe("file");
   });
 
+  it('rejects image/svg+xml -- an "image" type, but one that can carry script', async () => {
+    sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "collecting" }, error: null });
+    const res = await POST(makeRequest({ ...VALID_BODY, contentType: "image/svg+xml" }), { params: { eventId: "slug-1" } });
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.scope).toBe("file");
+  });
+
+  it.each(["image/jpeg", "image/png", "image/webp", "image/heic", "image/HEIC"])(
+    "accepts %s (allowlisted raster type, case-insensitive)",
+    async (contentType) => {
+      sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "collecting" }, error: null });
+      sb.mockResponse({ data: null, error: null }); // clientUploadId lookup
+      sb.mockResponse({ count: 0, error: null }); // existing count
+      const res = await POST(makeRequest({ ...VALID_BODY, contentType }), { params: { eventId: "slug-1" } });
+      expect(res.status).toBe(200);
+    }
+  );
+
   it('rejects a declared size over the ceiling with scope: "file"', async () => {
     sb.mockResponse({ data: { id: "b1", tier: "standard", uploads_closed_at: null, status: "collecting" }, error: null });
     const res = await POST(makeRequest({ ...VALID_BODY, fileSize: 26 * 1024 * 1024 }), { params: { eventId: "slug-1" } });

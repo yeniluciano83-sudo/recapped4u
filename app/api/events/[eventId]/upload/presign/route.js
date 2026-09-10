@@ -14,6 +14,22 @@ import { getUploadLimit } from "@/lib/uploadLimits";
 // cryptographically constrain the size the way an S3 POST policy would.
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
+// An explicit raster allowlist rather than a bare "image/" prefix check:
+// "image/svg+xml" is an image type too, and an SVG can carry inline
+// JavaScript. Every path that serves these bytes back today either
+// re-encodes through sharp (the render pipeline, the polaroid framer) or
+// pins Content-Type: image/jpeg, so an uploaded SVG isn't actually an XSS
+// vector right now -- but there's no reason to accept one in the first
+// place. Covers what phone cameras and screenshots actually produce.
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
+
 export async function POST(req, { params }) {
   const { eventId } = await params;
 
@@ -89,8 +105,8 @@ export async function POST(req, { params }) {
   // this one photo, not the event as a whole -- it shouldn't abort the
   // rest of a guest's batch, just this file. See uploadOneFile/handleUpload
   // in both upload pages.
-  if (!contentType.startsWith("image/")) {
-    return NextResponse.json({ error: "Only photos can be uploaded.", scope: "file" }, { status: 400 });
+  if (!ALLOWED_IMAGE_TYPES.has(contentType.toLowerCase())) {
+    return NextResponse.json({ error: "Only photos can be uploaded (JPEG, PNG, WebP, or HEIC).", scope: "file" }, { status: 400 });
   }
 
   if (typeof fileSize === "number" && fileSize > MAX_FILE_SIZE_BYTES) {

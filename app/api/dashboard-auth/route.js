@@ -40,7 +40,14 @@ function isCorrectPassword(candidate) {
 }
 
 export async function POST(req) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  // x-real-ip is Vercel's trustworthy client IP; the leftmost
+  // x-forwarded-for entry is client-controlled and would let a brute-force
+  // script get a fresh attempt budget per spoofed value. See getClientIp in
+  // lib/rateLimit.js -- same reasoning.
+  const ip =
+    req.headers.get("x-real-ip")?.trim() ||
+    req.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
+    "unknown";
   if (isRateLimited(ip)) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }

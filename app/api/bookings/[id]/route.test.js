@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSupabaseMock } from "@/test/helpers/mockSupabase";
 
 vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
-vi.mock("@/lib/email", () => ({ sendRescheduleConfirmation: vi.fn() }));
+vi.mock("@/lib/email", () => ({ sendRescheduleConfirmation: vi.fn(), sendBookingUpdateConfirmation: vi.fn() }));
 
 import { supabase } from "@/lib/supabase";
-import { sendRescheduleConfirmation } from "@/lib/email";
+import { sendRescheduleConfirmation, sendBookingUpdateConfirmation } from "@/lib/email";
 import { PATCH } from "./route";
 
 function jsonRequest(body) {
@@ -19,6 +19,7 @@ describe("PATCH /api/bookings/[id]", () => {
     sb = createSupabaseMock();
     supabase.from.mockImplementation(sb.from);
     sendRescheduleConfirmation.mockReset();
+    sendBookingUpdateConfirmation.mockReset();
   });
 
   it("rejects a status not in the allowed set", async () => {
@@ -113,6 +114,48 @@ describe("PATCH /api/bookings/[id]", () => {
     expect(res.status).toBe(200);
     const updateCall = sb.callLog[0].calls.find((c) => c.method === "update");
     expect(updateCall.args[0]).toEqual({ tier: "keepsake", upload_cap_notified_at: null, custom_price_cents: 15000 });
+  });
+
+  describe("notifyPackageUpdate (tier/price confirmation email)", () => {
+    it("doesn't email the host on a tier change when notifyPackageUpdate isn't set -- a plain correction", async () => {
+      sb.mockResponse({ data: { id: "b1", tier: "premium", email: "jordan@example.com", host_name: "Jordan" }, error: null });
+      const res = await PATCH(jsonRequest({ tier: "premium" }), { params: { id: "b1" } });
+      expect(res.status).toBe(200);
+      expect(sendBookingUpdateConfirmation).not.toHaveBeenCalled();
+    });
+
+    it("emails the host when notifyPackageUpdate is explicitly set alongside a tier change", async () => {
+      sb.mockResponse({ data: { id: "b1", tier: "premium", custom_price_cents: null, email: "jordan@example.com", host_name: "Jordan" }, error: null });
+      const res = await PATCH(jsonRequest({ tier: "premium", notifyPackageUpdate: true }), { params: { id: "b1" } });
+      expect(res.status).toBe(200);
+      expect(sendBookingUpdateConfirmation).toHaveBeenCalledWith({
+        to: "jordan@example.com",
+        hostName: "Jordan",
+        tier: "premium",
+        customPriceCents: null,
+      });
+    });
+
+    it("also emails on a custom_price_cents-only change with notifyPackageUpdate set", async () => {
+      sb.mockResponse({ data: { id: "b1", tier: "standard", custom_price_cents: 5000, email: "jordan@example.com", host_name: "Jordan" }, error: null });
+      const res = await PATCH(jsonRequest({ custom_price_cents: 5000, notifyPackageUpdate: true }), { params: { id: "b1" } });
+      expect(res.status).toBe(200);
+      expect(sendBookingUpdateConfirmation).toHaveBeenCalledTimes(1);
+    });
+
+    it("ignores notifyPackageUpdate when neither tier nor custom_price_cents is in the request", async () => {
+      sb.mockResponse({ data: { id: "b1", host_name: "Jordan Updated" }, error: null });
+      const res = await PATCH(jsonRequest({ host_name: "Jordan Updated", notifyPackageUpdate: true }), { params: { id: "b1" } });
+      expect(res.status).toBe(200);
+      expect(sendBookingUpdateConfirmation).not.toHaveBeenCalled();
+    });
+
+    it("still succeeds even if the package update email fails to send", async () => {
+      sendBookingUpdateConfirmation.mockRejectedValue(new Error("resend is down"));
+      sb.mockResponse({ data: { id: "b1", tier: "premium", email: "jordan@example.com", host_name: "Jordan" }, error: null });
+      const res = await PATCH(jsonRequest({ tier: "premium", notifyPackageUpdate: true }), { params: { id: "b1" } });
+      expect(res.status).toBe(200);
+    });
   });
 
   describe("host details", () => {

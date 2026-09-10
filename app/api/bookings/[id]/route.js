@@ -158,6 +158,20 @@ export async function PATCH(req, { params }) {
       }
     }
 
+    // Same opt-in shape as the reschedule notice above -- a tier/price edit
+    // is just as often a plain correction as it is something the host
+    // actually needs to hear about, so this only fires when staff checks
+    // the box, not on every Package save.
+    if (("tier" in update || "custom_price_cents" in update) && body.notifyPackageUpdate) {
+      try {
+        const { sendBookingUpdateConfirmation } = await import("@/lib/email");
+        await sendBookingUpdateConfirmation({ to: data.email, hostName: data.host_name, tier: data.tier, customPriceCents: data.custom_price_cents });
+      } catch (err) {
+        console.error(`Package update email failed for booking ${id}:`, err.message);
+        captureError(err, { tags: { route: "bookings.update", email: "package-update-confirmation" }, extra: { bookingId: id } });
+      }
+    }
+
     return NextResponse.json({ success: true, booking: data });
   } catch (err) {
     console.error("Booking update failed:", err);

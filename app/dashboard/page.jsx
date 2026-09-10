@@ -419,19 +419,33 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBookin
   const [pendingTier, setPendingTier] = useState(booking.tier);
   const [pendingPrice, setPendingPrice] = useState(booking.custom_price_cents != null ? String(booking.custom_price_cents / 100) : "");
   const [savingPackage, setSavingPackage] = useState(false);
+  const [notifyPackageUpdate, setNotifyPackageUpdate] = useState(false);
 
   const openPackageEditor = () => {
     setPendingTier(booking.tier);
     setPendingPrice(booking.custom_price_cents != null ? String(booking.custom_price_cents / 100) : "");
+    setNotifyPackageUpdate(false);
     setEditingPackage(true);
   };
+
+  // Whether either field actually differs from what's saved -- same
+  // "only offer the checkbox when it'll actually do something" reasoning
+  // as the reschedule checkbox's own dateChanged check below. Computed here
+  // (not just inside savePackage) so the checkbox's visibility in the JSX
+  // can use it too.
+  const pendingPackagePriceCents = pendingPrice.trim() === "" ? null : Math.round(parseFloat(pendingPrice.trim()) * 100);
+  const packageChanged = pendingTier !== booking.tier || pendingPackagePriceCents !== (booking.custom_price_cents ?? null);
 
   const savePackage = async () => {
     const trimmed = pendingPrice.trim();
     const priceCents = trimmed === "" ? null : Math.round(parseFloat(trimmed) * 100);
     if (trimmed !== "" && (!Number.isFinite(priceCents) || priceCents < 0)) return;
     setSavingPackage(true);
-    const ok = await onUpdateBooking(booking.id, { tier: pendingTier, custom_price_cents: priceCents });
+    const ok = await onUpdateBooking(booking.id, {
+      tier: pendingTier,
+      custom_price_cents: priceCents,
+      ...(packageChanged && notifyPackageUpdate ? { notifyPackageUpdate: true } : {}),
+    });
     setSavingPackage(false);
     if (ok) setEditingPackage(false);
   };
@@ -572,6 +586,12 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBookin
             <div style={{ fontSize: "12px", color: "#8a857d", marginBottom: "6px" }}>Custom price (optional -- blank uses the plan's normal price)</div>
             <input type="number" min="0" step="0.01" value={pendingPrice} onChange={(e) => setPendingPrice(e.target.value)} disabled={savingPackage}
               placeholder="e.g. 150.00" style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #D8CFC0", fontSize: "14px", marginBottom: "10px", boxSizing: "border-box" }} />
+            {packageChanged && (
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#4a4642", marginBottom: "10px", cursor: "pointer" }}>
+                <input type="checkbox" checked={notifyPackageUpdate} onChange={(e) => setNotifyPackageUpdate(e.target.checked)} disabled={savingPackage} style={{ accentColor: "#C97A3D" }} />
+                Email the host a confirmation of this change
+              </label>
+            )}
             <div style={{ display: "flex", gap: "8px" }}>
               <button onClick={savePackage} disabled={savingPackage}
                 style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "13px", fontWeight: 700, cursor: savingPackage ? "default" : "pointer", opacity: savingPackage ? 0.6 : 1 }}>

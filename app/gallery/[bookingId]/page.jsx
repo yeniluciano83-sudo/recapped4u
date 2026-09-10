@@ -37,8 +37,29 @@ export default function GalleryDeliveryPage() {
   // light up the "Share this gallery" button further down the page.
   const [videoShareCopied, setVideoShareCopied] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
+  // Grid/Masonry/Slideshow/Polaroid up in `template` picks how photos are
+  // BROWSED on this page -- purely CSS, no pixels touched (see
+  // PolaroidLayout below). This is a separate choice for what DOWNLOADING
+  // actually produces: "plain" hands back the untouched original (same as
+  // always); "polaroid" routes a single photo through
+  // api/gallery/[bookingId]/photo/[index], which frames it with
+  // lib/photo-frame.js before serving it; "grid"/"masonry" aren't per-photo
+  // styles at all (see lib/photo-collage.js's own comment) and only apply
+  // to "Download all", which composites a contact-sheet-style collage
+  // instead of zipping individual photos.
+  const [downloadStyle, setDownloadStyle] = useState("plain");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState(new Set());
+  // Selecting individual photos has no meaning once the download choice is
+  // a collage (see the comment above) -- drop out of select mode rather
+  // than leaving it active with a "Download selected" action that no
+  // longer makes sense.
+  useEffect(() => {
+    if (downloadStyle === "grid" || downloadStyle === "masonry") {
+      setSelectMode(false);
+      setSelectedIndices(new Set());
+    }
+  }, [downloadStyle]);
   // Whether the recap video is playing inline (vs. showing its poster +
   // play button). Reset whenever the selected cut changes so switching
   // toggles always drops back to the poster for the new cut.
@@ -169,9 +190,9 @@ export default function GalleryDeliveryPage() {
   };
 
   const handleDownloadSelected = () => {
-    const urls = data?.photo_download_urls || [];
-    const selectedUrls = Array.from(selectedIndices).sort((a, b) => a - b).map((i) => urls[i]).filter(Boolean);
-    triggerStaggeredDownloads(selectedUrls);
+    const indices = Array.from(selectedIndices).sort((a, b) => a - b);
+    const urls = indices.map((i) => `/api/gallery/${bookingId}/photo/${i}${downloadStyle === "polaroid" ? "?style=polaroid" : ""}`);
+    triggerStaggeredDownloads(urls);
     setSelectMode(false);
     setSelectedIndices(new Set());
   };
@@ -449,16 +470,22 @@ export default function GalleryDeliveryPage() {
                   </button>
                 );
               })}
-              <button onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
-                  fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
-                  border: selectMode ? "1px solid #C97A3D" : "1px solid #E4DED2",
-                  background: selectMode ? "#FBEEE0" : "transparent",
-                  color: selectMode ? "#C97A3D" : "#6b655c",
-                }}>
-                {selectMode ? "Cancel" : "Select photos"}
-              </button>
+              {/* Selecting individual photos to download doesn't apply to
+                  Grid/Masonry -- those export one collage of many photos,
+                  not a per-photo file, so there's nothing for a selection
+                  to attach to. */}
+              {downloadStyle !== "grid" && downloadStyle !== "masonry" && (
+                <button onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "5px", padding: "7px 12px", borderRadius: "999px",
+                    fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
+                    border: selectMode ? "1px solid #C97A3D" : "1px solid #E4DED2",
+                    background: selectMode ? "#FBEEE0" : "transparent",
+                    color: selectMode ? "#C97A3D" : "#6b655c",
+                  }}>
+                  {selectMode ? "Cancel" : "Select photos"}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -469,7 +496,7 @@ export default function GalleryDeliveryPage() {
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "0 0 14px", lineHeight: 1.6 }}>
               Your {RETENTION_LABEL[booking.tier] || ""} window has ended and this gallery is being permanently removed — download anything you'd like to keep right away.
             </p>
-            <DownloadOnlyLayout photos={photos} downloadUrls={data?.photo_download_urls || []} />
+            <DownloadOnlyLayout photos={photos} bookingId={bookingId} downloadStyle={downloadStyle} />
           </div>
         ) : (
           <div style={{ marginBottom: "36px" }}>
@@ -478,6 +505,40 @@ export default function GalleryDeliveryPage() {
             {template === "slideshow" && <SlideshowLayout photos={photos} index={slideIndex} setIndex={setSlideIndex} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
             {template === "polaroid" && <PolaroidLayout photos={photos} selectMode={selectMode} selected={selectedIndices} onSelect={handlePhotoClick} />}
           </div>
+        )}
+
+        {/* Independent of `template` above -- that's how photos are BROWSED
+            here (pure CSS, see PolaroidLayout), this is what DOWNLOADING
+            actually produces. Plain/Polaroid are per-photo styles (apply to
+            a single download or "Download all" alike); Grid/Masonry are
+            page layouts, not photo styles, so they only apply to
+            "Download all" -- see the comment on downloadStyle's own
+            declaration above. */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "12.5px", color: "#6b655c", fontWeight: 600 }}>Downloads:</span>
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+            {[
+              { id: "plain", label: "Plain" },
+              { id: "polaroid", label: "Polaroid" },
+              { id: "grid", label: "Grid collage" },
+              { id: "masonry", label: "Masonry collage" },
+            ].map((opt) => (
+              <button key={opt.id} onClick={() => setDownloadStyle(opt.id)} aria-pressed={downloadStyle === opt.id}
+                style={{
+                  padding: "6px 12px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
+                  border: downloadStyle === opt.id ? "1px solid #C97A3D" : "1px solid #E4DED2",
+                  background: downloadStyle === opt.id ? "#FBEEE0" : "transparent",
+                  color: downloadStyle === opt.id ? "#C97A3D" : "#6b655c",
+                }}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {(downloadStyle === "grid" || downloadStyle === "masonry") && (
+          <p style={{ fontSize: "12px", color: "#8a857d", margin: "-6px 0 12px" }}>
+            Downloads as one or more collage sheets (several photos composited together), not individual photos — use "Download all" below.
+          </p>
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -501,7 +562,7 @@ export default function GalleryDeliveryPage() {
                     galleries can run into the thousands of photos, where the old
                     one-file-per-download-prompt approach took several minutes. Plain <a download>
                     (no JS click handler) since the browser can drive this download on its own. */}
-                <a href={`/api/gallery/${bookingId}/download-all`} download
+                <a href={`/api/gallery/${bookingId}/download-all${downloadStyle !== "plain" ? `?style=${downloadStyle}` : ""}`} download
                   style={{ flex: 1, padding: "14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: photos.length === 0 ? "#E4DED2" : "transparent", color: photos.length === 0 ? "#8a857d" : "#211F1D", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", textDecoration: "none", cursor: photos.length === 0 ? "default" : "pointer", opacity: photos.length === 0 ? 0.6 : 1, pointerEvents: photos.length === 0 ? "none" : "auto" }}>
                   <Download size={16} /> Download all
                 </a>
@@ -542,13 +603,13 @@ export default function GalleryDeliveryPage() {
       )}
 
       {lightbox !== null && (
-        <Lightbox photos={photos} index={lightbox} onClose={() => setLightbox(null)} />
+        <Lightbox photos={photos} index={lightbox} onClose={() => setLightbox(null)} template={template} />
       )}
     </main>
   );
 }
 
-function Lightbox({ photos, index, onClose }) {
+function Lightbox({ photos, index, onClose, template }) {
   const containerRef = useRef(null);
   useModalDialog(containerRef, onClose);
 
@@ -634,13 +695,23 @@ function Lightbox({ photos, index, onClose }) {
               lightbox's initial mount, not replay on every arrow-key or
               swipe page-through, which would look frantic browsing quickly
               through a large gallery. */}
-          <img
-            src={photos[cur]}
-            alt={`Photo ${cur + 1} of ${photos.length}`}
-            onClick={(e) => e.stopPropagation()}
-            className="lightbox-pop"
-            style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }}
-          />
+          {template === "polaroid" ? (
+            // Same cream card + inset square photo PolaroidLayout uses on
+            // screen (and lib/photo-frame.js bakes into a download) --
+            // straight, not tilted, since a single focused view isn't the
+            // scattered-pile moment the tilt is for.
+            <div onClick={(e) => e.stopPropagation()} className="lightbox-pop" style={{ background: "#F7F3E9", padding: "18px 18px 64px", borderRadius: "2px", boxShadow: "0 20px 50px rgba(0,0,0,0.4)", width: "min(500px, 90vw)", boxSizing: "border-box" }}>
+              <img src={photos[cur]} alt={`Photo ${cur + 1} of ${photos.length}`} style={{ width: "100%", aspectRatio: "1", objectFit: "contain", background: "#FFFFFF", display: "block" }} />
+            </div>
+          ) : (
+            <img
+              src={photos[cur]}
+              alt={`Photo ${cur + 1} of ${photos.length}`}
+              onClick={(e) => e.stopPropagation()}
+              className="lightbox-pop"
+              style={{ width: "min(500px, 90vw)", borderRadius: "14px", display: "block" }}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -714,11 +785,11 @@ function SlideshowLayout({ photos, index, setIndex, selectMode, selected, onSele
   );
 }
 
-function DownloadOnlyLayout({ photos, downloadUrls }) {
+function DownloadOnlyLayout({ photos, bookingId, downloadStyle }) {
   return (
     <div className="gallery-grid" style={{ display: "grid", gap: "8px" }}>
       {photos.map((url, i) => (
-        <a key={i} href={downloadUrls[i] || url} download aria-label={`Download photo ${i + 1} of ${photos.length}`}
+        <a key={i} href={`/api/gallery/${bookingId}/photo/${i}${downloadStyle === "polaroid" ? "?style=polaroid" : ""}`} download aria-label={`Download photo ${i + 1} of ${photos.length}`}
           style={{ position: "relative", aspectRatio: "1", borderRadius: "8px", overflow: "hidden", display: "block", backgroundColor: "#FFFFFF", textDecoration: "none" }}>
           <img src={url} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "6px", background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
@@ -730,18 +801,36 @@ function DownloadOnlyLayout({ photos, downloadUrls }) {
   );
 }
 
+// Cream card colour (not stark white), a caption strip along the bottom
+// roughly 4x the side/top border, and near-square corners -- the same real
+// instant-film proportions lib/photo-frame.js bakes into a Polaroid
+// download and the render pipeline's own polaroid video mode
+// (lib/video-assemble.js) already use, so browsing, the lightbox, and a
+// downloaded file all read as the same physical object rather than three
+// different approximations of "polaroid".
+const POLAROID_CARD_COLOR = "#F7F3E9";
+
 function PolaroidLayout({ photos, selectMode, selected, onSelect }) {
   const rotations = [-3, 2, -1.5, 3, -2, 1.5];
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", justifyContent: "center", padding: "10px 0" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "28px", justifyContent: "center", padding: "10px 0" }}>
       {photos.map((url, i) => (
         <button key={i} onClick={() => onSelect(i)} aria-label={selectMode ? `${selected?.has(i) ? "Deselect" : "Select"} photo ${i + 1} of ${photos.length}` : `View photo ${i + 1} of ${photos.length}`}
-          style={{ position: "relative", background: "#FFFFFF", padding: "10px 10px 14px", borderRadius: "4px", border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer", transform: `rotate(${rotations[i % rotations.length]}deg)`, boxShadow: "0 4px 10px rgba(0,0,0,0.15)", width: "150px" }}>
+          style={{
+            position: "relative", background: POLAROID_CARD_COLOR, padding: "14px 14px 56px", borderRadius: "2px",
+            border: selected?.has(i) ? "2px solid #C97A3D" : "2px solid transparent", cursor: "pointer",
+            transform: `rotate(${rotations[i % rotations.length]}deg)`,
+            boxShadow: "0 1px 2px rgba(33,31,29,0.12), 0 12px 24px rgba(33,31,29,0.2)",
+            width: "200px",
+          }}>
           {/* Staggered, not simultaneous -- capped at 1.2s so a large
               gallery's last tile isn't left waiting several seconds behind
               its first. animation-delay lives inline (per-photo, computed),
-              the animation itself in the shared .polaroid-photo class. */}
-          <img src={url} alt="" loading="lazy" className="polaroid-photo" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block", animationDelay: `${Math.min(i * 70, 1200)}ms` }} />
+              the animation itself in the shared .polaroid-photo class.
+              White behind the photo (not the card's cream) -- any
+              letterboxed sliver from a non-square photo reads as a real
+              print's paper edge, not a colour mismatch. */}
+          <img src={url} alt="" loading="lazy" className="polaroid-photo" style={{ width: "100%", aspectRatio: "1", objectFit: "contain", display: "block", background: "#FFFFFF", animationDelay: `${Math.min(i * 70, 1200)}ms` }} />
           {selectMode && <SelectBadge selected={selected?.has(i)} />}
         </button>
       ))}

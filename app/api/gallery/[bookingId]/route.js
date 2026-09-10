@@ -74,7 +74,7 @@ export async function GET(req, { params }) {
     socialVideoUrls, socialVideoDownloadUrls,
     socialVideoNoRoastUrls, socialVideoNoRoastDownloadUrls,
     socialVideoPosterUrls, socialVideoNoRoastPosterUrls,
-    photoUrls, photoDownloadUrls,
+    photoUrls,
   ] = await Promise.all([
     deliverable.full_video_key ? getSignedDownloadUrl(deliverable.full_video_key, 86400) : null,
     deliverable.full_video_no_roast_key ? getSignedDownloadUrl(deliverable.full_video_no_roast_key, 86400) : null,
@@ -89,7 +89,6 @@ export async function GET(req, { params }) {
     Promise.all(socialPosterKeys.map((k) => getSignedDownloadUrl(k, 86400))),
     Promise.all(socialNoRoastPosterKeys.map((k) => getSignedDownloadUrl(k, 86400))),
     Promise.all(photoKeys.map((k) => getSignedDownloadUrl(k, 86400))),
-    Promise.all(photoKeys.map((k, i) => getSignedDownloadUrl(k, 86400, `${eventSlug}-photo-${i + 1}.jpg`))),
   ]);
 
   return NextResponse.json({
@@ -108,7 +107,14 @@ export async function GET(req, { params }) {
       social_video_poster_urls: socialVideoPosterUrls,
       social_video_no_roast_poster_urls: socialVideoNoRoastPosterUrls,
     },
+    // No more photo_download_urls here -- downloads (single, selected, or
+    // "download all") now go through app/api/gallery/[bookingId]/photo/
+    // [index]/route.js and .../download-all/route.js instead of a direct
+    // presigned link, since ?style=polaroid needs to actually touch the
+    // bytes (fetch, frame, re-serve) rather than just handing back a link
+    // to the untouched original. That also drops this route back to
+    // generating one signed URL per photo instead of two, which mattered
+    // for a 2000-photo Luxe gallery.
     photos: photoUrls,
-    photo_download_urls: photoDownloadUrls,
   });
 }

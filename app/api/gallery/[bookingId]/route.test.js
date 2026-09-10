@@ -36,9 +36,9 @@ describe("GET /api/gallery/[bookingId]", () => {
   });
 
   // The heaviest route in its family (a Luxe gallery's ~2000 photos each
-  // get a view + download signed URL below) but, until now, the only one
-  // in this family with no rate limit at all -- download-all and template
-  // both already had one.
+  // get a signed view URL below) but, until now, the only one in this
+  // family with no rate limit at all -- download-all and template both
+  // already had one.
   it("returns 429 and never queries the database when rate-limited", async () => {
     checkRateLimit.mockResolvedValue({ success: false });
     const res = await GET({}, { params: { bookingId: "b1" } });
@@ -111,7 +111,10 @@ describe("GET /api/gallery/[bookingId]", () => {
       "https://signed.example/s2-poster.jpg",
     ]);
     expect(json.photos).toEqual(["https://signed.example/p1.jpg", "https://signed.example/p2.jpg"]);
-    expect(json.photo_download_urls).toEqual(["https://signed.example/p1.jpg", "https://signed.example/p2.jpg"]);
+    // No more photo_download_urls -- downloads go through their own routes
+    // now (app/api/gallery/[bookingId]/photo/[index] and .../download-all),
+    // which is also why this only signs one URL per photo, not two.
+    expect(json).not.toHaveProperty("photo_download_urls");
   });
 
   it("leaves poster URLs null for a deliverable predating migration 027", async () => {

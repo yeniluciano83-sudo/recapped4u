@@ -441,7 +441,7 @@ function BookingFormInner() {
               <p style={{ fontSize: "12.5px", color: "#4a4642", margin: "8px 0 0", lineHeight: 1.5 }}>
                 {isSocialCutsFormat
                   ? "Social cuts here always render caption-free right now, regardless of this choice — we're keeping it required so your pick is already on file if roasted social cuts ship later."
-                  : "Witty commentary layered over your photos. You'll get both a captioned cut and a caption-free version of the same video."}
+                  : "Witty commentary on the photos in your full recap video. You'll get both a captioned cut and a caption-free version of the same video."}
               </p>
               {form.roastEnabled && (isRoastFullLevelEligible ? (
                 <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>

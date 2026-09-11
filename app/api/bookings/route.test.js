@@ -97,6 +97,43 @@ describe("POST /api/bookings", () => {
     expect(insertCall.args[0].gallery_template).toBe("polaroid");
   });
 
+  describe("venue and event time -- both optional, back the shareable guest invite", () => {
+    it("stores a trimmed venue and a valid HH:MM event time", async () => {
+      sb.mockResponse({ data: { id: "booking-venue" }, error: null });
+      sb.mockResponse({ data: null, error: null });
+      stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_venue", url: "https://checkout.stripe.com/venue" });
+
+      const res = await POST(jsonRequest({ ...BASE_BODY, venue: "  The Grand Hall  ", eventTime: "17:30" }));
+      expect(res.status).toBe(200);
+      const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+      expect(insertCall.args[0].venue).toBe("The Grand Hall");
+      expect(insertCall.args[0].event_time).toBe("17:30");
+    });
+
+    it("stores null for both when neither is provided", async () => {
+      sb.mockResponse({ data: { id: "booking-no-venue" }, error: null });
+      sb.mockResponse({ data: null, error: null });
+      stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_none", url: "https://checkout.stripe.com/none" });
+
+      const res = await POST(jsonRequest(BASE_BODY));
+      expect(res.status).toBe(200);
+      const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+      expect(insertCall.args[0].venue).toBeNull();
+      expect(insertCall.args[0].event_time).toBeNull();
+    });
+
+    it("discards a malformed event time rather than storing garbage", async () => {
+      sb.mockResponse({ data: { id: "booking-bad-time" }, error: null });
+      sb.mockResponse({ data: null, error: null });
+      stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_bad", url: "https://checkout.stripe.com/bad" });
+
+      const res = await POST(jsonRequest({ ...BASE_BODY, eventTime: "not-a-time" }));
+      expect(res.status).toBe(200);
+      const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+      expect(insertCall.args[0].event_time).toBeNull();
+    });
+  });
+
   // The form's own Continue button gates this too (lib/bookingFormValidation.js,
   // reused directly here), but that's UX on top of this -- a request that
   // skips the form entirely must still be rejected, not silently stored with

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { buttonStyle, shadow, radius, LoadingState, toastStyle } from "@/components/ui";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2, ArrowUp } from "lucide-react";
+import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2, ArrowUp, Image as ImageIcon } from "lucide-react";
 import { getUploadLimit } from "@/lib/uploadLimits";
 
 // Spotlight/Luxe only, matching what those tiers actually advertise.
@@ -68,6 +68,7 @@ export default function QrSharePage() {
   const [eventInfo, setEventInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [sharingInvite, setSharingInvite] = useState(false);
   const [closingUploads, setClosingUploads] = useState(false);
   const [extendingDeadline, setExtendingDeadline] = useState(false);
   const [savingStyle, setSavingStyle] = useState(false);
@@ -176,8 +177,42 @@ export default function QrSharePage() {
   }, [slug, hostToken, eventInfo?.status]);
 
   const qrImageUrl = slug ? `/api/qrcode/${slug}` : "";
+  const inviteImageUrl = slug ? `/api/invite/${slug}` : "";
   const uploadUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/event/${slug}` : "";
   const eventName = eventInfo ? `${eventInfo.host_name}'s ${eventInfo.event_type}` : "";
+
+  // Separate from handleShare below -- that one shares the bare link (fast,
+  // works everywhere). This shares an actual picture: event details, date,
+  // venue, and the same QR code baked into one image, themed to the event
+  // type (see lib/inviteMoods.js) -- something to post to a story or drop
+  // directly into a text, not just a link someone has to tap to see
+  // anything. Falls back to a plain download when the browser's share
+  // sheet can't take a file (most desktop browsers, some older mobile
+  // ones) so there's still a way to get the image onto the host's device.
+  const handleShareInvite = async () => {
+    if (!inviteImageUrl) return;
+    setSharingInvite(true);
+    try {
+      const res = await fetch(inviteImageUrl);
+      if (!res.ok) throw new Error("Failed to load invite image");
+      const blob = await res.blob();
+      const file = new File([blob], `recapped-invite-${slug}.png`, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: eventName, text: `You're invited to ${eventName}!` });
+      } else {
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = `recapped-invite-${slug}.png`;
+        link.click();
+        URL.revokeObjectURL(objectUrl);
+      }
+    } catch (err) {
+      if (err?.name !== "AbortError") console.error("Invite share failed", err);
+    } finally {
+      setSharingInvite(false);
+    }
+  };
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -369,6 +404,9 @@ export default function QrSharePage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={handleShare} style={primaryBtnStyle}>
               <Share2 size={16} /> Share with guests
+            </button>
+            <button onClick={handleShareInvite} disabled={sharingInvite} style={{ ...secondaryBtnStyle, opacity: sharingInvite ? 0.7 : 1 }}>
+              <ImageIcon size={16} /> {sharingInvite ? "Preparing invite…" : "Share invite image"}
             </button>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={handleCopy} style={secondaryBtnStyle}>

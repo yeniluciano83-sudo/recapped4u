@@ -12,8 +12,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic } = body;
+    const { email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic, venue, eventTime } = body;
     const hostName = (body.hostName || "").trim();
+
+    // Both optional and purely descriptive -- back the shareable guest
+    // invite (app/api/invite/[bookingId]/route.js), nothing in the
+    // pipeline reads either. eventTime is validated rather than trusted
+    // as-is: it only ever needs to render on the invite image and the
+    // confirmation email, and a garbage value there is a worse failure
+    // (a visibly wrong time on something a host hands to their guests)
+    // than just omitting it.
+    const trimmedVenue = (venue || "").trim().slice(0, 200) || null;
+    const validEventTime = typeof eventTime === "string" && /^([01]\d|2[0-3]):([0-5]\d)$/.test(eventTime) ? eventTime : null;
 
     // A whitespace-only hostName passes a plain truthy check, then breaks
     // hostName.split(" ")[0] personalization in every email template
@@ -88,6 +98,8 @@ export async function POST(req) {
         email: (email || "").trim(),
         event_type: eventType,
         event_date: eventDate,
+        venue: trimmedVenue,
+        event_time: validEventTime,
         // "" (the form's empty-input default) must become null, but a
         // legitimately-entered 0 must not -- a plain `guestCount || null`
         // would coerce that 0 to null too.

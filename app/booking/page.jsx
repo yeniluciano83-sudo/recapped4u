@@ -12,6 +12,16 @@ function formatDate(dateStr) {
   catch { return dateStr; }
 }
 
+// <input type="time"> hands back "HH:MM" in 24h -- formatted here for
+// display (both the review step and the guest invite want "6:30 PM", not
+// the raw form value) rather than stored that way, since there's no
+// timezone here to format it correctly against later.
+function formatTime(timeStr) {
+  if (!timeStr) return "";
+  try { return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); }
+  catch { return timeStr; }
+}
+
 // Mirrors the STYLE_MUSIC map in scripts/auto-recap.js -- same files, served
 // from public/ so they're directly playable here for a style preview.
 const MUSIC_PREVIEW_URL = {
@@ -123,7 +133,7 @@ function BookingFormInner() {
   // to make an actual choice on step 3 -- canProceed() below blocks
   // Continue until they do, rather than silently defaulting to "recap"
   // the way this used to work.
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", roastChoiceMade: false, deliveryFormat: "", fullVideoNoMusic: false });
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", eventTime: "", venue: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", roastChoiceMade: false, deliveryFormat: "", fullVideoNoMusic: false });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -270,6 +280,10 @@ function BookingFormInner() {
             </Field>
           )}
           <Field label="Event date"><input style={inputStyle} type="date" value={form.eventDate} onChange={(e) => update("eventDate", e.target.value)} /></Field>
+          <Field label="Start time (optional)"><input style={inputStyle} type="time" value={form.eventTime} onChange={(e) => update("eventTime", e.target.value)} /></Field>
+          <Field label="Venue / location (optional)">
+            <input style={inputStyle} value={form.venue} onChange={(e) => update("venue", e.target.value)} placeholder="e.g. The Grand Hall, 123 Main St" />
+          </Field>
           <Field label="Estimated guest count (optional)"><input style={inputStyle} type="number" value={form.guestCount} onChange={(e) => update("guestCount", e.target.value)} placeholder="e.g. 40" /></Field>
         </StepBlock>
       )}
@@ -649,14 +663,17 @@ function computeTotal({ form, isRoastEligible, effectiveRoastLevel }) {
 // an empty value -- SummaryRow already falls back to "—" for that -- so the
 // sidebar can render from step 1 onward and simply fill in as the host goes.
 function buildSummaryRows({ form, effectiveEventType, effectiveStyle, isSocialCutEligible, isVideoOnlyFormat, isSocialCutsFormat, isRoastEligible, effectiveRoastLevel }) {
-  const eventParts = [effectiveEventType, form.eventDate ? formatDate(form.eventDate) : ""].filter(Boolean);
+  const eventParts = [effectiveEventType, form.eventDate ? formatDate(form.eventDate) : "", form.eventTime ? formatTime(form.eventTime) : ""].filter(Boolean);
   const rows = [
     { label: "Host", value: form.hostName },
     { label: "Email", value: form.email },
     { label: "Event", value: eventParts.join(" — ") },
+  ];
+  if (form.venue.trim()) rows.push({ label: "Venue", value: form.venue.trim() });
+  rows.push(
     { label: "Package", value: TIERS.find((t) => t.id === form.tier)?.name },
     { label: "Style", value: SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label },
-  ];
+  );
   if (isSocialCutEligible && !isVideoOnlyFormat && !isSocialCutsFormat && form.socialStyle) {
     rows.push({ label: "Social cut theme", value: SOCIAL_STYLE_OPTIONS.find((s) => s.id === form.socialStyle)?.label });
   }

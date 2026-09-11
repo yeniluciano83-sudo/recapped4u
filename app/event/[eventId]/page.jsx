@@ -25,6 +25,13 @@ const RETRY_DELAY_MS = 900;
 // moved yet.
 const RATE_LIMIT_RETRY_MS = 3000;
 
+const RSVP_OPTIONS = [
+  { value: "yes", label: "Yes" },
+  { value: "maybe", label: "Maybe" },
+  { value: "no", label: "No" },
+];
+const RSVP_CONFIRM_LABEL = { yes: "attending", maybe: "a maybe", no: "not attending" };
+
 // Stable across every retry of the SAME File object -- the browser never
 // changes a file's name/size/lastModified between attempts, whether the
 // retry is this function's own loop or the guest re-tapping the upload
@@ -41,6 +48,14 @@ function formatDate(dateStr) {
   if (!dateStr) return "";
   try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
   catch { return dateStr; }
+}
+
+// Matches formatTimeLabel in app/api/invite/[slug]/route.js -- same "5:30
+// PM" shape on both the invite image and this page for the same booking.
+function formatTime(timeStr) {
+  if (!timeStr) return "";
+  try { return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); }
+  catch { return timeStr; }
 }
 
 // Classifies a JSON error response from our own presign/confirm routes the
@@ -133,6 +148,9 @@ export default function EventUploadPage() {
   const [uploadError, setUploadError] = useState(null);
   const [eventInfo, setEventInfo] = useState(null);
   const [staleBuild, setStaleBuild] = useState(false);
+  const [rsvpChoice, setRsvpChoice] = useState(null);
+  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
+  const [rsvpError, setRsvpError] = useState(null);
 
   const loadEventInfo = useCallback(async () => {
     try {
@@ -206,6 +224,30 @@ export default function EventUploadPage() {
       return [...prev, ...newFiles.filter((f) => !alreadyPending.has(clientUploadIdFor(f)))];
     });
     e.target.value = "";
+  };
+
+  // Reuses whatever's currently in the name field below (shared with photo
+  // uploads) rather than asking for a name twice -- falls back to an
+  // anonymous "Guest" RSVP if it's still empty, same fallback handleUpload
+  // uses. A guest can tap a different button afterward to change their
+  // mind; the server upserts on (booking, name) for named guests so that
+  // doesn't create a second row (see migration 038).
+  const handleRsvp = async (response) => {
+    setRsvpSubmitting(true);
+    setRsvpError(null);
+    try {
+      const res = await fetch(`/api/events/${eventId}/rsvp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guestName: uploaderName, response }),
+      });
+      if (!res.ok) throw new Error("RSVP failed");
+      setRsvpChoice(response);
+    } catch (err) {
+      setRsvpError("Couldn't save your RSVP — please try again.");
+    } finally {
+      setRsvpSubmitting(false);
+    }
   };
 
   const handleUpload = async () => {
@@ -321,6 +363,8 @@ export default function EventUploadPage() {
   const reelSegments = Math.min(uploadCount, 24);
   const eventName = eventInfo?.host_name ? `${eventInfo.host_name}'s ${eventInfo.event_type}` : "This event";
   const eventDate = formatDate(eventInfo?.event_date);
+  const eventTime = formatTime(eventInfo?.event_time);
+  const dateTimeLine = [eventDate, eventTime].filter(Boolean).join(" · ");
   // Matches the turnaround promise already made on the homepage FAQ ("How
   // long does it take?") -- kept in sync manually since that's plain JSX
   // text, not a shared constant.
@@ -342,9 +386,37 @@ export default function EventUploadPage() {
 
       <div style={{ width: "100%", maxWidth: "480px", padding: "40px 24px 0" }}>
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
-          <p style={{ fontSize: 15, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", marginBottom: "10px", fontWeight: 600 }}>You're invited to add to the story</p>
+          <p style={{ fontSize: 15, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", marginBottom: "10px", fontWeight: 600 }}>You're invited</p>
           <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(28px, 4.2vw, 40px)", lineHeight: 1.15, margin: "0 0 8px" }}>{eventName}</h1>
-          <p style={{ fontSize: "15px", color: "#4a4642", margin: 0 }}>{eventDate}</p>
+          <p style={{ fontSize: "15px", color: "#4a4642", margin: 0 }}>{dateTimeLine}</p>
+          {eventInfo?.venue && (
+            <p style={{ fontSize: "14px", color: "#8a857d", margin: "4px 0 0" }}>{eventInfo.venue}</p>
+          )}
+          {!isCancelled && (
+            <div style={{ marginTop: "20px" }}>
+              <p style={{ fontSize: "13.5px", fontWeight: 600, color: "#211F1D", marginBottom: "10px" }}>Will you be there?</p>
+              <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+                {RSVP_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => handleRsvp(opt.value)} disabled={rsvpSubmitting}
+                    style={{
+                      padding: "9px 18px", borderRadius: "999px",
+                      border: rsvpChoice === opt.value ? "1px solid #C97A3D" : "1px solid #D8CFC0",
+                      background: rsvpChoice === opt.value ? "#C97A3D" : "#FFFFFF",
+                      color: rsvpChoice === opt.value ? "#FFFFFF" : "#4a4642",
+                      fontSize: "13.5px", fontWeight: 700, cursor: rsvpSubmitting ? "default" : "pointer",
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {rsvpChoice && (
+                <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "12.5px", color: "#7A8B76", marginTop: "10px" }}>
+                  <Check size={12} /> Thanks — we've got you down as {RSVP_CONFIRM_LABEL[rsvpChoice]}.
+                </p>
+              )}
+              {rsvpError && <p role="alert" style={{ fontSize: "12.5px", color: "#C97A3D", marginTop: "10px" }}>{rsvpError}</p>}
+            </div>
+          )}
         </div>
 
         <div style={{ textAlign: "center", marginBottom: "32px", fontSize: "14px", color: "#7A8B76" }}>

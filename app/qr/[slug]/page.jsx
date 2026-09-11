@@ -67,6 +67,8 @@ export default function QrSharePage() {
 
   const [eventInfo, setEventInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [rsvpSummary, setRsvpSummary] = useState(null);
+  const [rsvpNamesExpanded, setRsvpNamesExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sharingInvite, setSharingInvite] = useState(false);
   const [closingUploads, setClosingUploads] = useState(false);
@@ -176,6 +178,17 @@ export default function QrSharePage() {
       .finally(() => setPhotosLoading(false));
   }, [slug, hostToken, eventInfo?.status]);
 
+  // Not gated to status === "collecting" like photos above -- RSVPs are
+  // about attendance, not the upload window, so they're worth showing a
+  // host well before uploads even open and after they've closed.
+  useEffect(() => {
+    if (!slug || !hostToken) return;
+    fetch(`/api/events/${slug}/rsvp?t=${encodeURIComponent(hostToken)}`)
+      .then((res) => res.json())
+      .then((data) => setRsvpSummary(data.counts ? data : null))
+      .catch((err) => console.error("Failed to load RSVPs", err));
+  }, [slug, hostToken]);
+
   const qrImageUrl = slug ? `/api/qrcode/${slug}` : "";
   const inviteImageUrl = slug ? `/api/invite/${slug}` : "";
   const uploadUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/event/${slug}` : "";
@@ -183,12 +196,17 @@ export default function QrSharePage() {
 
   // Separate from handleShare below -- that one shares the bare link (fast,
   // works everywhere). This shares an actual picture: event details, date,
-  // venue, and the same QR code baked into one image, themed to the event
-  // type (see lib/inviteMoods.js) -- something to post to a story or drop
+  // venue, and the same QR code baked into one image, themed to the event's
+  // style (see lib/inviteMoods.js) -- something to post to a story or drop
   // directly into a text, not just a link someone has to tap to see
-  // anything. Falls back to a plain download when the browser's share
-  // sheet can't take a file (most desktop browsers, some older mobile
-  // ones) so there's still a way to get the image onto the host's device.
+  // anything. `url` rides alongside the image so a receiving app that
+  // supports it (most SMS/WhatsApp/etc share targets do, even for a file
+  // share) still gets a tappable link to the actual upload page -- the QR
+  // in the picture itself only works if the recipient scans a screen, which
+  // isn't possible from inside their own messaging app. Falls back to a
+  // plain download when the browser's share sheet can't take a file (most
+  // desktop browsers, some older mobile ones) so there's still a way to get
+  // the image onto the host's device.
   const handleShareInvite = async () => {
     if (!inviteImageUrl) return;
     setSharingInvite(true);
@@ -198,7 +216,7 @@ export default function QrSharePage() {
       const blob = await res.blob();
       const file = new File([blob], `recapped-invite-${slug}.png`, { type: "image/png" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: eventName, text: `You're invited to ${eventName}!` });
+        await navigator.share({ files: [file], title: eventName, text: `You're invited to ${eventName}!`, url: uploadUrl });
       } else {
         const objectUrl = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -420,6 +438,35 @@ export default function QrSharePage() {
               <Download size={16} /> Download QR image
             </a>
           </div>
+
+          {rsvpSummary && (
+            <div style={{ marginTop: 24, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
+              <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 10px" }}>RSVPs</p>
+              <div style={{ display: "flex", gap: 16, fontSize: 14, color: "#4a4642" }}>
+                <span><strong style={{ color: "#7A8B76" }}>{rsvpSummary.counts.yes}</strong> yes</span>
+                <span><strong style={{ color: "#C97A3D" }}>{rsvpSummary.counts.maybe}</strong> maybe</span>
+                <span><strong style={{ color: "#8a857d" }}>{rsvpSummary.counts.no}</strong> no</span>
+              </div>
+              {rsvpSummary.responses?.length > 0 && (
+                <>
+                  <button type="button" onClick={() => setRsvpNamesExpanded((v) => !v)}
+                    style={{ marginTop: 10, background: "none", border: "none", padding: 0, color: "#C97A3D", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+                    {rsvpNamesExpanded ? "Hide names" : "Show names"}
+                  </button>
+                  {rsvpNamesExpanded && (
+                    <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 6, maxHeight: 220, overflowY: "auto" }}>
+                      {rsvpSummary.responses.map((r, i) => (
+                        <li key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#4a4642" }}>
+                          <span>{r.guest_name || "Guest"}</span>
+                          <span style={{ textTransform: "capitalize", color: r.response === "yes" ? "#7A8B76" : r.response === "no" ? "#8a857d" : "#C97A3D" }}>{r.response}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {eventInfo.status === "collecting" && !eventInfo.uploads_closed_at && (
             <a href={`/qr/${slug}/upload?t=${encodeURIComponent(hostToken)}`} style={{ marginTop: 24, padding: 18, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left", textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 14 }}>

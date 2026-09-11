@@ -734,7 +734,19 @@ export default function HomePage() {
         <EventPhotoScene />
       </div>
 
-      <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white"
+      {/* Wider than every other Section on the page (1180 vs the 900
+          default) -- at 900, this grid's own auto-fit math only ever fits 3
+          of the 4 tiers per row (3*200 + 2*20 = 640 fits in the 852px
+          content box; a 4th needs 860), so Luxe wrapped alone onto its own
+          row with empty space beside it on every screen at least ~950px
+          wide, tablet landscape and every desktop included -- not just
+          "narrow enough it should wrap" but a mismatch between the section
+          cap and the grid's own math. At 1180 there's room for a clean
+          4-across row (4*200 + 3*20 = 860 fits in the 1132px content box)
+          on real desktop and laptop widths, while narrower tablets still
+          step down to 3, then 2, then 1 exactly as the same auto-fit rule
+          already handled before. */}
+      <Section id="services" refs={sectionRefs} title="Pricing" icon={<Sparkles size={20} color="#C97A3D" />} band="white" maxWidth={1180}
         subtitle="Start for free, or pick the tier that matches how much of the event you want captured.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 20, padding: "6px 4px" }}>
           {TIERS.map((t, idx) => {
@@ -1166,7 +1178,7 @@ function useScrollReveal() {
   return { ref, visible };
 }
 
-function Section({ id, refs, title, icon, children, subtitle, band, blob }) {
+function Section({ id, refs, title, icon, children, subtitle, band, blob, maxWidth = 900 }) {
   const { ref: revealRef, visible } = useScrollReveal();
   const setRefs = (el) => {
     revealRef.current = el;
@@ -1186,7 +1198,7 @@ function Section({ id, refs, title, icon, children, subtitle, band, blob }) {
 
   const content = (
     <section ref={setRefs} id={id} style={{
-      position: "relative", maxWidth: 900, margin: "0 auto", padding: "56px 24px", scrollMarginTop: 70,
+      position: "relative", maxWidth, margin: "0 auto", padding: "56px 24px", scrollMarginTop: 70,
       opacity: visible ? 1 : 0,
       transform: visible ? "translateY(0)" : "translateY(28px)",
       transition: "opacity 0.7s ease, transform 0.7s ease",

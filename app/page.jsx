@@ -172,6 +172,23 @@ export default function HomePage() {
     sectionRefs.current[id]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Mobile-only sticky "Book Now" bar (see .mobile-book-bar below) -- the
+  // sticky header up top already carries a Book Now button at every scroll
+  // position, but on a phone that's a small target in the corner, easy to
+  // stop noticing once you're deep in a long FAQ/pricing scroll. This
+  // mirrors it at the bottom of the screen, in thumb reach, appearing only
+  // once the hero (which has its own large visual focus, not a CTA) has
+  // fully scrolled out of view, and hiding again on the way back up to it.
+  const heroRef = useRef(null);
+  const [showMobileBookBar, setShowMobileBookBar] = useState(false);
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => setShowMobileBookBar(!entry.isIntersecting), { threshold: 0 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div style={{ background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: FAQ_JSON_LD }} />
@@ -621,7 +638,7 @@ export default function HomePage() {
       `}</style>
 
       <main>
-      <section style={{ maxWidth: 640, margin: "0 auto", padding: "64px 24px 56px", textAlign: "center", position: "relative", backgroundImage: "radial-gradient(ellipse 70% 60% at 50% 0%, #FBEEE0, transparent)" }}>
+      <section ref={heroRef} style={{ maxWidth: 640, margin: "0 auto", padding: "64px 24px 56px", textAlign: "center", position: "relative", backgroundImage: "radial-gradient(ellipse 70% 60% at 50% 0%, #FBEEE0, transparent)" }}>
         <p style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, marginBottom: 16 }}>
           Event recap videos & photo galleries
         </p>
@@ -897,7 +914,7 @@ export default function HomePage() {
           underline for the same reason nothing else on the site uses one --
           color, weight and the site-wide hover/focus treatment (see
           app/layout.js) already carry that job everywhere else. */}
-      <footer style={{ padding: "44px 20px 40px", borderTop: "1px solid #E4DED2" }}>
+      <footer className="site-footer" style={{ padding: "44px 20px 40px", borderTop: "1px solid #E4DED2" }}>
         <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, textAlign: "center" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", color: "#211F1D" }}>
             <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 8, background: "linear-gradient(135deg, #C97A3D, #E0985A)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
@@ -913,6 +930,39 @@ export default function HomePage() {
           <p style={{ fontSize: 12, color: "#8a857d", margin: 0 }}>© {new Date().getFullYear()} Recapped For You LLC</p>
         </div>
       </footer>
+
+      {/* Always mounted (never conditionally rendered) so the slide-in/out
+          below can actually transition -- visibility is driven by the
+          transform, not by mount state. Hidden entirely above 850px (the
+          same breakpoint the header's own hamburger collapse uses): desktop
+          and tablet already have plenty of nav real estate for the header's
+          Book Now button, so this would just be a second redundant bar. */}
+      <div className="mobile-book-bar" style={{ transform: showMobileBookBar ? "translateY(0)" : "translateY(100%)" }}>
+        <span style={{ fontSize: 12.5, color: "#4a4642", fontWeight: 600 }}>Start free — no card required</span>
+        <a href="/booking" className="press-btn" style={{ backgroundImage: "linear-gradient(135deg, #C97A3D, #E0985A)", color: "#211F1D", fontSize: 13, fontWeight: 700, padding: "10px 18px", borderRadius: 8, textDecoration: "none", flexShrink: 0 }}>
+          Book Now
+        </a>
+      </div>
+      <style>{`
+        .mobile-book-bar {
+          display: none;
+          position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+          align-items: center; justify-content: space-between; gap: 12px;
+          padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+          background: #FAF7F2ee; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+          border-top: 1px solid #E4DED2; box-shadow: 0 -4px 14px rgba(33,31,29,0.08);
+          transition: transform 0.25s ease;
+        }
+        @media (max-width: 850px) {
+          .mobile-book-bar { display: flex; }
+          /* Room for the bar above so it never covers the footer's own
+             links/copyright once someone scrolls all the way down. */
+          .site-footer { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .mobile-book-bar { transition: none; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -224,7 +224,20 @@ function BookingFormInner() {
   }
 
   return (
-    <Shell>
+    <Shell
+      summary={
+        <BookingSummarySidebar
+          form={form}
+          effectiveEventType={effectiveEventType}
+          effectiveStyle={effectiveStyle}
+          isSocialCutEligible={isSocialCutEligible}
+          isVideoOnlyFormat={isVideoOnlyFormat}
+          isSocialCutsFormat={isSocialCutsFormat}
+          isRoastEligible={isRoastEligible}
+          effectiveRoastLevel={effectiveRoastLevel}
+        />
+      }
+    >
       {confirmError && (
         <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "14px 16px", borderRadius: "10px", background: "#FBEEE0", border: "1px solid #E4DED2", marginBottom: "20px" }}>
           <AlertTriangle size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "2px" }} />
@@ -470,25 +483,10 @@ function BookingFormInner() {
 
       {step === 4 && (
         <StepBlock icon={<Users size={20} color="#C97A3D" />} title="Review your booking">
-          <SummaryRow label="Host" value={form.hostName} />
-          <SummaryRow label="Email" value={form.email} />
-          <SummaryRow label="Event" value={`${effectiveEventType} — ${formatDate(form.eventDate)}`} />
-          <SummaryRow label="Package" value={TIERS.find((t) => t.id === form.tier)?.name} />
-          <SummaryRow label="Style" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label} />
-          {isSocialCutEligible && !isVideoOnlyFormat && !isSocialCutsFormat && form.socialStyle && (
-            <SummaryRow label="Social cut theme" value={SOCIAL_STYLE_OPTIONS.find((s) => s.id === form.socialStyle)?.label} />
-          )}
-          {isSocialCutEligible && (
-            <SummaryRow label="Delivery format" value={isSocialCutsFormat ? "Social cuts of every photo" : isVideoOnlyFormat ? "Full video only" : "Full recap video + social cuts"} />
-          )}
-          {!isSocialCutsFormat && form.fullVideoNoMusic && <SummaryRow label="Full video music" value="Off" />}
-          {isRoastEligible && form.roastEnabled && (
-            <SummaryRow
-              label="Roast Reel"
-              value={`${ROAST_LEVELS.find((r) => r.id === effectiveRoastLevel)?.label}${roastAddonPrice(form.tier, effectiveRoastLevel) ? ` (+$${roastAddonPrice(form.tier, effectiveRoastLevel)})` : " (included)"}`}
-            />
-          )}
-          <SummaryRow label="Total" value={`$${(parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0) + (isRoastEligible && form.roastEnabled ? roastAddonPrice(form.tier, effectiveRoastLevel) : 0)}`} />
+          {buildSummaryRows({ form, effectiveEventType, effectiveStyle, isSocialCutEligible, isVideoOnlyFormat, isSocialCutsFormat, isRoastEligible, effectiveRoastLevel }).map((row) => (
+            <SummaryRow key={row.label} label={row.label} value={row.value} />
+          ))}
+          <SummaryRow label="Total" value={`$${computeTotal({ form, isRoastEligible, effectiveRoastLevel })}`} />
           <div style={{ marginTop: "20px", padding: "14px", background: "#FFFFFF", borderRadius: "10px", fontSize: "12px", color: "#6b655c", lineHeight: 1.6 }}>
             By booking, you're agreeing to our terms of service, and you'll get a confirmation email right away with your QR code and upload link. {
               `Your event gallery and video stay accessible for ${form.tier === "free" ? "7 days" : GALLERY_RETENTION[form.tier] || "90 days"} after delivery, then they're permanently removed.`
@@ -527,36 +525,87 @@ function BookingFormInner() {
 
 const visuallyHidden = { position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", border: 0 };
 
-function Shell({ children }) {
+// Shared by both Shell branches below so the entrance animation stays
+// identical whether or not the order-summary sidebar is present.
+//
+// Every step (1-4) is only ever conditionally rendered
+// ({step === N && <StepBlock>...}), so each one already mounts fresh the
+// moment it becomes the active step and unmounts the moment it stops being
+// -- no key trick or extra state needed for this to replay correctly on
+// every step change, forward or back. This was the one flow on the site
+// with no motion anywhere in it: every individual field on this form got
+// its own polish pass this session (the theme requirement, the roast
+// choice, the back button), but moving between steps still hard-cut. Kept
+// non-directional (fade + a small vertical lift, not a left/right slide)
+// rather than trying to distinguish Continue from Back -- every other
+// entrance animation on the site (the mobile nav panel, the gallery
+// lightbox) is the same family, and a directional slide that's wrong half
+// the time (sliding in from the "forward" side on a Back click) would be
+// worse than no direction at all.
+const STEP_FADE_STYLE = `
+  .step-fade-in { animation: step-fade-in 260ms ease-out; }
+  @keyframes step-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) {
+    .step-fade-in { animation: none; }
+  }
+`;
+
+const eyebrow = (
+  <div style={{ textAlign: "center", marginBottom: "28px" }}>
+    <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: 0 }}>Recapped For You</p>
+  </div>
+);
+
+// `summary` is only ever passed by the active wizard (see BookingFormInner
+// below) -- the one-off "confirmation sent" screen renders through the
+// plain branch below, unchanged, since a running order total stops being
+// useful the moment there's nothing left to add to it.
+function Shell({ children, summary }) {
+  if (!summary) {
+    return (
+      <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
+        <div style={{ width: "100%", maxWidth: "460px" }}>
+          <h1 style={visuallyHidden}>Book your event recap</h1>
+          {eyebrow}
+          {children}
+          <style>{STEP_FADE_STYLE}</style>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", justifyContent: "center", padding: "40px 20px" }}>
-      <div style={{ width: "100%", maxWidth: "460px" }}>
+      <div className="booking-page-width">
         <h1 style={visuallyHidden}>Book your event recap</h1>
-        <div style={{ textAlign: "center", marginBottom: "28px" }}>
-          <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: 0 }}>Recapped For You</p>
+        {eyebrow}
+        <div className="booking-shell">
+          <div className="booking-main-col">{children}</div>
+          <aside className="booking-summary-col">{summary}</aside>
         </div>
-        {children}
         <style>{`
-          /* Every step (1-4) is only ever conditionally rendered
-             ({step === N && <StepBlock>...}), so each one already mounts
-             fresh the moment it becomes the active step and unmounts the
-             moment it stops being -- no key trick or extra state needed for
-             this to replay correctly on every step change, forward or back.
-             This was the one flow on the site with no motion anywhere in it:
-             every individual field on this form got its own polish pass this
-             session (the theme requirement, the roast choice, the back
-             button), but moving between steps still hard-cut. Kept
-             non-directional (fade + a small vertical lift, not a
-             left/right slide) rather than trying to distinguish Continue
-             from Back -- every other entrance animation on the site
-             (the mobile nav panel, the gallery lightbox) is the same family,
-             and a directional slide that's wrong half the time (sliding in
-             from the "forward" side on a Back click) would be worse than
-             no direction at all. */
-          .step-fade-in { animation: step-fade-in 260ms ease-out; }
-          @keyframes step-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-          @media (prefers-reduced-motion: reduce) {
-            .step-fade-in { animation: none; }
+          ${STEP_FADE_STYLE}
+
+          /* The wizard stays the familiar narrow single column on phones.
+             Tablet gets more room to breathe (still one column -- there
+             isn't space for a real sidebar next to it yet), and only past
+             ~960px does a persistent order-summary column make sense
+             alongside the form, the way a real checkout page would lay it
+             out, instead of the form sitting alone in a sea of empty
+             margin on a wide screen. */
+          .booking-page-width { width: 100%; max-width: 460px; }
+          @media (min-width: 700px) {
+            .booking-page-width { max-width: 620px; }
+          }
+          @media (min-width: 960px) {
+            .booking-page-width { max-width: 920px; }
+          }
+
+          .booking-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: start; }
+          .booking-summary-col { display: none; }
+          @media (min-width: 960px) {
+            .booking-shell { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); }
+            .booking-summary-col { display: block; position: sticky; top: 40px; }
           }
         `}</style>
       </div>
@@ -585,6 +634,68 @@ function Field({ label, children }) {
 
 function SummaryRow({ label, value }) {
   return <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", padding: "10px 0", borderBottom: "1px solid #E4DED2", fontSize: "14px" }}><span style={{ color: "#6b655c", flexShrink: 0 }}>{label}</span><span style={{ fontWeight: 500, textAlign: "right", flex: "1 1 auto", minWidth: 0 }}>{value || "—"}</span></div>;
+}
+
+function computeTotal({ form, isRoastEligible, effectiveRoastLevel }) {
+  const basePrice = parseInt((TIERS.find((t) => t.id === form.tier)?.price || "$0").slice(1), 10) || 0;
+  const roastPrice = isRoastEligible && form.roastEnabled ? roastAddonPrice(form.tier, effectiveRoastLevel) : 0;
+  return basePrice + roastPrice;
+}
+
+// Backs both the step-4 review and the persistent order-summary sidebar --
+// one source for "what does this booking actually consist of" so the two
+// views can't quietly drift apart the way duplicated copy elsewhere on the
+// site has before. Rows for fields not chosen yet render their label with
+// an empty value -- SummaryRow already falls back to "—" for that -- so the
+// sidebar can render from step 1 onward and simply fill in as the host goes.
+function buildSummaryRows({ form, effectiveEventType, effectiveStyle, isSocialCutEligible, isVideoOnlyFormat, isSocialCutsFormat, isRoastEligible, effectiveRoastLevel }) {
+  const eventParts = [effectiveEventType, form.eventDate ? formatDate(form.eventDate) : ""].filter(Boolean);
+  const rows = [
+    { label: "Host", value: form.hostName },
+    { label: "Email", value: form.email },
+    { label: "Event", value: eventParts.join(" — ") },
+    { label: "Package", value: TIERS.find((t) => t.id === form.tier)?.name },
+    { label: "Style", value: SOCIAL_STYLE_OPTIONS.find((s) => s.id === effectiveStyle)?.label },
+  ];
+  if (isSocialCutEligible && !isVideoOnlyFormat && !isSocialCutsFormat && form.socialStyle) {
+    rows.push({ label: "Social cut theme", value: SOCIAL_STYLE_OPTIONS.find((s) => s.id === form.socialStyle)?.label });
+  }
+  if (isSocialCutEligible && form.deliveryFormat) {
+    rows.push({ label: "Delivery format", value: isSocialCutsFormat ? "Social cuts of every photo" : isVideoOnlyFormat ? "Full video only" : "Full recap video + social cuts" });
+  }
+  if (!isSocialCutsFormat && form.fullVideoNoMusic) rows.push({ label: "Full video music", value: "Off" });
+  if (isRoastEligible && form.roastEnabled) {
+    rows.push({
+      label: "Roast Reel",
+      value: `${ROAST_LEVELS.find((r) => r.id === effectiveRoastLevel)?.label}${roastAddonPrice(form.tier, effectiveRoastLevel) ? ` (+$${roastAddonPrice(form.tier, effectiveRoastLevel)})` : " (included)"}`,
+    });
+  }
+  return rows;
+}
+
+// The persistent right-hand column at >=960px (see .booking-summary-col in
+// Shell) -- a running receipt that fills in as the host moves through the
+// wizard, so the total is never a surprise sprung on step 4. Sticky-
+// positioned by its wrapper, not this component, so it stays in view while
+// the (much taller) form column scrolls past it on steps 2 and 3.
+function BookingSummarySidebar({ form, effectiveEventType, effectiveStyle, isSocialCutEligible, isVideoOnlyFormat, isSocialCutsFormat, isRoastEligible, effectiveRoastLevel }) {
+  const tierObj = TIERS.find((t) => t.id === form.tier);
+  const rows = buildSummaryRows({ form, effectiveEventType, effectiveStyle, isSocialCutEligible, isVideoOnlyFormat, isSocialCutsFormat, isRoastEligible, effectiveRoastLevel });
+  const total = computeTotal({ form, isRoastEligible, effectiveRoastLevel });
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: "16px", padding: "22px", boxShadow: "0 2px 4px rgba(33,31,29,0.05), 0 8px 20px rgba(33,31,29,0.06)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+        <Package size={17} color="#C97A3D" />
+        <span style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "17px", fontWeight: 700 }}>Your booking</span>
+      </div>
+      {rows.map((row) => <SummaryRow key={row.label} label={row.label} value={row.value} />)}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "14px", paddingTop: "14px", borderTop: "1.5px solid #211F1D" }}>
+        <span style={{ fontWeight: 700, fontSize: "14px" }}>Total</span>
+        <span style={{ fontWeight: 700, fontSize: "20px", color: "#C97A3D" }}>${total}</span>
+      </div>
+      {tierObj && <p style={{ fontSize: "11.5px", color: "#8a857d", margin: "12px 0 0", lineHeight: 1.5 }}>{tierObj.tagline}</p>}
+    </div>
+  );
 }
 
 // Shared definitions in components/ui.jsx. The overrides below are the values

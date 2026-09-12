@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { cardStyle as sharedCardStyle } from "@/components/ui";
 import Link from "next/link";
-import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, Gift, Crown, MessageCircle, Quote, Play, Pause } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, MessageCircle, Quote, Play, Pause } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -67,8 +67,13 @@ const EVENT_TYPE_GROUPS = [
 const EVENT_TYPE_ASK = { label: "Something Else? Ask Us", icon: "ask-us" };
 
 // Small visual identity per tier for the pricing cards -- purely
-// decorative, doesn't touch the actual price/feature data above.
-const TIER_ICONS = { free: Gift, standard: Camera, premium: Star, keepsake: Crown };
+// decorative, doesn't touch the actual price/feature data above. Slugs
+// into public/images/tier-icons/<slug>.jpg, one hand-painted sticker per
+// tier (see scripts/generate-tier-icons.mjs), replacing the plain lucide
+// icon these badges used to show. The palette across the four rises from
+// plain warm orange (Free) to a richer muted gold (Luxe), echoing the same
+// tier progression the copy already describes.
+const TIER_ICONS = { free: "free", standard: "standard", premium: "premium", keepsake: "keepsake" };
 
 // A feature line that appears verbatim on every tier (computed, not
 // hand-classified, so it can't silently go stale if TIERS changes) reads as
@@ -756,7 +761,7 @@ export default function HomePage() {
         subtitle="Start for free, or pick the tier that matches how much of the event you want captured.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: 20, padding: "6px 4px" }}>
           {TIERS.map((t, idx) => {
-            const TierIcon = TIER_ICONS[t.id] || Sparkles;
+            const tierIcon = TIER_ICONS[t.id];
             const tilt = [-1.3, 0.9, 0, -0.7][idx] || 0;
             const baseTransform = t.highlight ? "scale(1.03)" : `rotate(${tilt}deg)`;
             return (
@@ -773,9 +778,13 @@ export default function HomePage() {
               ) : (
                 <div aria-hidden="true" className="price-card-pin" style={{ position: "absolute", top: -9, left: "50%", transform: `translateX(-50%) rotate(${-tilt * 2}deg)`, width: 50, height: 16, background: "rgba(122,139,118,0.32)", borderRadius: 2 }} />
               )}
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "#FBEEE0", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
-                <TierIcon size={16} color="#C97A3D" />
-              </div>
+              {tierIcon ? (
+                <img src={`/images/tier-icons/${tierIcon}.jpg`} alt="" aria-hidden="true" width={34} height={34} style={{ borderRadius: 10, objectFit: "cover", display: "block", marginBottom: 10 }} />
+              ) : (
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: "#FBEEE0", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                  <Sparkles size={16} color="#C97A3D" />
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
                 <span style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</span>
                 <span style={{ color: "#C97A3D", fontWeight: 700 }}><CountUpPrice value={t.price} /></span>

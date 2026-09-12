@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { buttonStyle, shadow, radius, LoadingState, toastStyle } from "@/components/ui";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Download, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2, ArrowUp, Image as ImageIcon } from "lucide-react";
+import { Download, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2, ArrowUp, Image as ImageIcon, Mail } from "lucide-react";
 import { getUploadLimit } from "@/lib/uploadLimits";
 
 // Spotlight/Luxe only, matching what those tiers actually advertise.
@@ -71,6 +71,8 @@ export default function QrSharePage() {
   const [rsvpNamesExpanded, setRsvpNamesExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sharingInvite, setSharingInvite] = useState(false);
+  const [guestEmailsInput, setGuestEmailsInput] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
   const [closingUploads, setClosingUploads] = useState(false);
   const [extendingDeadline, setExtendingDeadline] = useState(false);
   const [savingStyle, setSavingStyle] = useState(false);
@@ -259,6 +261,38 @@ export default function QrSharePage() {
 
   const handlePrint = () => window.print();
 
+  // Sends the same digital invite image as an actual email (via Resend --
+  // see sendGuestInviteEmail in lib/email.js) rather than relying on the
+  // device's share sheet to hand the image off to a mail app -- confirmed
+  // that Mail/Gmail share targets often drop the image file and leave a
+  // guest with nothing but a bare link. Accepts a few different ways of
+  // separating addresses (commas, newlines, or plain whitespace from a
+  // pasted list) rather than requiring one exact format.
+  const handleSendInviteEmail = async () => {
+    const emails = guestEmailsInput.split(/[\s,]+/).map((e) => e.trim()).filter(Boolean);
+    if (emails.length === 0) return;
+    setSendingInvite(true);
+    try {
+      const res = await fetch(`/api/events/${slug}/send-invite?t=${encodeURIComponent(hostToken)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emails }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send the invite.");
+      showToast(
+        data.failed > 0
+          ? `Sent to ${data.sent} guest${data.sent === 1 ? "" : "s"} — ${data.failed} failed.`
+          : `Invite emailed to ${data.sent} guest${data.sent === 1 ? "" : "s"}.`
+      );
+      setGuestEmailsInput("");
+    } catch (err) {
+      showToast(err.message || "Failed to send the invite. Please try again.");
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
   const handleSetSocialStyle = async (styleId) => {
     const next = eventInfo.social_style === styleId ? null : styleId; // click again to clear back to "same as full cut"
     setSavingStyle(true);
@@ -437,6 +471,31 @@ export default function QrSharePage() {
             <a href={qrImageUrl} download={`recapped-qr-${slug}.png`} style={{ ...secondaryBtnStyle, textDecoration: "none" }}>
               <Download size={16} /> Download QR image
             </a>
+          </div>
+
+          {/* A real, sent email rather than another share-sheet target --
+              see handleSendInviteEmail's own comment for why: Mail/Gmail
+              picked from the native share sheet above often drops the
+              invite image entirely, leaving a guest with just a bare link. */}
+          <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
+            <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 4px" }}>Email the invite to guests</p>
+            <p style={{ fontSize: 12.5, color: "#8a857d", margin: "0 0 10px" }}>
+              Sends the actual invite picture, not just a link — separate emails, one address per line or comma-separated.
+            </p>
+            <textarea
+              value={guestEmailsInput}
+              onChange={(e) => setGuestEmailsInput(e.target.value)}
+              placeholder="jordan@example.com, sam@example.com"
+              rows={2}
+              style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: 14, fontFamily: "inherit", resize: "vertical", boxSizing: "border-box", marginBottom: 10 }}
+            />
+            <button
+              onClick={handleSendInviteEmail}
+              disabled={sendingInvite || !guestEmailsInput.trim()}
+              style={{ ...secondaryBtnStyle, width: "100%", opacity: sendingInvite || !guestEmailsInput.trim() ? 0.6 : 1 }}
+            >
+              <Mail size={16} /> {sendingInvite ? "Sending…" : "Email invite"}
+            </button>
           </div>
 
           {rsvpSummary && (

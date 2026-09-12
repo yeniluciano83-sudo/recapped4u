@@ -4,7 +4,7 @@ import { fieldStyle, buttonStyle } from "@/components/ui";
 import { canProceedFromStyleStep, hasMadeRequiredRoastChoice } from "@/lib/bookingFormValidation";
 import { isRoastLevelSelectable } from "@/lib/pricing";
 import { useSearchParams } from "next/navigation";
-import { Calendar, Users, Sparkles, Package, Check, ArrowRight, ArrowLeft, Flame, AlertTriangle, Play, Pause } from "lucide-react";
+import { Check, ArrowRight, ArrowLeft, AlertTriangle, Play, Pause } from "lucide-react";
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
@@ -265,7 +265,7 @@ function BookingFormInner() {
       </div>
 
       {step === 1 && (
-        <StepBlock icon={<Calendar size={20} color="#C97A3D" />} title="Tell us about the event">
+        <StepBlock icon={<StepIcon src="/images/how-it-works-icons/book.jpg" />} title="Tell us about the event">
           <Field label="Your name"><input style={inputStyle} value={form.hostName} onChange={(e) => update("hostName", e.target.value)} placeholder="Jordan Smith" /></Field>
           <Field label="Email"><input style={inputStyle} type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="jordan@email.com" /></Field>
           <Field label="Event type">
@@ -289,7 +289,7 @@ function BookingFormInner() {
       )}
 
       {step === 2 && (
-        <StepBlock icon={<Package size={20} color="#C97A3D" />} title="Choose your package">
+        <StepBlock icon={<StepIcon src="/images/booking-icons/choose-package.jpg" />} title="Choose your package">
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {TIERS.map((t) => (
               <button key={t.id} onClick={() => update("tier", t.id)} aria-pressed={form.tier === t.id} style={{ textAlign: "left", padding: "18px", borderRadius: "14px", cursor: "pointer", background: form.tier === t.id ? "#FBEEE0" : "#FFFFFF", border: form.tier === t.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
@@ -317,7 +317,7 @@ function BookingFormInner() {
       )}
 
       {step === 3 && (
-        <StepBlock icon={<Sparkles size={20} color="#C97A3D" />} title="Pick your editing style">
+        <StepBlock icon={<StepIcon src="/images/how-it-works-icons/editing.jpg" />} title="Pick your editing style">
           <p style={{ fontSize: 15, color: "#4a4642", margin: "0 0 14px", lineHeight: 1.5 }}>
             {isSocialCutsFormat
               ? "Choose a theme for your social cuts, or pick \"No theme (no music)\" for a clean, true-to-life default look — one of the two is required, since this is the only style picker for social-cuts-only delivery."
@@ -433,7 +433,7 @@ function BookingFormInner() {
               {isSocialCutsFormat ? (
                 <>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <Flame size={17} color="#C97A3D" />
+                    <StepIcon src="/images/faq-icons/roast-reel.jpg" size={20} />
                     <span style={{ fontWeight: 700, fontSize: "15px" }}>Roast Reel</span>
                     <span style={{ fontSize: "10.5px", color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                       {roastAddonPrice(form.tier, effectiveRoastLevel) ? `+$${roastAddonPrice(form.tier, effectiveRoastLevel)}` : "Included"}
@@ -458,7 +458,7 @@ function BookingFormInner() {
               ) : (
                 <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
                   <input type="checkbox" checked={form.roastEnabled} onChange={(e) => update("roastEnabled", e.target.checked)} style={{ width: "18px", height: "18px", accentColor: "#C97A3D", flexShrink: 0 }} />
-                  <Flame size={17} color="#C97A3D" />
+                  <StepIcon src="/images/faq-icons/roast-reel.jpg" size={20} />
                   <span style={{ fontWeight: 700, fontSize: "15px" }}>Add Roast Reel</span>
                   <span style={{ fontSize: "10.5px", color: "#7A8B76", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     {roastAddonPrice(form.tier, effectiveRoastLevel) ? `+$${roastAddonPrice(form.tier, effectiveRoastLevel)}` : "Included"}
@@ -496,7 +496,7 @@ function BookingFormInner() {
       )}
 
       {step === 4 && (
-        <StepBlock icon={<Users size={20} color="#C97A3D" />} title="Review your booking">
+        <StepBlock icon={<StepIcon src="/images/booking-icons/review-booking.jpg" />} title="Review your booking">
           {buildSummaryRows({ form, effectiveEventType, effectiveStyle, isSocialCutEligible, isVideoOnlyFormat, isSocialCutsFormat, isRoastEligible, effectiveRoastLevel }).map((row) => (
             <SummaryRow key={row.label} label={row.label} value={row.value} />
           ))}
@@ -627,6 +627,18 @@ function Shell({ children, summary }) {
   );
 }
 
+// A small hand-painted sticker badge, replacing the bare lucide glyphs
+// these headings used to show -- several reuse the exact same asset as an
+// identical concept elsewhere on the site (the "Tell us about the event"
+// step reuses the homepage's "Book" icon, "Pick your editing style" reuses
+// its "We do the editing" icon, and the Roast Reel toggle reuses the FAQ's
+// own Roast Reel icon) rather than a second, slightly-different icon for
+// the same idea. See scripts/generate-booking-icons.mjs for the two that
+// don't already have a match elsewhere.
+function StepIcon({ src, size = 32 }) {
+  return <img src={src} alt="" aria-hidden="true" width={size} height={size} style={{ borderRadius: size > 24 ? 10 : 7, objectFit: "cover", flexShrink: 0, boxShadow: "0 2px 8px rgba(201,122,61,0.25)" }} />;
+}
+
 function StepBlock({ icon, title, children }) {
   return (
     <div className="step-fade-in">
@@ -702,7 +714,7 @@ function BookingSummarySidebar({ form, effectiveEventType, effectiveStyle, isSoc
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E4DED2", borderRadius: "16px", padding: "22px", boxShadow: "0 2px 4px rgba(33,31,29,0.05), 0 8px 20px rgba(33,31,29,0.06)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-        <Package size={17} color="#C97A3D" />
+        <StepIcon src="/images/booking-icons/choose-package.jpg" size={22} />
         <span style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "17px", fontWeight: 700 }}>Your booking</span>
       </div>
       {rows.map((row) => <SummaryRow key={row.label} label={row.label} value={row.value} />)}

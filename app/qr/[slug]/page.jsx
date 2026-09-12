@@ -529,9 +529,7 @@ export default function QrSharePage() {
 
           {eventInfo.status === "collecting" && !eventInfo.uploads_closed_at && (
             <a href={`/qr/${slug}/upload?t=${encodeURIComponent(hostToken)}`} style={{ marginTop: 24, padding: 18, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left", textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FBEEE0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Camera size={19} color="#C97A3D" strokeWidth={1.8} />
-              </div>
+              <img src="/images/host-page-icons/add-own-photos.jpg" alt="" aria-hidden="true" width={40} height={40} style={{ borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 2px" }}>Add your own photos</p>
                 <p style={{ fontSize: 12.5, color: "#6b655c", margin: 0 }}>Your own upload page — straight from your camera roll</p>
@@ -614,7 +612,7 @@ export default function QrSharePage() {
                 <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>Loading photos…</p>
               ) : photos.length === 0 ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Camera size={14} color="#8a857d" />
+                  <img src="/images/host-page-icons/add-own-photos.jpg" alt="" aria-hidden="true" width={16} height={16} style={{ borderRadius: 4, objectFit: "cover", flexShrink: 0 }} />
                   <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
                 </div>
               ) : (
@@ -690,7 +688,7 @@ export default function QrSharePage() {
                 <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>Loading photos…</p>
               ) : photos.length === 0 ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Camera size={14} color="#8a857d" />
+                  <img src="/images/host-page-icons/add-own-photos.jpg" alt="" aria-hidden="true" width={16} height={16} style={{ borderRadius: 4, objectFit: "cover", flexShrink: 0 }} />
                   <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>No photos uploaded yet — check back once guests start adding theirs.</p>
                 </div>
               ) : (

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { buttonStyle, radius, shadow, LoadingState } from "@/components/ui";
 import { useParams } from "next/navigation";
-import { Download, Play, Image as ImageIcon, Share2, Clock, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight, ArrowUp } from "lucide-react";
+import { Download, Play, Image as ImageIcon, Share2, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight, ArrowUp } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
 
 // Keep in sync with GALLERY_RETENTION in app/booking/page.jsx.
@@ -407,8 +407,13 @@ export default function GalleryDeliveryPage() {
               {activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.18)" }} />}
               {!activeVideoPosterUrl && <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #FBEEE0, #FAF7F2)" }} />}
               {isRoastCut && (
-                <span style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 5, background: "#C97A3D", color: "#211F1D", fontSize: 12, fontWeight: 700, padding: "5px 11px", borderRadius: 999 }}>
-                  🔥 Roast Reel cut
+                <span style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 6, background: "#C97A3D", color: "#211F1D", fontSize: 12, fontWeight: 700, padding: "5px 11px 5px 5px", borderRadius: 999 }}>
+                  {/* Same Roast Reel sticker used everywhere else this
+                      concept appears (the FAQ, the booking wizard, the
+                      homepage's roast-preview cards) -- one consistent mark
+                      for the same idea, not a plain emoji here alone. */}
+                  <img src="/images/faq-icons/roast-reel.jpg" alt="" aria-hidden="true" width={18} height={18} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  Roast Reel cut
                 </span>
               )}
               <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: activeVideoPosterUrl ? "0 4px 18px rgba(0,0,0,0.4)" : "none", position: "relative" }}>
@@ -575,7 +580,9 @@ export default function GalleryDeliveryPage() {
             </div>
           )}
           <div style={{ padding: "14px 16px", background: "#FFFFFF", borderRadius: "10px", border: "1px solid #E4DED2", display: "flex", gap: "10px" }}>
-            <Clock size={16} color="#C97A3D" style={{ flexShrink: 0, marginTop: "1px" }} />
+            {/* Same "Delivery & retention" sticker used in the FAQ and the
+                booking confirmation email for this identical concept. */}
+            <img src="/images/faq-icons/retention.jpg" alt="" aria-hidden="true" width={20} height={20} style={{ borderRadius: 6, objectFit: "cover", flexShrink: 0, marginTop: "1px" }} />
             <p style={{ fontSize: "12.5px", color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
               {isDownloadOnly
                 ? `Your ${RETENTION_LABEL[booking.tier] || ""} window has ended and this gallery is now being permanently removed.`

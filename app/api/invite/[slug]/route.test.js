@@ -25,7 +25,7 @@ describe("GET /api/invite/[slug]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns a themed invite PNG for an existing event", async () => {
+  it("returns a themed invite JPEG for an existing event", async () => {
     sb.mockResponse({
       data: { upload_slug: "slug-1", host_name: "Jordan", event_type: "Wedding", event_date: "2026-06-14", event_time: "17:30", venue: "The Grand Hall" },
       error: null,
@@ -33,13 +33,13 @@ describe("GET /api/invite/[slug]", () => {
     const res = await GET(makeRequest(), { params: { slug: "slug-1" } });
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toBe("image/png");
-    expect(res.headers.get("Content-Disposition")).toBe('inline; filename="recapped-invite-slug-1.png"');
+    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(res.headers.get("Content-Disposition")).toBe('inline; filename="recapped-invite-slug-1.jpg"');
 
     const buf = Buffer.from(await res.arrayBuffer());
-    // PNG magic bytes -- confirms this is a real, non-empty image, not just
-    // an empty/garbage buffer that happened to get a 200.
-    expect(buf.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    // JPEG magic bytes (SOI marker) -- confirms this is a real, non-empty
+    // image, not just an empty/garbage buffer that happened to get a 200.
+    expect(buf.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
   });
 
   it("still renders when venue/time were never captured (both nullable)", async () => {
@@ -50,6 +50,6 @@ describe("GET /api/invite/[slug]", () => {
     const res = await GET(makeRequest(), { params: { slug: "slug-2" } });
     expect(res.status).toBe(200);
     const buf = Buffer.from(await res.arrayBuffer());
-    expect(buf.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    expect(buf.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
   });
 });

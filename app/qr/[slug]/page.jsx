@@ -220,7 +220,7 @@ export default function QrSharePage() {
       const res = await fetch(inviteImageUrl);
       if (!res.ok) throw new Error("Failed to load invite image");
       const blob = await res.blob();
-      const file = new File([blob], `recapped-invite-${slug}.png`, { type: "image/png" });
+      const file = new File([blob], `recapped-invite-${slug}.jpg`, { type: "image/jpeg" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: eventName, text: `You're invited to ${eventName}!`, url: uploadUrl });
       } else {

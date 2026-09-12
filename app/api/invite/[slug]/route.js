@@ -22,7 +22,7 @@ function formatTimeLabel(timeStr) {
 // than only ever printing a poster. Public and unauthenticated on purpose,
 // same reasoning as the QR route: the slug is on the QR poster every guest
 // scans, and this route only ever hands back the same upload link.
-// Usage: GET /api/invite/[slug] -> returns a PNG image
+// Usage: GET /api/invite/[slug] -> returns a JPEG image
 export async function GET(req, { params }) {
   const { slug } = await params;
 
@@ -56,9 +56,9 @@ export async function GET(req, { params }) {
     return new NextResponse(cardBuffer, {
       status: 200,
       headers: {
-        "Content-Type": "image/png",
+        "Content-Type": "image/jpeg",
         "Cache-Control": "public, max-age=3600",
-        "Content-Disposition": `inline; filename="recapped-invite-${slug}.png"`,
+        "Content-Disposition": `inline; filename="recapped-invite-${slug}.jpg"`,
       },
     });
   } catch (err) {

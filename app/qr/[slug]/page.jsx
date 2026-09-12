@@ -457,6 +457,21 @@ export default function QrSharePage() {
           <p style={{ fontSize: 15, color: "#6b655c", marginBottom: 24, wordBreak: "break-all" }}>{uploadUrl}</p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Text/WhatsApp is the one channel where this button's native
+                share sheet reliably delivers both the picture and a
+                tappable link in the same message -- Mail/Gmail share
+                targets often drop the image (see the Email card's own
+                comment below), and a browser with no file-share support at
+                all falls back to just opening the card in a new tab. Sage
+                green on purpose -- the same color the homepage's own
+                WhatsApp contact button uses, so "this is the WhatsApp-ish
+                path" reads as a color, not just a sentence. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "#F0F4EF", border: "1px solid #D3DCCF" }}>
+              <img src="/images/host-page-icons/recommended-share.jpg" alt="" aria-hidden="true" width={26} height={26} style={{ borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+              <p style={{ margin: 0, fontSize: 12, color: "#5C6B58", fontWeight: 600, textAlign: "left", lineHeight: 1.4 }}>
+                Best sent by text or WhatsApp — the picture and the tap-through link land together, so no guest is ever left staring at a bare link.
+              </p>
+            </div>
             <button onClick={handleShareInvite} disabled={sharingInvite} style={{ ...primaryBtnStyle, opacity: sharingInvite ? 0.7 : 1 }}>
               <ImageIcon size={16} /> {sharingInvite ? "Preparing your digital invite…" : "Share your event's digital invite"}
             </button>
@@ -480,7 +495,7 @@ export default function QrSharePage() {
           <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "#FFFFFF", border: "1px solid #E4DED2", textAlign: "left" }}>
             <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 4px" }}>Email the invite to guests</p>
             <p style={{ fontSize: 12.5, color: "#8a857d", margin: "0 0 10px" }}>
-              Sends the actual invite picture, not just a link — separate emails, one address per line or comma-separated.
+              Sends the actual invite picture, not just a link — separate emails, one address per line or comma-separated. Handy for anyone you don't have a number for; text or WhatsApp above still gets there faster.
             </p>
             <textarea
               value={guestEmailsInput}

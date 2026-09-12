@@ -29,37 +29,42 @@ const TIERS = [
 // cover MY event" instead of reading the whole list. "Something Else? Ask
 // Us" isn't an event type at all (it's a CTA), so it renders separately
 // below the groups rather than as pill #20 in the wall.
+// `icon` is a slug into public/images/event-icons/<slug>.jpg -- a small,
+// hand-painted sticker generated per event type (see
+// scripts/generate-event-icons.mjs), themed to match that same event
+// type's digital invite mood (lib/inviteMoods.js), replacing the plain
+// emoji these pills used to show.
 const EVENT_TYPE_GROUPS = [
   { category: "Weddings & Milestones", items: [
-    { label: "Weddings", emoji: "💍" },
-    { label: "Engagement Parties", emoji: "💐" },
-    { label: "Bridal Showers", emoji: "🎀" },
-    { label: "Bachelor/Bachelorette Parties", emoji: "🎊" },
-    { label: "Graduations", emoji: "🎓" },
-    { label: "Anniversaries", emoji: "✨" },
-    { label: "Retirement Parties", emoji: "🥂" },
+    { label: "Weddings", icon: "weddings" },
+    { label: "Engagement Parties", icon: "engagement-parties" },
+    { label: "Bridal Showers", icon: "bridal-showers" },
+    { label: "Bachelor/Bachelorette Parties", icon: "bachelor-bachelorette-parties" },
+    { label: "Graduations", icon: "graduations" },
+    { label: "Anniversaries", icon: "anniversaries" },
+    { label: "Retirement Parties", icon: "retirement-parties" },
   ] },
   { category: "Birthdays & Parties", items: [
-    { label: "Parties", emoji: "🎉" },
-    { label: "Birthdays", emoji: "🎂" },
-    { label: "Sweet 16s/Quinceañeras", emoji: "👑" },
-    { label: "Gender Reveals", emoji: "🎈" },
-    { label: "Baby Showers", emoji: "🍼" },
+    { label: "Parties", icon: "parties" },
+    { label: "Birthdays", icon: "birthdays" },
+    { label: "Sweet 16s/Quinceañeras", icon: "sweet-16-quinceaneras" },
+    { label: "Gender Reveals", icon: "gender-reveals" },
+    { label: "Baby Showers", icon: "baby-showers" },
   ] },
   { category: "Reunions & Gatherings", items: [
-    { label: "Family Reunions", emoji: "👨‍👩‍👧‍👦" },
-    { label: "Class/Friend Reunions", emoji: "🤝" },
-    { label: "Housewarmings", emoji: "🏡" },
-    { label: "Religious Ceremonies", emoji: "🙏" },
-    { label: "Holiday Celebrations", emoji: "🎇" },
+    { label: "Family Reunions", icon: "family-reunions" },
+    { label: "Class/Friend Reunions", icon: "class-friend-reunions" },
+    { label: "Housewarmings", icon: "housewarmings" },
+    { label: "Religious Ceremonies", icon: "religious-ceremonies" },
+    { label: "Holiday Celebrations", icon: "holiday-celebrations" },
   ] },
   { category: "Corporate & More", items: [
-    { label: "Corporate Events", emoji: "💼" },
-    { label: "Fundraisers & Galas", emoji: "🎗️" },
-    { label: "Vacations", emoji: "✈️" },
+    { label: "Corporate Events", icon: "corporate-events" },
+    { label: "Fundraisers & Galas", icon: "fundraisers-galas" },
+    { label: "Vacations", icon: "vacations" },
   ] },
 ];
-const EVENT_TYPE_ASK = { label: "Something Else? Ask Us", emoji: "💬" };
+const EVENT_TYPE_ASK = { label: "Something Else? Ask Us", icon: "ask-us" };
 
 // Small visual identity per tier for the pricing cards -- purely
 // decorative, doesn't touch the actual price/feature data above.
@@ -852,16 +857,18 @@ export default function HomePage() {
               <p style={{ fontSize: 11.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 700, margin: "0 0 9px" }}>{group.category}</p>
               <div className="event-pill-row" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                 {group.items.map((e, idx) => (
-                  <span key={e.label} className="event-pill" style={{ display: "inline-flex", alignItems: "center", gap: 7, background: idx % 2 === 0 ? "#FAF7F2" : "#FBEEE0", border: "1px solid #E4DED2", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, maxWidth: "100%" }}>
-                    <span aria-hidden="true">{e.emoji}</span> {e.label}
+                  <span key={e.label} className="event-pill" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: idx % 2 === 0 ? "#FAF7F2" : "#FBEEE0", border: "1px solid #E4DED2", borderRadius: 999, padding: "6px 16px 6px 6px", fontSize: 13.5, maxWidth: "100%" }}>
+                    <img src={`/images/event-icons/${e.icon}.jpg`} alt="" aria-hidden="true" loading="lazy" width={24} height={24} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: "0 0 0 2px #FFFFFF" }} />
+                    {e.label}
                   </span>
                 ))}
               </div>
             </div>
           ))}
           <button onClick={() => scrollTo("contact")} className="press-btn event-pill"
-            style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 7, background: "#FBEEE0", border: "1px solid #C97A3D", color: "#C97A3D", borderRadius: 999, padding: "8px 16px", fontSize: 13.5, cursor: "pointer", fontWeight: 600, maxWidth: "100%" }}>
-            <span aria-hidden="true">{EVENT_TYPE_ASK.emoji}</span> {EVENT_TYPE_ASK.label}
+            style={{ alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 8, background: "#FBEEE0", border: "1px solid #C97A3D", color: "#C97A3D", borderRadius: 999, padding: "6px 16px 6px 6px", cursor: "pointer", fontSize: 13.5, fontWeight: 600, maxWidth: "100%" }}>
+            <img src={`/images/event-icons/${EVENT_TYPE_ASK.icon}.jpg`} alt="" aria-hidden="true" loading="lazy" width={24} height={24} style={{ borderRadius: "50%", objectFit: "cover", flexShrink: 0, boxShadow: "0 0 0 2px #FFFFFF" }} />
+            {EVENT_TYPE_ASK.label}
           </button>
         </div>
       </Section>

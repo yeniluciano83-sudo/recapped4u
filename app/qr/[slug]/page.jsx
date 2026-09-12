@@ -203,12 +203,17 @@ export default function QrSharePage() {
   // actual picture: event details, date, venue, and the same QR code baked
   // into one image, themed to the event's style (see lib/inviteMoods.js)
   // -- something to post to a story or drop directly into a text, not just
-  // a link someone has to tap to see anything. `url` rides alongside the
-  // image so a receiving app that
-  // supports it (most SMS/WhatsApp/etc share targets do, even for a file
-  // share) still gets a tappable link to the actual upload page -- the QR
-  // in the picture itself only works if the recipient scans a screen, which
-  // isn't possible from inside their own messaging app.
+  // a link someone has to tap to see anything.
+  //
+  // The upload link is put in `text`, not passed as the separate `url`
+  // member -- per the Web Share spec (and confirmed against real target
+  // apps), a receiving app is free to silently drop `url` once `files` is
+  // also present, which left some guests with only a picture and no way to
+  // actually tap through to the upload page (the QR baked into the image
+  // only works if they scan a *different* screen, not the one showing the
+  // message they just received). Plain text survives every target that
+  // accepts text at all, and every major messaging app auto-linkifies a
+  // bare URL inside it, so the guest always gets something tappable.
   //
   // Falls back to opening the card in a new tab -- not a silent download --
   // when the browser has no file-share sheet to hand it to (most desktop
@@ -227,7 +232,7 @@ export default function QrSharePage() {
       const blob = await res.blob();
       const file = new File([blob], `recapped-invite-${slug}.jpg`, { type: "image/jpeg" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: eventName, text: `You're invited to ${eventName}!`, url: uploadUrl });
+        await navigator.share({ files: [file], title: eventName, text: `You're invited to ${eventName}! RSVP and add your photos: ${uploadUrl}` });
       } else {
         const objectUrl = URL.createObjectURL(blob);
         window.open(objectUrl, "_blank", "noopener,noreferrer");

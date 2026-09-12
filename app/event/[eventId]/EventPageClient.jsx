@@ -1,0 +1,537 @@
+"use client";
+import React, { useState, useEffect, useCallback } from "react";
+import { shadow } from "@/components/ui";
+import { useParams } from "next/navigation";
+import { Camera, Upload, Check, Loader2, AlertTriangle, Sparkles } from "lucide-react";
+
+// How often to re-check status while it's still moving -- lets a host who
+// leaves this tab open see "processing" flip to "ready" on its own, instead
+// of needing to know to reload. Stopped once status is delivered/cancelled
+// (see the effect below), so this never polls forever.
+const STATUS_POLL_MS = 60000;
+
+// A dropped connection (weak WiFi/cell signal at a real event, common with
+// a room full of phones) fails a request before it ever reaches our
+// server -- nothing to log, nothing retryable server-side. Retrying here,
+// client-side, is the only place that actually helps. A 4xx response means
+// the server looked at the request and rejected it for a reason retrying
+// won't fix (uploads closed, event cancelled) -- don't waste attempts on
+// those; only retry on network failures or 5xx.
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 900;
+// A 429 (rate limited) clears on its own once the sliding window moves --
+// wait longer than the normal retry backoff before trying that one file
+// again, rather than burning all its attempts against a window that hasn't
+// moved yet.
+const RATE_LIMIT_RETRY_MS = 3000;
+
+const RSVP_OPTIONS = [
+  { value: "yes", label: "Yes" },
+  { value: "maybe", label: "Maybe" },
+  { value: "no", label: "No" },
+];
+const RSVP_CONFIRM_LABEL = { yes: "attending", maybe: "a maybe", no: "not attending" };
+
+// Stable across every retry of the SAME File object -- the browser never
+// changes a file's name/size/lastModified between attempts, whether the
+// retry is this function's own loop or the guest re-tapping the upload
+// button with the same still-selected file. Lets the server recognize a
+// repeat and skip re-inserting it (see app/api/events/[eventId]/upload
+// /confirm/route.js) instead of creating a duplicate row when a request
+// actually succeeded but its response got lost -- confirmed live at a real
+// event, not just a theoretical race.
+function clientUploadIdFor(file) {
+  return `${file.name}_${file.size}_${file.lastModified}`;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
+  catch { return dateStr; }
+}
+
+// Matches formatTimeLabel in app/api/invite/[slug]/route.js -- same "5:30
+// PM" shape on both the invite image and this page for the same booking.
+function formatTime(timeStr) {
+  if (!timeStr) return "";
+  try { return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); }
+  catch { return timeStr; }
+}
+
+// Classifies a JSON error response from our own presign/confirm routes the
+// same way regardless of which one it came from: scope: "file" means this
+// rejection is about this one photo (skip and continue), anything else
+// non-retryable means the whole event stopped accepting uploads (abort the
+// rest of the batch). See handleUpload below.
+async function classifyJsonError(res) {
+  const data = await res.json().catch(() => ({}));
+  const error = data.error || "Upload failed. Please try again.";
+  // 429: transient, not a permanent rejection -- a room of guests on one
+  // shared Wi-Fi (plus a host adding a big album) share a single per-IP
+  // budget. Must NOT abort the rest of the batch the way a real 4xx
+  // (uploads closed, wrong file type) does; the caller pauses and retries
+  // this one file.
+  if (res.status === 429) return { rateLimited: true, error };
+  if (res.status >= 400 && res.status < 500) return { ok: false, error, retryable: false, scope: data.scope };
+  return null; // 5xx -- caller falls through to its retry loop
+}
+
+// Uploads go straight from the browser to R2 (see getSignedUploadUrl in
+// lib/storage.js) -- our own API routes only ever see small JSON payloads,
+// never the actual photo bytes. This is what fixed a real incident: Vercel
+// rejects any request body over ~4.5MB with its own 413 before a route
+// even runs, so routing raw photo bytes through our function meant one
+// large phone photo alone could fail to upload, no matter how generous our
+// own size check claimed to be.
+async function uploadOneFile(eventId, uploaderName, file) {
+  let lastError = "Upload failed. Please try again.";
+  const clientUploadId = clientUploadIdFor(file);
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const presignRes = await fetch(`/api/events/${eventId}/upload/presign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, contentType: file.type, fileSize: file.size, clientUploadId }),
+      });
+      if (!presignRes.ok) {
+        const classified = await classifyJsonError(presignRes);
+        if (classified?.rateLimited) {
+          lastError = classified.error;
+          if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, RATE_LIMIT_RETRY_MS));
+          continue;
+        }
+        if (classified) return classified;
+        lastError = "Upload failed. Please try again.";
+      } else {
+        const presignData = await presignRes.json().catch(() => ({}));
+        if (presignData.alreadyUploaded) {
+          return { ok: true };
+        }
+        const putRes = await fetch(presignData.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+        if (putRes.ok) {
+          const confirmRes = await fetch(`/api/events/${eventId}/upload/confirm`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: presignData.key, clientUploadId, uploaderName }),
+          });
+          if (confirmRes.ok) return { ok: true };
+          const classified = await classifyJsonError(confirmRes);
+          if (classified?.rateLimited) {
+            lastError = classified.error;
+            if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, RATE_LIMIT_RETRY_MS));
+            continue;
+          }
+          if (classified) return classified;
+          lastError = "Upload failed. Please try again.";
+        } else {
+          lastError = "Upload failed. Please try again.";
+        }
+      }
+    } catch (err) {
+      lastError = "Upload failed. Please try again.";
+    }
+    if (attempt < MAX_ATTEMPTS) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+  }
+  return { ok: false, error: lastError, retryable: true };
+}
+
+export default function EventUploadPage() {
+  const params = useParams();
+  const eventId = params?.eventId;
+
+  const [files, setFiles] = useState([]);
+  const [thumbnails, setThumbnails] = useState([]);
+  const [uploaderName, setUploaderName] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [justUploaded, setJustUploaded] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [eventInfo, setEventInfo] = useState(null);
+  const [staleBuild, setStaleBuild] = useState(false);
+  const [rsvpChoice, setRsvpChoice] = useState(null);
+  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
+  const [rsvpError, setRsvpError] = useState(null);
+
+  const loadEventInfo = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/events/${eventId}`);
+      const data = await res.json();
+      setEventInfo(data.event || null);
+      setUploadCount(data.uploadCount || 0);
+    } catch (err) {
+      console.error("Failed to load event info", err);
+    }
+  }, [eventId]);
+
+  // A guest at a real event often leaves this tab open for the whole
+  // party, uploading in bursts as they take photos -- if a fix deploys
+  // in the meantime, their tab keeps running the JS it loaded at the
+  // start, silently missing it (this is exactly what happened with a
+  // real batch-upload bug: retrying in the same stale tab kept hitting
+  // the old, already-fixed behavior). Comparing the live server's
+  // deploy against the build this tab was loaded with catches that.
+  const checkBuildFreshness = useCallback(async () => {
+    try {
+      const res = await fetch("/api/build-version");
+      const data = await res.json();
+      if (data.sha && data.sha !== "dev" && data.sha !== process.env.NEXT_PUBLIC_BUILD_SHA) {
+        setStaleBuild(true);
+      }
+    } catch (err) {
+      // Best-effort -- never let this block uploads.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (eventId) { loadEventInfo(); checkBuildFreshness(); }
+  }, [eventId, loadEventInfo, checkBuildFreshness]);
+
+  // Only poll while status can still change -- delivered/cancelled are
+  // terminal, and re-fetching an active upload session (files selected,
+  // an in-flight upload) risks stomping local state for no reason.
+  const status = eventInfo?.status;
+  useEffect(() => {
+    if (!eventId || !status || status === "delivered" || status === "cancelled") return;
+    const interval = setInterval(() => { loadEventInfo(); checkBuildFreshness(); }, STATUS_POLL_MS);
+    return () => clearInterval(interval);
+  }, [eventId, status, loadEventInfo, checkBuildFreshness]);
+
+  // Real thumbnails, not just filenames -- a guest recognizes their own
+  // photo on sight, not by "IMG_2594.HEIC". Regenerated whenever `files`
+  // changes, including the post-upload narrowing down to just the file(s)
+  // that still need a retry, so what's shown always matches what's selected.
+  // Revoking on every change (not just unmount) keeps this from leaking a
+  // blob URL per photo over a guest uploading many batches in one session.
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setThumbnails(urls);
+    return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
+  }, [files]);
+
+  // A native <input type="file"> replaces its own selection every time,
+  // not adds to it -- picking 5 photos, then tapping "add photos" again to
+  // grab 3 more before hitting the upload button, silently dropped the
+  // first 5 with no warning. Merges into whatever's already pending
+  // instead, deduped by the same identity uploadOneFile's own retry logic
+  // already uses, so re-picking a photo already in the queue doesn't queue
+  // it twice. Clearing the input's value afterward means picking the exact
+  // same file(s) again later still fires a change event -- browsers won't
+  // if the selection didn't change from the input's own perspective.
+  const handleFiles = (e) => {
+    const newFiles = Array.from(e.target.files || []);
+    setFiles((prev) => {
+      const alreadyPending = new Set(prev.map(clientUploadIdFor));
+      return [...prev, ...newFiles.filter((f) => !alreadyPending.has(clientUploadIdFor(f)))];
+    });
+    e.target.value = "";
+  };
+
+  // Reuses whatever's currently in the name field below (shared with photo
+  // uploads) rather than asking for a name twice -- falls back to an
+  // anonymous "Guest" RSVP if it's still empty, same fallback handleUpload
+  // uses. A guest can tap a different button afterward to change their
+  // mind; the server upserts on (booking, name) for named guests so that
+  // doesn't create a second row (see migration 038).
+  const handleRsvp = async (response) => {
+    setRsvpSubmitting(true);
+    setRsvpError(null);
+    try {
+      const res = await fetch(`/api/events/${eventId}/rsvp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guestName: uploaderName, response }),
+      });
+      if (!res.ok) throw new Error("RSVP failed");
+      setRsvpChoice(response);
+    } catch (err) {
+      setRsvpError("Couldn't save your RSVP — please try again.");
+    } finally {
+      setRsvpSubmitting(false);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (files.length === 0) return;
+    setUploading(true);
+    setUploadError(null);
+    // One upload sequence (presign -> direct PUT to R2 -> confirm) per
+    // file -- see uploadOneFile above.
+    const name = uploaderName || "Guest";
+    const stillFailed = [];   // network/5xx -- worth an automatic retry via re-tap
+    const rejected = [];      // this one photo was rejected (wrong type / too large) -- retrying it won't help, doesn't say anything about the rest of the batch
+    let uploadedCount = 0;
+    let stoppedEarly = null;
+    let stoppedAtIndex = -1;
+
+    for (let i = 0; i < files.length; i++) {
+      const result = await uploadOneFile(eventId, name, files[i]);
+      if (result.ok) {
+        uploadedCount += 1;
+      } else if (result.scope === "file") {
+        rejected.push(result.error);
+      } else if (!result.retryable) {
+        // Server rejected the request for a reason retrying won't fix and
+        // that's true of every remaining file too (uploads closed, event
+        // cancelled, event's recap already started) -- stop here instead
+        // of attempting the rest.
+        stoppedEarly = result.error;
+        stoppedAtIndex = i;
+        break;
+      } else {
+        stillFailed.push(files[i]);
+      }
+    }
+
+    setUploadCount((c) => c + uploadedCount);
+
+    // Best-effort telemetry, not part of the guest's flow -- a photo that
+    // failed even after every retry means something's actually wrong
+    // (an R2/Supabase blip, a bad deploy), unlike a per-file rejection or
+    // an expected booking-state stop. Lets that reach Sentry the moment it
+    // happens instead of only surfacing once someone notices a booking
+    // stalled at a low photo count.
+    if (stillFailed.length > 0) {
+      fetch(`/api/events/${eventId}/upload-batch-issue`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uploadedCount, totalCount: files.length, failedCount: stillFailed.length }),
+      }).catch(() => {});
+    }
+
+    const rejectedMsg = rejected.length === 0 ? "" :
+      rejected.length === 1 ? ` 1 photo couldn't be added: ${rejected[0]}` :
+      ` ${rejected.length} photos couldn't be added (wrong file type or too large).`;
+
+    if (stoppedEarly) {
+      setUploadError(`${stoppedEarly}${rejectedMsg}`);
+      // Drop everything up to and including the file that just failed --
+      // the ones before it already succeeded (leaving them selected would
+      // silently re-upload duplicates on retry), and the one that failed
+      // will just fail identically again since the rejection reason won't
+      // change. Whatever's left after it is still untried and worth
+      // keeping selected -- including anything picked while this batch was
+      // still in flight, since handleFiles always appends after it, never
+      // splices into it.
+      setFiles((prev) => prev.slice(stoppedAtIndex + 1));
+    } else if (stillFailed.length > 0 || rejected.length > 0) {
+      setUploadError(
+        (uploadedCount > 0
+          ? `${uploadedCount} of ${files.length} added.`
+          : stillFailed.length > 0 ? `Upload failed after retrying.` : `Upload failed.`
+        ) + rejectedMsg +
+        (stillFailed.length > 0 ? ` ${stillFailed.length} didn't make it after retrying -- check your connection and tap Retry to try just those again.` : "")
+      );
+      // Keep the retryable ones, drop the rejected ones for good, and keep
+      // anything picked mid-upload too -- same reasoning as above, it always
+      // lands after this batch rather than inside it.
+      setFiles((prev) => [...stillFailed, ...prev.slice(files.length)]);
+    } else {
+      setJustUploaded(true);
+      // Only clear the batch this run actually processed -- a fresh pick
+      // made while this upload was still in flight lands after it in the
+      // array and starts its own run the moment this one flips uploading
+      // back off (see the effect below).
+      setFiles((prev) => prev.slice(files.length));
+      setUploaderName("");
+      setTimeout(() => setJustUploaded(false), 3500);
+    }
+
+    setUploading(false);
+  };
+
+  // Auto-send the moment a batch is ready to go -- fires when a fresh pick
+  // lands (files grows) or the previous run just finished (uploading flips
+  // back to false), so a picked photo never sits waiting on a second tap to
+  // actually reach the server. Skipped while uploadError is set: those files
+  // already failed once (network issue, or the event itself rejecting
+  // uploads) and auto-retrying them forever with no backoff between attempts
+  // would just hammer the same failure -- that case waits for the explicit
+  // Retry tap below instead.
+  useEffect(() => {
+    if (files.length > 0 && !uploading && !uploadError) {
+      handleUpload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, uploading]);
+
+  const notActivated = status === "pending_confirmation";
+  const isCancelled = status === "cancelled";
+  const isProcessing = status === "analyzing" || status === "editing";
+  const isDelivered = status === "delivered";
+  const uploadsClosed = notActivated || isCancelled || isProcessing || isDelivered || Boolean(eventInfo?.uploads_closed_at);
+
+  const reelSegments = Math.min(uploadCount, 24);
+  const eventName = eventInfo?.host_name ? `${eventInfo.host_name}'s ${eventInfo.event_type}` : "This event";
+  const eventDate = formatDate(eventInfo?.event_date);
+  const eventTime = formatTime(eventInfo?.event_time);
+  const dateTimeLine = [eventDate, eventTime].filter(Boolean).join(" · ");
+  // Matches the turnaround promise already made on the homepage FAQ ("How
+  // long does it take?") -- kept in sync manually since that's plain JSX
+  // text, not a shared constant.
+  const turnaroundText = eventInfo?.tier === "keepsake"
+    ? "Luxe recaps are usually ready within 48 hours (priority turnaround)."
+    : "Recaps are usually ready within a few days.";
+
+  return (
+    <main style={{ minHeight: "100vh", background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 0 64px" }}>
+      {/* justUploaded (already tracked for the button's "Added -- thank
+          you!" state) doubles as the trigger window for both this glow and
+          the counter bump below -- a guest's contribution visibly landing,
+          not just a silent count update. */}
+      <div className={justUploaded ? "reel-glow" : undefined} style={{ width: "100%", height: "10px", display: "flex", gap: "3px", padding: "0 12px", background: "#F0EAE0" }}>
+        {Array.from({ length: 24 }).map((_, i) => (
+          <div key={i} className={i < reelSegments ? "reel-segment-filled" : undefined} style={{ flex: 1, height: "10px", borderRadius: "1px", background: i < reelSegments ? "#C97A3D" : "#E4DED2", transition: "background 0.4s ease" }} />
+        ))}
+      </div>
+
+      <div style={{ width: "100%", maxWidth: "480px", padding: "40px 24px 0" }}>
+        <div style={{ textAlign: "center", marginBottom: "36px" }}>
+          <p style={{ fontSize: 15, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", marginBottom: "10px", fontWeight: 600 }}>You're invited</p>
+          <h1 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(28px, 4.2vw, 40px)", lineHeight: 1.15, margin: "0 0 8px" }}>{eventName}</h1>
+          <p style={{ fontSize: "15px", color: "#4a4642", margin: 0 }}>{dateTimeLine}</p>
+          {eventInfo?.venue && (
+            <p style={{ fontSize: "14px", color: "#8a857d", margin: "4px 0 0" }}>{eventInfo.venue}</p>
+          )}
+          {!isCancelled && (
+            <div style={{ marginTop: "20px" }}>
+              <p style={{ fontSize: "13.5px", fontWeight: 600, color: "#211F1D", marginBottom: "10px" }}>Will you be there?</p>
+              <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+                {RSVP_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => handleRsvp(opt.value)} disabled={rsvpSubmitting}
+                    style={{
+                      padding: "9px 18px", borderRadius: "999px",
+                      border: rsvpChoice === opt.value ? "1px solid #C97A3D" : "1px solid #D8CFC0",
+                      background: rsvpChoice === opt.value ? "#C97A3D" : "#FFFFFF",
+                      color: rsvpChoice === opt.value ? "#FFFFFF" : "#4a4642",
+                      fontSize: "13.5px", fontWeight: 700, cursor: rsvpSubmitting ? "default" : "pointer",
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {rsvpChoice && (
+                <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "12.5px", color: "#7A8B76", marginTop: "10px" }}>
+                  <Check size={12} /> Thanks — we've got you down as {RSVP_CONFIRM_LABEL[rsvpChoice]}.
+                </p>
+              )}
+              {rsvpError && <p role="alert" style={{ fontSize: "12.5px", color: "#C97A3D", marginTop: "10px" }}>{rsvpError}</p>}
+            </div>
+          )}
+        </div>
+
+        <div style={{ textAlign: "center", marginBottom: "32px", fontSize: "14px", color: "#7A8B76" }}>
+          <strong className={justUploaded ? "count-pop" : undefined} style={{ color: "#C97A3D", fontSize: "16px", display: "inline-block" }}>{uploadCount}</strong> {uploadCount === 1 ? "moment" : "moments"} captured so far
+        </div>
+
+        <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2", boxShadow: shadow.md }}>
+          {isDelivered ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "16px 8px", textAlign: "center" }}>
+              <Check size={26} color="#7A8B76" className="success-pop" />
+              <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is ready!</p>
+              <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
+                The video and photo gallery have been delivered to the host's inbox.
+              </p>
+              <a href={`/gallery/${eventInfo.id}`}
+                style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginTop: "6px", padding: "12px 22px", borderRadius: "10px", background: "#C97A3D", color: "#211F1D", fontSize: "14px", fontWeight: 700, textDecoration: "none" }}>
+                View the recap →
+              </a>
+            </div>
+          ) : isProcessing ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
+              <Sparkles size={24} color="#C97A3D" className="pulse" />
+              <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is being made right now!</p>
+              <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>{turnaroundText}</p>
+            </div>
+          ) : uploadsClosed ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
+              <AlertTriangle size={24} color="#C97A3D" />
+              <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
+                {notActivated
+                  ? "This event hasn't been activated yet."
+                  : isCancelled
+                  ? "This event has been cancelled and is no longer accepting uploads."
+                  : "Uploads are closed for this event — processing starts soon."}
+              </p>
+            </div>
+          ) : (
+            <>
+              {staleBuild && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", padding: "10px 14px", borderRadius: "10px", background: "#FBEEE0", border: "1px solid #C97A3D", marginBottom: "16px", fontSize: "12.5px", color: "#4a4642" }}>
+                  <span>This page has an update available — refresh for the latest fixes.</span>
+                  <button onClick={() => window.location.reload()} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: "8px", border: "1px solid #C97A3D", background: "#FFFFFF", color: "#C97A3D", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Refresh</button>
+                </div>
+              )}
+              <label htmlFor="name-input" style={{ fontSize: "13px", color: "#4a4642", display: "block", marginBottom: "6px" }}>Your name (so we know who to thank)</label>
+              <input id="name-input" type="text" value={uploaderName} onChange={(e) => setUploaderName(e.target.value)} placeholder="e.g. Jordan"
+                style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", marginBottom: "20px", boxSizing: "border-box" }} />
+
+              <label htmlFor="file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "32px 16px", borderRadius: "12px", border: "1.5px dashed #C9BFA9", cursor: "pointer", textAlign: "center" }}>
+                <Camera size={28} color="#C97A3D" strokeWidth={1.6} />
+                <span style={{ fontSize: "15px", fontWeight: 500 }}>{files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} ready` : "Tap to add photos"}</span>
+                <span style={{ fontSize: "13px", color: "#6b655c" }}>Straight from your camera roll</span>
+                <input id="file-input" type="file" accept="image/*" multiple onChange={handleFiles} style={{ display: "none" }} />
+              </label>
+
+              {files.length > 0 && (
+                <div style={{ marginTop: "14px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {/* Actual photos, not filenames -- after a partial upload
+                      failure this list narrows down to just what still
+                      needs a retry, and a guest recognizes their own photo
+                      on sight far faster than "IMG_2594.HEIC". */}
+                  {files.slice(0, 6).map((f, i) => (
+                    <img key={i} src={thumbnails[i]} alt={f.name} title={f.name}
+                      style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", border: "1px solid #E4DED2", display: "block" }} />
+                  ))}
+                  {files.length > 6 && <div style={{ fontSize: "12px", color: "#6b655c", padding: "5px 4px", alignSelf: "center" }}>+{files.length - 6} more</div>}
+                </div>
+              )}
+
+              {/* Hidden the rest of the time -- picking photos now sends them
+                  on its own (see the auto-upload effect above). This only
+                  reappears to show progress, confirm success, or offer a
+                  manual Retry once something's actually failed. */}
+              {(uploading || justUploaded || uploadError) && (
+                <button onClick={handleUpload} disabled={files.length === 0 || uploading}
+                  role="status" aria-live="polite"
+                  style={{ width: "100%", marginTop: "20px", padding: "14px", borderRadius: "10px", border: "none", background: files.length === 0 ? "#E4DED2" : "#C97A3D", color: files.length === 0 ? "#8a857d" : "#211F1D", fontSize: "15px", fontWeight: 700, cursor: files.length === 0 || uploading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                  {uploading ? <><Loader2 size={17} className="spin" /> Adding to the reel…</> : justUploaded ? <><Check size={17} /> Added — thank you!</> : <><Upload size={17} /> Retry</>}
+                </button>
+              )}
+
+              {uploadError && (
+                <p role="alert" style={{ fontSize: "12.5px", color: "#C97A3D", marginTop: "12px", textAlign: "center" }}>{uploadError}</p>
+              )}
+            </>
+          )}
+        </div>
+
+        <p style={{ textAlign: "center", fontSize: "12px", color: "#8a857d", marginTop: "22px", lineHeight: 1.6 }}>
+          Your photos help build the event recap video — the host can star favorites to guarantee they make the cut.<br />No account needed — just this link.
+        </p>
+        <p style={{ textAlign: "center", marginTop: "18px" }}>
+          <a href="/#about" style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>
+            Learn more about us →
+          </a>
+        </p>
+      </div>
+
+      <style>{`
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+        .pulse { animation: pulse 1.8s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+        .success-pop { animation: success-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes success-pop-in { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+        .count-pop { animation: count-pop-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes count-pop-in { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
+        .reel-glow .reel-segment-filled { animation: reel-segment-glow 0.7s ease-out; }
+        @keyframes reel-segment-glow {
+          0% { box-shadow: 0 0 0 rgba(201,122,61,0); }
+          35% { box-shadow: 0 0 6px 1px rgba(201,122,61,0.85); }
+          100% { box-shadow: 0 0 0 rgba(201,122,61,0); }
+        }
+        @media (prefers-reduced-motion: reduce) { .success-pop, .pulse, .count-pop, .reel-glow .reel-segment-filled { animation: none; } }
+      `}</style>
+    </main>
+  );
+}

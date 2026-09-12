@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { cardStyle as sharedCardStyle } from "@/components/ui";
 import Link from "next/link";
-import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, Calendar, QrCode, Wand2, PartyPopper, MessageCircle, Quote, Play, Pause } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, QrCode, MessageCircle, Quote, Play, Pause } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -313,9 +313,8 @@ export default function HomePage() {
         .how-step { display: flex; gap: 20px; }
         .how-step-node { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
         .how-step-circle {
-          width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-          background: linear-gradient(135deg, #C97A3D, #E0985A);
-          display: flex; align-items: center; justify-content: center;
+          width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+          object-fit: cover; display: block;
           box-shadow: 0 4px 14px rgba(201,122,61,0.32);
         }
         .how-step-line { width: 2px; flex: 1; min-height: 0; background: #E4DED2; margin: 6px 0; }
@@ -722,16 +721,14 @@ export default function HomePage() {
         subtitle="Every guest already has a camera in their pocket. Four simple steps turn what they capture into one story worth watching.">
         <div className={`how-timeline${howVisible ? " how-timeline-visible" : ""}`} ref={howRef}>
           {[
-            { n: "1", icon: Calendar, t: "Book", d: "Tell us about your event, pick your editing style — takes less than 2 minutes." },
-            { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Send a themed digital invite with RSVP built right in, or print a QR poster for the day itself. Guests tap Yes, Maybe, or No and add photos with zero apps and zero fuss — you can toss in your own photos from your host page." },
-            { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, we polish every photo for your gallery, then curate the best of them into your full video and social cuts — cut, graded, and paced automatically, start to finish." },
-            { n: "4", icon: PartyPopper, t: "It lands in your inbox", d: "A polished video and photo gallery, ready to relive, share, and keep." },
-          ].map((s, i, arr) => {
-            const Icon = s.icon;
-            return (
+            { n: "1", icon: "book", t: "Book", d: "Tell us about your event, pick your editing style — takes less than 2 minutes." },
+            { n: "2", icon: "pitch-in", t: "Everyone pitches in", d: "Send a themed digital invite with RSVP built right in, or print a QR poster for the day itself. Guests tap Yes, Maybe, or No and add photos with zero apps and zero fuss — you can toss in your own photos from your host page." },
+            { n: "3", icon: "editing", t: "We do the editing", d: "Once uploads close, we polish every photo for your gallery, then curate the best of them into your full video and social cuts — cut, graded, and paced automatically, start to finish." },
+            { n: "4", icon: "delivered", t: "It lands in your inbox", d: "A polished video and photo gallery, ready to relive, share, and keep." },
+          ].map((s, i, arr) => (
               <div className="how-step" key={s.n}>
                 <div className="how-step-node">
-                  <div className="how-step-circle"><Icon size={19} color="#FFFFFF" strokeWidth={2} /></div>
+                  <img src={`/images/how-it-works-icons/${s.icon}.jpg`} alt="" aria-hidden="true" className="how-step-circle" width={44} height={44} />
                   {i < arr.length - 1 && <div className="how-step-line" />}
                 </div>
                 <div className="how-step-content">
@@ -739,8 +736,7 @@ export default function HomePage() {
                   <div className="how-step-desc">{s.d}</div>
                 </div>
               </div>
-            );
-          })}
+          ))}
         </div>
       </Section>
 

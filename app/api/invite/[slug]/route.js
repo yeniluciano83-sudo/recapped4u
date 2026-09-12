@@ -23,8 +23,20 @@ function formatTimeLabel(timeStr) {
 // same reasoning as the QR route: the slug is on the QR poster every guest
 // scans, and this route only ever hands back the same upload link.
 // Usage: GET /api/invite/[slug] -> returns a JPEG image
+//   ?rsvp=0 -- drops the Yes/Maybe/No row (see buildInviteCard's own
+//   showRsvp comment). Used by the printed poster (app/qr/[slug]/page.jsx's
+//   print-card), taped up at the event itself, where RSVPing no longer
+//   makes sense -- the guest scanning it is already there.
 export async function GET(req, { params }) {
   const { slug } = await params;
+  // Base fallback + optional chaining -- req.url is a full URL from the
+  // Next runtime but may be relative/absent from a hand-built request
+  // object in tests, and an unparseable URL here should just mean "show
+  // RSVP" (the default) rather than a 500.
+  let showRsvp = true;
+  try {
+    showRsvp = new URL(req?.url ?? "", "http://localhost").searchParams.get("rsvp") !== "0";
+  } catch {}
 
   const { success } = await checkRateLimit("invite-card", req, { requests: 30, windowSeconds: 60 });
   if (!success) {
@@ -51,6 +63,7 @@ export async function GET(req, { params }) {
       uploadUrl,
       dateLabel: formatDateLabel(booking.event_date),
       timeLabel: formatTimeLabel(booking.event_time),
+      showRsvp,
     });
 
     return new NextResponse(cardBuffer, {

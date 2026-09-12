@@ -6,8 +6,8 @@ vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
 import { supabase } from "@/lib/supabase";
 import { GET } from "./route";
 
-function makeRequest() {
-  return { headers: { get: () => null } };
+function makeRequest(url) {
+  return { url, headers: { get: () => null } };
 }
 
 describe("GET /api/invite/[slug]", () => {
@@ -48,6 +48,17 @@ describe("GET /api/invite/[slug]", () => {
       error: null,
     });
     const res = await GET(makeRequest(), { params: { slug: "slug-2" } });
+    expect(res.status).toBe(200);
+    const buf = Buffer.from(await res.arrayBuffer());
+    expect(buf.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
+  });
+
+  it("still renders with ?rsvp=0, the printed-poster variant with no RSVP row", async () => {
+    sb.mockResponse({
+      data: { upload_slug: "slug-3", host_name: "Jordan", event_type: "Wedding", event_date: "2026-06-14", event_time: "17:30", venue: "The Grand Hall" },
+      error: null,
+    });
+    const res = await GET(makeRequest("https://test.example/api/invite/slug-3?rsvp=0"), { params: { slug: "slug-3" } });
     expect(res.status).toBe(200);
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));

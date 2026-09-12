@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { buttonStyle, shadow, radius, LoadingState, toastStyle } from "@/components/ui";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Download, Share2, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2, ArrowUp, Image as ImageIcon } from "lucide-react";
+import { Download, Printer, Copy, Check, CheckCircle2, Star, AlertTriangle, Clock, Camera, ChevronRight, Play, Pause, Trash2, ArrowUp, Image as ImageIcon } from "lucide-react";
 import { getUploadLimit } from "@/lib/uploadLimits";
 
 // Spotlight/Luxe only, matching what those tiers actually advertise.
@@ -194,12 +194,17 @@ export default function QrSharePage() {
   const uploadUrl = typeof window !== "undefined" && slug ? `${window.location.origin}/event/${slug}` : "";
   const eventName = eventInfo ? `${eventInfo.host_name}'s ${eventInfo.event_type}` : "";
 
-  // Separate from handleShare below -- that one shares the bare link (fast,
-  // works everywhere). This shares an actual picture: event details, date,
-  // venue, and the same QR code baked into one image, themed to the event's
-  // style (see lib/inviteMoods.js) -- something to post to a story or drop
-  // directly into a text, not just a link someone has to tap to see
-  // anything. `url` rides alongside the image so a receiving app that
+  // The only share action on this page now -- a plain-link "Share with
+  // guests" button used to sit alongside this one, but on any browser with
+  // full Web Share API support (including files) the two opened the exact
+  // same native share sheet, just with or without the image attached,
+  // which read as "these buttons do the same thing" since the payload
+  // difference isn't visible from the share sheet itself. This shares an
+  // actual picture: event details, date, venue, and the same QR code baked
+  // into one image, themed to the event's style (see lib/inviteMoods.js)
+  // -- something to post to a story or drop directly into a text, not just
+  // a link someone has to tap to see anything. `url` rides alongside the
+  // image so a receiving app that
   // supports it (most SMS/WhatsApp/etc share targets do, even for a file
   // share) still gets a tappable link to the actual upload page -- the QR
   // in the picture itself only works if the recipient scans a screen, which
@@ -234,18 +239,6 @@ export default function QrSharePage() {
       if (err?.name !== "AbortError") console.error("Invite share failed", err);
     } finally {
       setSharingInvite(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: eventName, text: `Add your photos to ${eventName}`, url: uploadUrl });
-      } catch (err) {
-        // user cancelled the native share sheet — nothing to do
-      }
-    } else {
-      handleCopy();
     }
   };
 
@@ -425,11 +418,8 @@ export default function QrSharePage() {
           <p style={{ fontSize: 15, color: "#6b655c", marginBottom: 24, wordBreak: "break-all" }}>{uploadUrl}</p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={handleShare} style={primaryBtnStyle}>
-              <Share2 size={16} /> Share with guests
-            </button>
-            <button onClick={handleShareInvite} disabled={sharingInvite} style={{ ...secondaryBtnStyle, opacity: sharingInvite ? 0.7 : 1 }}>
-              <ImageIcon size={16} /> {sharingInvite ? "Preparing invite…" : "Share invite image"}
+            <button onClick={handleShareInvite} disabled={sharingInvite} style={{ ...primaryBtnStyle, opacity: sharingInvite ? 0.7 : 1 }}>
+              <ImageIcon size={16} /> {sharingInvite ? "Preparing your invitation…" : "Share your event invitation"}
             </button>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={handleCopy} style={secondaryBtnStyle}>
@@ -685,16 +675,16 @@ export default function QrSharePage() {
         <ArrowUp size={20} />
       </button>
 
-      {/* Printable card — hidden on screen, shown only when printing */}
+      {/* Printable card — hidden on screen, shown only when printing. Prints
+          the same illustrated invite image as "Share your event invitation"
+          (event details, QR, themed background -- see lib/inviteCard.js)
+          rather than a separately hand-styled plain-text poster, so the two
+          stay visually identical instead of drifting apart over time --
+          minus the RSVP row (?rsvp=0): this poster gets taped up at the
+          event itself, where "Will you be there?" no longer makes sense to
+          whoever's scanning it. */}
       <div className="print-card">
-        <p className="print-eyebrow">You're invited to add to the story</p>
-        <h1 className="print-title">{eventName}</h1>
-        <p className="print-date">{formatDate(eventInfo.event_date)}</p>
-        <div className="print-qr-frame">
-          <img src={qrImageUrl} alt="Guest upload QR code" width={280} height={280} />
-        </div>
-        <p className="print-url">{uploadUrl}</p>
-        <p className="print-footer">Scan to add your photos — no app needed</p>
+        <img src={`${inviteImageUrl}?rsvp=0`} alt={`${eventName} invitation`} className="print-invite-img" />
       </div>
 
       <style>{`
@@ -717,27 +707,15 @@ export default function QrSharePage() {
           .no-print { display: none !important; }
           .print-card {
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            text-align: center;
             min-height: 100vh;
-            padding: 40px;
-            font-family: var(--font-fraunces), Georgia, serif;
-            color: #211F1D;
-            background: #ffffff;
           }
-          .print-eyebrow { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #7A8B76; font-weight: 600; margin-bottom: 12px; }
-          .print-title { font-size: 32px; margin: 0 0 6px; }
-          .print-date { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; color: #555; margin-bottom: 28px; }
-          /* The QR code used to float bare on the page -- the one physical,
-             tangible thing this product produces (a host prints and tapes
-             this up at the actual event), but the only place on the site
-             with no card treatment at all. Matches the border color/radius
-             every on-screen card already uses. */
-          .print-qr-frame { padding: 22px; border: 2px solid #E4DED2; border-radius: 20px; background: #FAF7F2; }
-          .print-url { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; color: #777; margin-top: 20px; word-break: break-all; }
-          .print-footer { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; color: #C97A3D; font-weight: 600; margin-top: 8px; }
+          /* object-fit: contain -- the invite image is a fixed 1080x1920
+             portrait; this scales it to fit the printed page's own size
+             without cropping or distorting it, whatever paper/margins the
+             host's print dialog ends up using. */
+          .print-invite-img { max-width: 100%; max-height: 100vh; width: auto; height: auto; object-fit: contain; }
         }
       `}</style>
     </>

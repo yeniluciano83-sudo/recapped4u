@@ -203,10 +203,16 @@ export default function QrSharePage() {
   // supports it (most SMS/WhatsApp/etc share targets do, even for a file
   // share) still gets a tappable link to the actual upload page -- the QR
   // in the picture itself only works if the recipient scans a screen, which
-  // isn't possible from inside their own messaging app. Falls back to a
-  // plain download when the browser's share sheet can't take a file (most
-  // desktop browsers, some older mobile ones) so there's still a way to get
-  // the image onto the host's device.
+  // isn't possible from inside their own messaging app.
+  //
+  // Falls back to opening the card in a new tab -- not a silent download --
+  // when the browser has no file-share sheet to hand it to (most desktop
+  // browsers; Firefox specifically, on desktop AND Android, has no Web
+  // Share API support for files at all, so this is what every Firefox host
+  // actually gets). A host should see the card land, not just have a file
+  // silently appear in their downloads folder with no visual confirmation;
+  // from the opened tab they can still save or share it themselves via
+  // their browser's own image controls.
   const handleShareInvite = async () => {
     if (!inviteImageUrl) return;
     setSharingInvite(true);
@@ -219,11 +225,10 @@ export default function QrSharePage() {
         await navigator.share({ files: [file], title: eventName, text: `You're invited to ${eventName}!`, url: uploadUrl });
       } else {
         const objectUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = `recapped-invite-${slug}.png`;
-        link.click();
-        URL.revokeObjectURL(objectUrl);
+        window.open(objectUrl, "_blank", "noopener,noreferrer");
+        // Not revoked immediately -- the new tab loads this blob: URL
+        // asynchronously, so an instant revoke could race with that load.
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
       }
     } catch (err) {
       if (err?.name !== "AbortError") console.error("Invite share failed", err);

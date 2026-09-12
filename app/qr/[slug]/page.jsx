@@ -419,7 +419,7 @@ export default function QrSharePage() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button onClick={handleShareInvite} disabled={sharingInvite} style={{ ...primaryBtnStyle, opacity: sharingInvite ? 0.7 : 1 }}>
-              <ImageIcon size={16} /> {sharingInvite ? "Preparing your invitation…" : "Share your event invitation"}
+              <ImageIcon size={16} /> {sharingInvite ? "Preparing your digital invite…" : "Share your event's digital invite"}
             </button>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={handleCopy} style={secondaryBtnStyle}>
@@ -676,7 +676,7 @@ export default function QrSharePage() {
       </button>
 
       {/* Printable card — hidden on screen, shown only when printing. Prints
-          the same illustrated invite image as "Share your event invitation"
+          the same illustrated invite image as "Share your event's digital invite"
           (event details, QR, themed background -- see lib/inviteCard.js)
           rather than a separately hand-styled plain-text poster, so the two
           stay visually identical instead of drifting apart over time --
@@ -704,18 +704,31 @@ export default function QrSharePage() {
         }
         .print-card { display: none; }
         @media print {
+          /* margin: 0 on both the page box and the default body margin --
+             confirmed live that leaving either in place, combined with
+             min-height: 100vh below, pushed the total content just past
+             one physical page and printed a near-blank second page, and
+             separately left the card sitting in a wide white margin
+             instead of actually filling the sheet. */
+          @page { margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; }
           .no-print { display: none !important; }
           .print-card {
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
           }
           /* object-fit: contain -- the invite image is a fixed 1080x1920
-             portrait; this scales it to fit the printed page's own size
-             without cropping or distorting it, whatever paper/margins the
-             host's print dialog ends up using. */
-          .print-invite-img { max-width: 100%; max-height: 100vh; width: auto; height: auto; object-fit: contain; }
+             portrait; this scales it to fill the printed page's height
+             (the binding dimension against a wider Letter/A4 sheet)
+             without cropping or distorting it. height, not max-height,
+             plus overflow: hidden on the parent -- max-height alone still
+             let the image's own intrinsic size push the container taller
+             than one page in some browsers' print layout pass. */
+          .print-invite-img { width: auto; height: 100vh; max-width: 100%; object-fit: contain; }
         }
       `}</style>
     </>

@@ -710,7 +710,7 @@ export default function HomePage() {
         <div className={`how-timeline${howVisible ? " how-timeline-visible" : ""}`} ref={howRef}>
           {[
             { n: "1", icon: Calendar, t: "Book", d: "Tell us about your event, pick your editing style — takes less than 2 minutes." },
-            { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Send a themed digital invite with RSVP built right in, or print a QR poster for the day itself. Guests tap Yes, Maybe, or No and add photos with zero apps and zero fuss — you can toss in your own from the same page." },
+            { n: "2", icon: QrCode, t: "Everyone pitches in", d: "Send a themed digital invite with RSVP built right in, or print a QR poster for the day itself. Guests tap Yes, Maybe, or No and add photos with zero apps and zero fuss — you can toss in your own photos from your host page." },
             { n: "3", icon: Wand2, t: "We do the editing", d: "Once uploads close, we polish every photo for your gallery, then curate the best of them into your full video and social cuts — cut, graded, and paced automatically, start to finish." },
             { n: "4", icon: PartyPopper, t: "It lands in your inbox", d: "A polished video and photo gallery, ready to relive, share, and keep." },
           ].map((s, i, arr) => {

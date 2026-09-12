@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { shadow } from "@/components/ui";
 import { useParams } from "next/navigation";
-import { Camera, Upload, Check, Loader2, AlertTriangle, Sparkles } from "lucide-react";
+import { Upload, Check, Loader2, AlertTriangle } from "lucide-react";
 
 // How often to re-check status while it's still moving -- lets a host who
 // leaves this tab open see "processing" flip to "ready" on its own, instead
@@ -426,7 +426,10 @@ export default function EventUploadPage() {
         <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "28px 22px", border: "1px solid #E4DED2", boxShadow: shadow.md }}>
           {isDelivered ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "16px 8px", textAlign: "center" }}>
-              <Check size={26} color="#7A8B76" className="success-pop" />
+              {/* Same "It lands in your inbox" sticker used on the
+                  homepage's How It Works timeline -- this is that exact
+                  same moment, reached from the guest's side. */}
+              <img src="/images/how-it-works-icons/delivered.jpg" alt="" aria-hidden="true" width={44} height={44} style={{ borderRadius: 12, objectFit: "cover" }} className="success-pop" />
               <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is ready!</p>
               <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>
                 The video and photo gallery have been delivered to the host's inbox.
@@ -438,7 +441,10 @@ export default function EventUploadPage() {
             </div>
           ) : isProcessing ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 8px", textAlign: "center" }}>
-              <Sparkles size={24} color="#C97A3D" className="pulse" />
+              {/* Same "We do the editing" sticker used on the homepage's
+                  How It Works timeline -- this is that exact same step,
+                  seen from the guest's side while it's actually happening. */}
+              <img src="/images/how-it-works-icons/editing.jpg" alt="" aria-hidden="true" width={40} height={40} style={{ borderRadius: 12, objectFit: "cover" }} className="pulse" />
               <p style={{ fontSize: "16px", fontWeight: 700, color: "#211F1D", margin: 0 }}>Your recap is being made right now!</p>
               <p style={{ fontSize: 15, color: "#4a4642", margin: 0, lineHeight: 1.6 }}>{turnaroundText}</p>
             </div>
@@ -466,7 +472,11 @@ export default function EventUploadPage() {
                 style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", marginBottom: "20px", boxSizing: "border-box" }} />
 
               <label htmlFor="file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "32px 16px", borderRadius: "12px", border: "1.5px dashed #C9BFA9", cursor: "pointer", textAlign: "center" }}>
-                <Camera size={28} color="#C97A3D" strokeWidth={1.6} />
+                {/* Same instant-camera sticker used on the host's own QR
+                    page for the identical "straight from your camera roll"
+                    action -- one guest-and-host-shared upload concept, not
+                    two different icons for the same idea. */}
+                <img src="/images/host-page-icons/add-own-photos.jpg" alt="" aria-hidden="true" width={44} height={44} style={{ borderRadius: 12, objectFit: "cover" }} />
                 <span style={{ fontSize: "15px", fontWeight: 500 }}>{files.length > 0 ? `${files.length} photo${files.length > 1 ? "s" : ""} ready` : "Tap to add photos"}</span>
                 <span style={{ fontSize: "13px", color: "#6b655c" }}>Straight from your camera roll</span>
                 <input id="file-input" type="file" accept="image/*" multiple onChange={handleFiles} style={{ display: "none" }} />

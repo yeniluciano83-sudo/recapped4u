@@ -848,7 +848,12 @@ export default function HomePage() {
                   <img src={p.photo} alt={`Guests at a ${p.event.toLowerCase()}`} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                  <Flame size={13} color="#C97A3D" style={{ flexShrink: 0, marginTop: 3 }} />
+                  {/* Same Roast Reel sticker used in the FAQ's own "What's
+                      the Roast Reel add-on?" icon (public/images/faq-icons
+                      /roast-reel.jpg) -- one consistent mark for the same
+                      concept appearing twice on this page, not a second,
+                      slightly-different icon for the same idea. */}
+                  <img src="/images/faq-icons/roast-reel.jpg" alt="" aria-hidden="true" width={20} height={20} style={{ borderRadius: 6, objectFit: "cover", flexShrink: 0, marginTop: 1 }} />
                   <p style={{ margin: 0, fontFamily: "var(--font-fraunces), Georgia, serif", fontStyle: "italic", fontSize: 15, color: "#211F1D", lineHeight: 1.5 }}>{p.roast}</p>
                 </div>
               </div>

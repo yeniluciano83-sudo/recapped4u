@@ -456,6 +456,20 @@ export default function QrSharePage() {
 
           <p style={{ fontSize: 15, color: "#6b655c", marginBottom: 24, wordBreak: "break-all" }}>{uploadUrl}</p>
 
+          {/* An actual preview of the picture "Share your event's digital
+              invite" below sends -- not just a description of it -- so a
+              host can see exactly what a guest receives before choosing
+              how to share it. Doubles as the reason a host might skip our
+              invite entirely: someone who'd rather design their own can
+              still grab the raw QR code from "Download QR image" below and
+              drop it into whatever they build themselves. Capped to a
+              phone-story-thumbnail width rather than shown at its real
+              1080x1920 size, which would otherwise dominate the page. */}
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8a857d", fontWeight: 600, marginBottom: 10 }}>Preview: what your guests will receive</p>
+            <img src={inviteImageUrl} alt={`Preview of ${eventName}'s digital invite`} width={220} style={{ width: "100%", maxWidth: 220, borderRadius: radius.lg, border: "1px solid #E4DED2", boxShadow: shadow.md }} />
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {/* WhatsApp/text is the one channel where this button's native
                 share sheet reliably delivers both the picture and a

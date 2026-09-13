@@ -35,32 +35,41 @@ const outDir = path.join(process.cwd(), "lib", "assets", isPrint ? "invite-backg
 const aspectRatio = isPrint ? "3:2" : "9:16";
 const orientationPhrase = isPrint ? "horizontal landscape format" : "vertical portrait format";
 
-// Each prompt names a specific fine-art/illustration tradition (gouache
-// wedding stationery, art-deco gala programs, golden-hour botanical
-// watercolor, paper-cut collage, etc.) rather than a generic "watercolor
-// illustration" -- confirmed live that the generic version reliably
-// undersold the moment (birthday became "some balloons and confetti"),
-// while naming a real artistic reference point and a specific, evocative
-// scene gets Gemini to actually commit to a mood instead of defaulting to
-// the most obvious clip-art association for each event type.
+// All seven moods now render as a 3D scene instead of the flat painterly
+// gouache used before -- but the flavor of "3D" splits in two. The five
+// more playful/personal occasions (romantic, festive, warm, holiday,
+// generic) get a cute glossy clay-render look, like a modern Pixar-short
+// still. Corporate and religious ceremony keep the same dimensionality
+// but in a more restrained register -- polished metallic/glass materials
+// and dramatic studio lighting, nothing "cute" -- since a gala or a
+// ceremony invitation calling for genuine formality. The card's own copy
+// stays split the same way (see NON_ITALIC_MOODS in lib/inviteCard.js,
+// which this file's comments call out by hand to keep in sync): only
+// professional and reverent keep upright, formal type -- the other five
+// go italic. Art style and type style move independently on this split;
+// only professional/reverent are excluded from italics, not from 3D.
 //
-// The center is asked to dissolve into a soft, out-of-focus bokeh glow --
-// a real photographic/painterly device (shallow depth of field) -- rather
-// than a flat, blank color fill. A first pass asked for a literal "clear
-// blank space" there and it worked (lib/inviteCard.js's scrim keeps text
-// legible either way) but looked static and a little empty next to how
-// detailed the borders had become; a softly blurred glow of light and
-// color reads as an intentional, atmospheric photograph instead of "art
-// with a hole cut out of the middle," while staying just as calm behind
-// text.
+// Every prompt ends with the same QUALITY_SUFFIX (4K/cinematic color grade
+// language) rather than repeating it per mood, and imageConfig.imageSize
+// actually requests 4K generation -- confirmed live that without it the
+// API defaults to "1K" (768x1344 for 9:16), which meant every card was
+// quietly upscaling a sub-1080px master to fill its own 1080x1920 canvas.
+//
+// Each scene mixes at least three distinct kinds of object rather than
+// one motif repeated (e.g. romantic isn't "just roses" -- it's flowers
+// plus a ribbon plus butterflies plus candlelight), and asks explicitly
+// for elegance/restraint on top of density -- confirmed live that "dense"
+// alone can read as cluttered without also asking for a curated,
+// gallery-quality arrangement rather than a pile of the same object.
+const QUALITY_SUFFIX = "Ultra-detailed 4K render, rich cinematic color grading, vivid saturated colors, crisp sharp detail throughout, professional studio-quality lighting, elegant and tasteful curated composition -- a refined arrangement of varied elements, not one motif repeated.";
 const PROMPTS = {
-  romantic: `A cinematic, richly painted wedding invitation illustration in fine hand-painted gouache, in the tradition of luxury wedding stationery, ${orientationPhrase}. A lush archway of trailing eucalyptus, garden roses, and ranunculus in blush pink, dusty mauve, and champagne gold, rendered in sharp, richly detailed focus around the outer edges, with fine gold botanical linework and a pair of soft golden butterflies catching the light. The scene dissolves toward the center into a soft, dreamy, out-of-focus bokeh of warm blush-cream light, like a shallow depth-of-field photograph, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark serif text. No people, no calligraphy, no text.`,
-  festive: `A cinematic, high-energy editorial illustration for a birthday celebration, painted like a burst of confetti frozen mid-air with real depth and dimension, ${orientationPhrase}. Streamers, ribbon curls, gold stars, and a shower of confetti in coral, hot pink, marigold, and turquoise, rendered in sharp, richly detailed focus around the outer edges, with balloons catching dramatic light in the corners. The scene dissolves toward the center into a soft, glowing, out-of-focus bokeh of warm light, like a shallow depth-of-field photograph, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text.`,
-  professional: `A cinematic art-deco illustration for a corporate gala invitation, in the style of a luxury gala program cover, ${orientationPhrase}. A richly detailed brushed-gold geometric border -- sunburst fan lines, layered chevrons, a delicate laurel motif -- rendered in sharp focus around the outer edges over a deep navy ground, with an elegant skyline silhouette glowing along the bottom edge. The scene dissolves toward the center into a smooth, softly glowing dark navy bokeh, like a shallow depth-of-field photograph, keeping the center two-thirds calm and uncluttered, suitable for overlaying light gold text. No people, no text.`,
-  warm: `A cinematic, golden-hour botanical illustration for a family reunion, painted in rich, sunlit brushwork with real depth, ${orientationPhrase}. Sun-dappled olive branches, wildflowers, sprigs of wheat, and a pair of small songbirds, rendered in sharp, richly detailed focus along the outer edges, evoking a backyard gathering at golden hour. The scene dissolves toward the center into a soft, glowing, out-of-focus bokeh of amber and honey light, like a shallow depth-of-field photograph, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text.`,
-  holiday: `A cinematic, softly-lit watercolor illustration for a holiday celebration, evoking a cozy candlelit evening with real depth and warmth, ${orientationPhrase}. Berry red and pine-green garlands strung with glowing fairy lights and gold ornaments, rendered in sharp, richly detailed focus along the outer edges, with delicate falling snow. The scene dissolves toward the center into a soft, warm, out-of-focus bokeh glow, like a shallow depth-of-field photograph, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text.`,
-  reverent: `A cinematic, luminous watercolor illustration for a religious ceremony invitation, deliberately free of any single religion's specific iconography, ${orientationPhrase}. Radiant dove-grey and soft gold light rays, rendered in richly detailed, sharp focus fanning in from the outer edges like early morning light through clouds, with delicate feather-light linework and a pair of doves in flight near the top corners. The scene dissolves toward the center into a soft, luminous, out-of-focus bokeh glow, like a shallow depth-of-field photograph, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text, no religious symbols.`,
-  generic: `A cinematic, modern illustration for a general celebration, in the style of a fine-art paper-cut collage with real dimension and shadow, ${orientationPhrase}. Soft terracotta, warm cream, and muted gold organic shapes -- overlapping arcs, leaves, and freeform curves -- rendered in sharp, richly detailed focus along the outer edges like a piece of gallery art. The scene dissolves toward the center into a soft, glowing, out-of-focus bokeh of warm cream light, like a shallow depth-of-field photograph, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text.`,
+  romantic: `A dreamy, softly-lit 3D rendered scene of an elegant floral wedding archway, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A refined mix of layered garden roses, ranunculus, and peonies in blush, ivory, and champagne, trailing eucalyptus, a delicate satin ribbon bow, a scattering of small pearls, and a pair of glossy 3D butterflies catching the light -- a curated, proper wedding-invitation-quality arrangement, densely filling only the outer edges in sharp, richly detailed 3D render. The scene dissolves toward the center into a soft, dreamy, out-of-focus blush-cream glow, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark serif text. No people, no calligraphy, no text. ${QUALITY_SUFFIX}`,
+  festive: `A vibrant 3D rendered scene of an elegant birthday celebration, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A curated mix of glossy 3D balloons, ribbon curls, a shower of confetti in coral, hot pink, marigold, and turquoise, a small wrapped gift box with a bow, and a lit birthday candle -- densely framing only the outer edges in sharp, richly detailed 3D render, with real sense of motion and energy. The scene dissolves toward the center into a soft, glowing, out-of-focus warm light, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text. ${QUALITY_SUFFIX}`,
+  professional: `A sleek, sophisticated 3D rendered scene for a corporate gala invitation, in the style of a luxury architectural render, ${orientationPhrase}. An ornate, richly detailed polished brushed-gold geometric frame with glossy 3D sunburst fan lines, layered chevrons, a delicate laurel motif, a crystal champagne coupe, and a fine fountain pen, rendered with realistic metallic and glass materials and dramatic studio lighting over a deep navy ground. An elegant 3D skyline silhouette glows along the bottom edge. The scene dissolves toward the center into a smooth, softly glowing dark navy glow, keeping the center two-thirds calm and uncluttered, suitable for overlaying light gold text. No people, no text. ${QUALITY_SUFFIX}`,
+  warm: `A warm, golden-hour 3D rendered scene of an elegant picnic gathering, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A curated mix of glossy 3D olive branches, wildflowers, sprigs of wheat, a woven picnic basket, a mason jar of lemonade, and a soft woven blanket -- densely framing only the outer edges in sharp, richly detailed 3D render, evoking a backyard gathering at golden hour. The scene dissolves toward the center into a soft, glowing, out-of-focus amber light, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text. ${QUALITY_SUFFIX}`,
+  holiday: `A cozy 3D rendered scene of an elegant holiday garland, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A curated mix of glossy 3D pine branches, string lights, gold ornaments in berry red and pine green, a wrapped gift box with a ribbon, a pinecone, and a scattering of glossy 3D snowflakes -- densely framing only the outer edges in sharp, richly detailed 3D render. The scene dissolves toward the center into a soft, warm, out-of-focus glow, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text. ${QUALITY_SUFFIX}`,
+  reverent: `A soft, luminous 3D rendered scene for a religious ceremony invitation, deliberately free of any single religion's specific iconography, in an elegant glossy 3D render style with soft studio lighting, ${orientationPhrase}. A curated mix of radiant dove-grey and soft gold 3D light rays fanning gently in from the outer edges like early morning light through clouds, delicate glossy 3D feather shapes, a pair of doves in flight near the top corners, and a single softly glowing candle. The scene dissolves toward the center into a soft, luminous, out-of-focus glow, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text, no religious symbols. ${QUALITY_SUFFIX}`,
+  generic: `An elegant 3D rendered scene of curated abstract organic shapes, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A refined mix of glossy 3D arcs, leaf forms, freeform curves, a delicate ribbon, and a small gift box in terracotta, cream, and muted gold, densely framing only the outer edges in sharp, richly detailed 3D render like a piece of gallery art. The scene dissolves toward the center into a soft, glowing, out-of-focus cream light, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text. ${QUALITY_SUFFIX}`,
 };
 
 const requested = process.argv.slice(2).filter((a) => a !== "--print");
@@ -74,6 +83,15 @@ for (const mood of moods) {
     console.error(`Unknown mood "${mood}" -- valid moods: ${Object.keys(PROMPTS).join(", ")}`);
     continue;
   }
+  // imageConfig.imageSize ("1K"/"2K"/"4K", per the SDK's own ImageConfig
+  // type) is NOT actually honored by gemini-2.5-flash-image -- confirmed
+  // live, passing "4K" returns the exact same 768x1344 pixels as "1K" for
+  // this same 9:16 shape. That field only applies to Google's separate
+  // Imagen models, which need Vertex AI -- the same reason this script
+  // uses generateContent instead of generateImages() at all (see git
+  // history/PR notes). Deliberately not passed here, so a future reader
+  // doesn't assume it's doing something it isn't; real resolution headroom
+  // would need an Imagen/Vertex integration, not a config tweak here.
   const res = await ai.models.generateContent({
     model: "gemini-2.5-flash-image",
     contents: prompt,

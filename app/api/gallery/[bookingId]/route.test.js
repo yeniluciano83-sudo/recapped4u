@@ -117,6 +117,21 @@ describe("GET /api/gallery/[bookingId]", () => {
     expect(json).not.toHaveProperty("photo_download_urls");
   });
 
+  it("reports has_teaser true only when the deliverable actually has one", async () => {
+    sb.mockResponse({ data: BOOKING, error: null });
+    sb.mockResponse({ data: { gallery_photo_keys: [], teaser_video_key: "deliverable/b1/teaser.mp4" }, error: null });
+    const withTeaser = await (await GET({}, { params: { bookingId: "b1" } })).json();
+    expect(withTeaser.deliverable.has_teaser).toBe(true);
+    // The raw key never leaves this route -- the bytes are only ever
+    // served through app/api/teaser/[bookingId]/route.js.
+    expect(withTeaser.deliverable).not.toHaveProperty("teaser_video_key");
+
+    sb.mockResponse({ data: BOOKING, error: null });
+    sb.mockResponse({ data: { gallery_photo_keys: [], teaser_video_key: null }, error: null });
+    const withoutTeaser = await (await GET({}, { params: { bookingId: "b1" } })).json();
+    expect(withoutTeaser.deliverable.has_teaser).toBe(false);
+  });
+
   it("leaves poster URLs null for a deliverable predating migration 027", async () => {
     sb.mockResponse({ data: BOOKING, error: null });
     sb.mockResponse({

@@ -12,6 +12,13 @@ const STATUS_FLOW = ["booked", "collecting", "analyzing", "editing", "delivered"
 const STATUS_LABEL = { booked: "Booked", collecting: "Collecting uploads", analyzing: "Analyzing photos", editing: "Editing", delivered: "Delivered", awaiting_roast_approval: "Awaiting Roast Reel approval", pending_confirmation: "Awaiting email confirmation", cancelled: "Cancelled" };
 const STATUS_COLOR = { booked: "#7A8B76", collecting: "#C97A3D", analyzing: "#C97A3D", editing: "#C97A3D", delivered: "#7A8B76", awaiting_roast_approval: "#C97A3D", pending_confirmation: "#8a857d", cancelled: "#8a857d" };
 const TIER_LABEL = { free: "Free", standard: "Highlight", premium: "Spotlight", keepsake: "Luxe" };
+// Keep in sync with the identical list in lib/cancelBooking.js -- can't
+// import that constant directly here, since that module also pulls in the
+// Stripe SDK (and reads STRIPE_SECRET_KEY at import time), which has no
+// business in a "use client" bundle. The real enforcement is server-side
+// regardless; this only gates whether the button shows up at all, so a
+// small amount of duplication is worth not shipping Stripe to the browser.
+const NOT_CANCELLABLE_STATUSES = ["analyzing", "editing", "awaiting_roast_approval", "delivered", "cancelled"];
 // Keep in sync with STYLE_LABELS in lib/email.js and STYLES in app/booking/page.jsx.
 const STYLE_LABEL = { cinematic: "Cinematic", upbeat: "Upbeat", documentary: "Documentary", retro: "Nostalgic / Retro", highlight: "Highlight Reel" };
 // Free is already $0 -- nothing to quote a custom price against.
@@ -202,6 +209,34 @@ export default function Dashboard() {
     }
   };
 
+  // Not optimistic, unlike updateBooking/updateStatus above -- cancelling
+  // can genuinely fail for a legitimate reason (the booking started
+  // processing in the gap since this page loaded) and can trigger a real
+  // Stripe refund, so the UI waits for the server's actual answer instead
+  // of flipping the status first and rolling back. Same underlying route
+  // as the host's own cancel link -- see lib/cancelBooking.js.
+  const cancelBookingAction = async (id) => {
+    try {
+      const res = await fetch(`/api/bookings/${id}/cancel`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Request failed with status ${res.status}`);
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: "cancelled" } : b)));
+      if (selected?.id === id) setSelected((s) => ({ ...s, status: "cancelled" }));
+      showToast(
+        data.alreadyCancelled
+          ? "This event was already cancelled."
+          : data.refunded
+          ? `Event cancelled and ${data.amountRefunded} refunded.`
+          : "Event cancelled."
+      );
+      return true;
+    } catch (err) {
+      console.error("Failed to cancel booking", err);
+      showToast(err.message || "Failed to cancel the event. Please try again.");
+      return false;
+    }
+  };
+
   const filtered = bookings
     .filter((b) => (filter === "all" ? true : b.status === filter))
     .filter((b) => (b.host_name || "").toLowerCase().includes(query.toLowerCase()) || (b.event_type || "").toLowerCase().includes(query.toLowerCase()))
@@ -295,7 +330,7 @@ export default function Dashboard() {
       </div>
 
       {selected && (
-        <DetailPanel booking={selected} analysisFailures={analysisFailures} onUpdateStatus={updateStatus} onUpdateBooking={updateBooking} onClose={() => setSelected(null)} />
+        <DetailPanel booking={selected} analysisFailures={analysisFailures} onUpdateStatus={updateStatus} onUpdateBooking={updateBooking} onCancelBooking={cancelBookingAction} onClose={() => setSelected(null)} />
       )}
 
       {showQuoteForm && (
@@ -402,10 +437,24 @@ export default function Dashboard() {
 
 const inputStyle = fieldStyle({ size: "md" });
 
-function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBooking, onClose }) {
+function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBooking, onCancelBooking, onClose }) {
   const containerRef = useRef(null);
   const titleId = useId();
   useModalDialog(containerRef, onClose);
+
+  // Inline confirm, same pattern as the three editors below (click once to
+  // reveal, click again to actually commit) -- deliberately not a native
+  // confirm() dialog (this app replaced those with styled UI everywhere
+  // else) and deliberately not optimistic, since a real Stripe refund can
+  // ride along with this one.
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const confirmCancel = async () => {
+    setCancelling(true);
+    const ok = await onCancelBooking(booking.id);
+    setCancelling(false);
+    if (ok) setConfirmingCancel(false);
+  };
 
   // Three separate editors, not one generic "edit any field" form -- each
   // group of fields has its own real rules (a package change is the
@@ -638,6 +687,32 @@ function DetailPanel({ booking, analysisFailures, onUpdateStatus, onUpdateBookin
               style={{ fontSize: "13px", color: "#C97A3D", fontWeight: 600, textDecoration: "none" }}>
               View delivered gallery &amp; recap →
             </a>
+          </div>
+        )}
+        {!NOT_CANCELLABLE_STATUSES.includes(booking.status) && (
+          <div style={{ padding: "10px 0", borderBottom: "1px solid #E4DED2" }}>
+            {confirmingCancel ? (
+              <div>
+                <p style={{ fontSize: "13px", color: "#4a4642", margin: "0 0 10px" }}>
+                  Cancel this event{booking.tier !== "free" && booking.stripe_payment_status === "paid" ? " and refund it if it's still 24+ hours out" : ""}? This can't be undone from here.
+                </p>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={confirmCancel} disabled={cancelling}
+                    style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#B3402A", color: "#FFFFFF", fontSize: "13px", fontWeight: 700, cursor: cancelling ? "default" : "pointer", opacity: cancelling ? 0.7 : 1 }}>
+                    {cancelling ? "Cancelling…" : "Yes, cancel this event"}
+                  </button>
+                  <button onClick={() => setConfirmingCancel(false)} disabled={cancelling}
+                    style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #E4DED2", background: "#FFFFFF", color: "#4a4642", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                    Never mind
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmingCancel(true)}
+                style={{ background: "none", border: "1px solid #E4DED2", borderRadius: "8px", padding: "6px 12px", fontSize: "12px", fontWeight: 600, color: "#B3402A", cursor: "pointer" }}>
+                Cancel event
+              </button>
+            )}
           </div>
         )}
         {editingStyle ? (

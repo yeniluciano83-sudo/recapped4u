@@ -136,7 +136,8 @@ node scripts/check-email-auth.js
 ## File map
 
 - `app/booking/page.jsx` — client-facing booking form
-- `app/qr/[slug]/page.jsx` — guest upload page (QR code destination)
+- `app/qr/[slug]/page.jsx` — host's share/management page (QR code, digital invite, RSVP summary, uploads)
+- `app/event/[eventId]/EventPageClient.jsx` — guest upload + RSVP page (the actual QR code/invite link destination)
 - `app/api/qrcode/[slug]/route.js` — generates each event's QR code
 - `app/dashboard/page.jsx` — internal event tracker (gated by `DASHBOARD_PASSWORD`)
 - `app/gallery/[bookingId]/page.jsx` — final client delivery page

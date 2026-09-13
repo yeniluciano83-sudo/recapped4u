@@ -6,10 +6,21 @@ import { generateConfirmToken } from "@/lib/confirmToken";
 import { TIER_PRICES, SOCIAL_CUT_ELIGIBLE_TIERS, isRoastLevelSelectable, roastAddonPriceCents, defaultGalleryTemplate } from "@/lib/pricing";
 import { canProceedFromStyleStep } from "@/lib/bookingFormValidation";
 import { captureError } from "@/lib/sentry";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(req) {
+  // Public and unauthenticated by design (anyone can book without an
+  // account) -- but that also means anyone can script a flood of these,
+  // each one writing a real row to `bookings` and, for paid tiers, opening
+  // a real Stripe Checkout session. Every other route in this app already
+  // rate-limits itself; this one just hadn't been given a limit yet.
+  const { success } = await checkRateLimit("bookings-create", req, { requests: 5, windowSeconds: 60 });
+  if (!success) {
+    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+  }
+
   try {
     const body = await req.json();
     const { email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic, venue, eventTime } = body;

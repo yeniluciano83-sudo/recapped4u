@@ -52,6 +52,7 @@ export default function PrivacyPage() {
             <li>Resend — sending booking, reminder, and delivery emails</li>
             <li>Cloudflare — storing uploaded photos</li>
             <li>Supabase — hosting the database that tracks bookings and uploads</li>
+            <li>Anthropic — analyzing uploaded photos to pick recap highlights, and to write Roast Reel commentary when a host adds it</li>
           </ul>
           <p style={{ marginTop: 8 }}>None of these providers get to use your data for their own purposes — they only process it on our behalf.</p>
         </Section>

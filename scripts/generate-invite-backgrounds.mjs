@@ -12,13 +12,14 @@
 //   touching the rest). --print switches to the printed card's landscape
 //   shape and output directory instead of the digital invite's 9:16.
 //
-// Each prompt asks for an illustration with its outer border decorated
-// and its center two-thirds left clear -- that clear center is where
-// lib/inviteCard.js draws the event details, tagline, and QR code, so a
-// redo should keep that same "framed border, clear middle" shape or the
-// text will end up overlapping the artwork. The exact aspect ratio and
-// orientation come from the config below, not the prompt text, so the
-// same wording works for both variants.
+// Each prompt confines its motif to a thin strip along one edge (left for
+// the digital 9:16 card, bottom for the print 3:2 card -- see marginPhrase
+// below), matching the one edge lib/inviteCard.js's own text scrim and QR
+// box structurally never reach into, whatever the copy length. A redo
+// should keep pointing at that same edge or the text/QR will start
+// overlapping the artwork again. The exact aspect ratio and orientation
+// come from the config below, not the prompt text, so the same wording
+// works for both variants.
 import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
 import fs from "fs";
@@ -35,41 +36,71 @@ const outDir = path.join(process.cwd(), "lib", "assets", isPrint ? "invite-backg
 const aspectRatio = isPrint ? "3:2" : "9:16";
 const orientationPhrase = isPrint ? "horizontal landscape format" : "vertical portrait format";
 
-// All seven moods now render as a 3D scene instead of the flat painterly
-// gouache used before -- but the flavor of "3D" splits in two. The five
-// more playful/personal occasions (romantic, festive, warm, holiday,
-// generic) get a cute glossy clay-render look, like a modern Pixar-short
-// still. Corporate and religious ceremony keep the same dimensionality
-// but in a more restrained register -- polished metallic/glass materials
-// and dramatic studio lighting, nothing "cute" -- since a gala or a
-// ceremony invitation calling for genuine formality. The card's own copy
-// stays split the same way (see NON_ITALIC_MOODS in lib/inviteCard.js,
-// which this file's comments call out by hand to keep in sync): only
-// professional and reverent keep upright, formal type -- the other five
-// go italic. Art style and type style move independently on this split;
-// only professional/reverent are excluded from italics, not from 3D.
+// Every mood now shares one visual language: a smooth creamy-white
+// cardstock background with a single small blind-emboss motif -- pressed
+// into the paper itself, not printed in color, so it reads in the paper's
+// own tone and is revealed only by soft raking light and shadow. Replaces
+// an earlier, louder pass at colorful 3D clay-render scenes (one per
+// mood, richly saturated, several objects each) -- simple, tonal, and
+// restrained reads as more elegant for a keepsake invitation than a busy
+// colorful illustration, and it also means every mood can share the exact
+// same creamy base rather than each getting its own background color, with
+// the one spot of real color left for `accent`/`text` in lib/inviteMoods.js
+// (the event details themselves) to carry the personality instead.
 //
-// Every prompt ends with the same QUALITY_SUFFIX (4K/cinematic color grade
-// language) rather than repeating it per mood, and imageConfig.imageSize
-// actually requests 4K generation -- confirmed live that without it the
-// API defaults to "1K" (768x1344 for 9:16), which meant every card was
-// quietly upscaling a sub-1080px master to fill its own 1080x1920 canvas.
+// Deliberately one or two objects per scene, not several -- the "elegant,
+// diversify" pass that preceded this style asked for denser, multi-object
+// compositions, which suited saturated color but reads as clutter once
+// everything is a single tone; restraint is the whole point of an emboss.
+const STYLE_SUFFIX = "Photographed macro on smooth creamy ivory cardstock paper, in a single-tone blind-emboss / letterpress relief -- the shapes are pressed into the paper itself, not printed in any ink or color, so every raised element reads in the exact same soft ivory-white tone as the paper around it, revealed only by soft raking studio light casting delicate, precise shadows and highlights along each raised edge. Extremely elegant, minimal, and sophisticated, like a luxury stationer's foil-free emboss. No ink, no color, no text, no people, no religious symbols.";
+// "Gathered in one corner" (an earlier pass's wording) still let Gemini
+// render a motif large enough to run behind the QR code and the text
+// scrim -- confirmed live on a real card. A single thin edge strip (the
+// pass after that) fixed the overlap but read as a lot of bare, unused
+// cardstock above and below the card and QR -- confirmed live, then
+// confirmed against lib/inviteCard.js's own layout math: the digital
+// card's content column (text scrim + centered QR box) always stays
+// within its own left/right padding AND leaves real top/bottom margin
+// once that column is vertically centered, so the safe area is actually
+// an open three-sided border (left, top, and bottom), not just one edge
+// -- deliberately left open on the right for an asymmetric, picture-
+// frame-with-one-side-missing look rather than a fully boxed-in border.
+// The print card's own safe area is the same three sides, just
+// proportioned differently: its content spans nearly the full width (a
+// text column plus a QR column), so its left band has to stay thin, while
+// vertical centering leaves real room top and bottom.
 //
-// Each scene mixes at least three distinct kinds of object rather than
-// one motif repeated (e.g. romantic isn't "just roses" -- it's flowers
-// plus a ribbon plus butterflies plus candlelight), and asks explicitly
-// for elegance/restraint on top of density -- confirmed live that "dense"
-// alone can read as cluttered without also asking for a curated,
-// gallery-quality arrangement rather than a pile of the same object.
-const QUALITY_SUFFIX = "Ultra-detailed 4K render, rich cinematic color grading, vivid saturated colors, crisp sharp detail throughout, professional studio-quality lighting, elegant and tasteful curated composition -- a refined arrangement of varied elements, not one motif repeated.";
+// A single continuous border (the pass after that) fixed the coverage
+// complaint but pushed Gemini toward an abstract repeating lace/vine
+// pattern instead of the actual named objects in each mood's own prompt
+// (a rose, a bow, doves) -- confirmed live, the border read as generic
+// scrollwork instead of anything you could name. Two separate, large,
+// clearly-detailed corner clusters (rather than one thin motif smeared
+// along the whole edge) is what got real recognizable relief detail back
+// while still keeping both clusters inside the same safe corners.
+// "Optionally linked by a thin line" (the pass after that) was meant to
+// read as a hairline stem, but Gemini consistently rendered it as a
+// full-height ruled line running the entire left edge -- confirmed live,
+// it looked like a stray printing artifact rather than a design choice.
+// Explicitly ruling it out (not just leaving it "optional") is what
+// actually stopped it from appearing.
+const marginPhrase = isPrint
+  ? "positioned as two separate, clearly detailed clusters of these objects -- rendered large enough to show real, crisp relief detail (individual petals, ribbon folds, feather barbs, icing texture, etc, whichever apply), not simplified into a repeating abstract pattern. One cluster sits in the top-left corner of the frame and the other in the bottom-left corner, each confined within roughly the outer 20% of the frame's height and 10% of its width at that corner. The two clusters are NOT connected by any line, vine, stem, or other element of any kind -- the space between them stays completely bare. The entire remaining frame -- the large center and right portion -- must stay completely bare, smooth, softly lit blank cardstock with no motif, texture, or design of any kind"
+  : "positioned as two separate, clearly detailed clusters of these objects -- rendered large enough to show real, crisp relief detail (individual petals, ribbon folds, feather barbs, icing texture, etc, whichever apply), not simplified into a repeating abstract pattern. One cluster sits in the top-left corner of the frame and the other in the bottom-left corner, each confined within roughly the outer 15% of the frame's width and 12% of its height at that corner. The two clusters are NOT connected by any line, vine, stem, or other element of any kind -- the space between them stays completely bare. The entire remaining frame -- the large center and right portion -- must stay completely bare, smooth, softly lit blank cardstock with no motif, texture, or design of any kind";
 const PROMPTS = {
-  romantic: `A dreamy, softly-lit 3D rendered scene of an elegant floral wedding archway, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A refined mix of layered garden roses, ranunculus, and peonies in blush, ivory, and champagne, trailing eucalyptus, a delicate satin ribbon bow, a scattering of small pearls, and a pair of glossy 3D butterflies catching the light -- a curated, proper wedding-invitation-quality arrangement, densely filling only the outer edges in sharp, richly detailed 3D render. The scene dissolves toward the center into a soft, dreamy, out-of-focus blush-cream glow, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark serif text. No people, no calligraphy, no text. ${QUALITY_SUFFIX}`,
-  festive: `A vibrant 3D rendered scene of an elegant birthday celebration, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A curated mix of glossy 3D balloons, ribbon curls, a shower of confetti in coral, hot pink, marigold, and turquoise, a small wrapped gift box with a bow, and a lit birthday candle -- densely framing only the outer edges in sharp, richly detailed 3D render, with real sense of motion and energy. The scene dissolves toward the center into a soft, glowing, out-of-focus warm light, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text. ${QUALITY_SUFFIX}`,
-  professional: `A sleek, sophisticated 3D rendered scene for a corporate gala invitation, in the style of a luxury architectural render, ${orientationPhrase}. An ornate, richly detailed polished brushed-gold geometric frame with glossy 3D sunburst fan lines, layered chevrons, a delicate laurel motif, a crystal champagne coupe, and a fine fountain pen, rendered with realistic metallic and glass materials and dramatic studio lighting over a deep navy ground. An elegant 3D skyline silhouette glows along the bottom edge. The scene dissolves toward the center into a smooth, softly glowing dark navy glow, keeping the center two-thirds calm and uncluttered, suitable for overlaying light gold text. No people, no text. ${QUALITY_SUFFIX}`,
-  warm: `A warm, golden-hour 3D rendered scene of an elegant picnic gathering, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A curated mix of glossy 3D olive branches, wildflowers, sprigs of wheat, a woven picnic basket, a mason jar of lemonade, and a soft woven blanket -- densely framing only the outer edges in sharp, richly detailed 3D render, evoking a backyard gathering at golden hour. The scene dissolves toward the center into a soft, glowing, out-of-focus amber light, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text. ${QUALITY_SUFFIX}`,
-  holiday: `A cozy 3D rendered scene of an elegant holiday garland, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A curated mix of glossy 3D pine branches, string lights, gold ornaments in berry red and pine green, a wrapped gift box with a ribbon, a pinecone, and a scattering of glossy 3D snowflakes -- densely framing only the outer edges in sharp, richly detailed 3D render. The scene dissolves toward the center into a soft, warm, out-of-focus glow, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text. ${QUALITY_SUFFIX}`,
-  reverent: `A soft, luminous 3D rendered scene for a religious ceremony invitation, deliberately free of any single religion's specific iconography, in an elegant glossy 3D render style with soft studio lighting, ${orientationPhrase}. A curated mix of radiant dove-grey and soft gold 3D light rays fanning gently in from the outer edges like early morning light through clouds, delicate glossy 3D feather shapes, a pair of doves in flight near the top corners, and a single softly glowing candle. The scene dissolves toward the center into a soft, luminous, out-of-focus glow, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text, no religious symbols. ${QUALITY_SUFFIX}`,
-  generic: `An elegant 3D rendered scene of curated abstract organic shapes, in a cute glossy clay-render style (like a modern Pixar short), warm studio lighting and soft shadows, ${orientationPhrase}. A refined mix of glossy 3D arcs, leaf forms, freeform curves, a delicate ribbon, and a small gift box in terracotta, cream, and muted gold, densely framing only the outer edges in sharp, richly detailed 3D render like a piece of gallery art. The scene dissolves toward the center into a soft, glowing, out-of-focus cream light, keeping the center two-thirds soft and uncluttered, suitable for overlaying dark text. No people, no text. ${QUALITY_SUFFIX}`,
+  romantic: `A blind-emboss relief of a single delicate garden rose in full bloom, a neatly tied ribbon bow, and a pair of doves in flight, pressed into smooth creamy cardstock, ${orientationPhrase}. The motif is ${marginPhrase}. ${STYLE_SUFFIX}`,
+  // Birthday reads as "someone's big day" -- a cake, not a generic party.
+  birthday: `A blind-emboss relief of a small cluster of round balloons floating beside a simple tiered celebration cake with lit candles, pressed into smooth creamy cardstock, ${orientationPhrase}. The motif is ${marginPhrase}. ${STYLE_SUFFIX}`,
+  // The other half of the old "festive" mood -- Party itself plus
+  // retirement/graduation/bachelor(ette) occasions with no specific
+  // milestone object of their own. Graffiti gives it a distinct, more
+  // playful/urban identity from birthday's cake.
+  party: `A blind-emboss relief of a small cluster of round balloons beside a playful abstract graffiti-style paint-drip splash, pressed into smooth creamy cardstock, ${orientationPhrase}. The motif is ${marginPhrase}. ${STYLE_SUFFIX}`,
+  professional: `A blind-emboss relief of a fine geometric sunburst frame beside a single delicate laurel sprig, pressed into smooth creamy cardstock, ${orientationPhrase}. The motif is ${marginPhrase}. ${STYLE_SUFFIX}`,
+  warm: `A blind-emboss relief of a single olive branch sprig beside a small woven picnic basket, pressed into smooth creamy cardstock, ${orientationPhrase}. The motif is ${marginPhrase}. ${STYLE_SUFFIX}`,
+  holiday: `A blind-emboss relief of a single pine branch sprig beside a small wrapped gift box tied with a ribbon, pressed into smooth creamy cardstock, ${orientationPhrase}. The motif is ${marginPhrase}. ${STYLE_SUFFIX}`,
+  reverent: `A blind-emboss relief of a pair of doves in flight beside a soft radiating sunburst of light rays, deliberately free of any single religion's specific iconography, pressed into smooth creamy cardstock, ${orientationPhrase}. The motif is ${marginPhrase}. ${STYLE_SUFFIX}`,
+  generic: `A blind-emboss relief of a small cluster of soft abstract organic arcs beside a delicate ribbon, pressed into smooth creamy cardstock, ${orientationPhrase}. The motif is ${marginPhrase}. ${STYLE_SUFFIX}`,
 };
 
 const requested = process.argv.slice(2).filter((a) => a !== "--print");

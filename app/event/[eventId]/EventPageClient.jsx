@@ -44,6 +44,35 @@ function clientUploadIdFor(file) {
   return `${file.name}_${file.size}_${file.lastModified}`;
 }
 
+// Remembers the name a guest actually used on this device, so re-opening
+// the same invite link later (most often to change an RSVP -- see
+// handleRsvp's own comment on why a differently-typed name creates a
+// second, separate RSVP row instead of updating the first) pre-fills the
+// same spelling instead of leaving it blank and inviting a new one.
+// Per-event (not global) since the same phone/browser can hold links to
+// several different events. Deliberately NOT used to auto-merge or
+// dedupe on the server -- two real guests can share a first name, so
+// guessing there would risk silently overwriting one person's actual
+// answer with someone else's; this only ever prefills a text field the
+// guest still has to submit themselves.
+function guestNameStorageKey(eventId) {
+  return `recapped:guest-name:${eventId}`;
+}
+
+function loadStoredGuestName(eventId) {
+  try {
+    return localStorage.getItem(guestNameStorageKey(eventId)) || "";
+  } catch {
+    return "";
+  }
+}
+
+function saveGuestName(eventId, name) {
+  try {
+    if (name) localStorage.setItem(guestNameStorageKey(eventId), name);
+  } catch {}
+}
+
 function formatDate(dateStr) {
   if (!dateStr) return "";
   try { return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }); }
@@ -157,6 +186,17 @@ export default function EventUploadPage() {
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
   const [rsvpError, setRsvpError] = useState(null);
 
+  // Runs once eventId is known -- pre-fills the name field from whatever
+  // this device last used on this same event (see guestNameStorageKey's
+  // own comment above), so a guest returning to change their RSVP doesn't
+  // have to retype their name, or risk retyping it slightly differently
+  // and creating a second RSVP row.
+  useEffect(() => {
+    if (!eventId) return;
+    const stored = loadStoredGuestName(eventId);
+    if (stored) setUploaderName(stored);
+  }, [eventId]);
+
   const loadEventInfo = useCallback(async () => {
     try {
       const res = await fetch(`/api/events/${eventId}`);
@@ -257,6 +297,7 @@ export default function EventUploadPage() {
       });
       if (!res.ok) throw new Error("RSVP failed");
       setRsvpChoice(response);
+      saveGuestName(eventId, uploaderName.trim());
     } catch (err) {
       setRsvpError("Couldn't save your RSVP — please try again.");
     } finally {
@@ -297,6 +338,7 @@ export default function EventUploadPage() {
     }
 
     setUploadCount((c) => c + uploadedCount);
+    if (uploadedCount > 0 && uploaderName.trim()) saveGuestName(eventId, uploaderName.trim());
 
     // Best-effort telemetry, not part of the guest's flow -- a photo that
     // failed even after every retry means something's actually wrong

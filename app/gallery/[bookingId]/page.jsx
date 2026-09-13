@@ -33,6 +33,7 @@ export default function GalleryDeliveryPage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [sharingRecap, setSharingRecap] = useState(false);
   // Separate from shareCopied so the video toolbar's confirmation doesn't also
   // light up the "Share this gallery" button further down the page.
   const [videoShareCopied, setVideoShareCopied] = useState(false);
@@ -163,6 +164,44 @@ export default function GalleryDeliveryPage() {
       setTimeout(() => setVideoShareCopied(false), 2500);
     } catch (err) {
       console.error("Failed to copy video link", err);
+    }
+  };
+
+  // Shares an actual picture -- the finished video's own poster frame with
+  // the event name and a QR/link to this gallery baked in (see
+  // lib/recapCard.js) -- the same reveal-card idea as the host's pre-event
+  // "Share your event's digital invite" (app/qr/[slug]/page.jsx), for the
+  // delivery side instead. handleShare above already covers a plain link
+  // share; this is the richer alternative for a host who wants something
+  // that actually shows the result, not just a URL.
+  //
+  // Same file-share mechanics as handleShareInvite: fetch the image,
+  // attach it as a file, and carry the gallery link in `text` rather than
+  // the separate `url` field, since a receiving app is free to drop `url`
+  // once `files` is also present (confirmed live building the invite's own
+  // share flow -- see that function's comment for the fuller story).
+  const handleShareRecap = async () => {
+    setSharingRecap(true);
+    try {
+      const res = await fetch(`/api/recap-card/${bookingId}`);
+      if (!res.ok) throw new Error("Failed to load recap card");
+      const blob = await res.blob();
+      const file = new File([blob], `recapped-recap-${bookingId}.jpg`, { type: "image/jpeg" });
+      const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/gallery/${bookingId}` : "";
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: eventName, text: `${eventName}'s recap is ready! Watch the video and download every photo: ${shareUrl}` });
+      } else {
+        // Same reasoning as handleShareInvite's own fallback -- open the
+        // card in a new tab (visible confirmation it landed) rather than a
+        // silent download, for any browser with no file-share sheet.
+        const objectUrl = URL.createObjectURL(blob);
+        window.open(objectUrl, "_blank", "noopener,noreferrer");
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+      }
+    } catch (err) {
+      if (err?.name !== "AbortError") console.error("Recap card share failed", err);
+    } finally {
+      setSharingRecap(false);
     }
   };
 
@@ -535,6 +574,12 @@ export default function GalleryDeliveryPage() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {!selectMode && (
+            <button onClick={handleShareRecap} disabled={sharingRecap}
+              style={{ padding: "14px", borderRadius: "10px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "14px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: sharingRecap ? "default" : "pointer", opacity: sharingRecap ? 0.7 : 1 }}>
+              <ImageIcon size={16} /> {sharingRecap ? "Preparing your recap card…" : "Share your finished recap"}
+            </button>
+          )}
           <div style={{ display: "flex", gap: "10px" }}>
             {selectMode ? (
               <>

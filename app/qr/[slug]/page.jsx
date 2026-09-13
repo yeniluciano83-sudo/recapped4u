@@ -509,7 +509,7 @@ export default function QrSharePage() {
               disabled={sendingInvite || !guestEmailsInput.trim()}
               style={{ ...secondaryBtnStyle, width: "100%", opacity: sendingInvite || !guestEmailsInput.trim() ? 0.6 : 1 }}
             >
-              <Mail size={16} /> {sendingInvite ? "Sending…" : "Email invite"}
+              <Mail size={16} /> {sendingInvite ? "Sending…" : "Email invite to guests"}
             </button>
           </div>
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { shadow } from "@/components/ui";
 import { useParams } from "next/navigation";
 import { Upload, Check, Loader2, AlertTriangle } from "lucide-react";
@@ -142,6 +142,11 @@ export default function EventUploadPage() {
   const [files, setFiles] = useState([]);
   const [thumbnails, setThumbnails] = useState([]);
   const [uploaderName, setUploaderName] = useState("");
+  // The name input sits lower on the page than the RSVP buttons (it's
+  // shared with photo uploads, further down) -- this lets handleRsvp
+  // scroll/focus it into view when a guest taps Yes/Maybe/No before
+  // filling it in, rather than just refusing silently.
+  const nameInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
   const [justUploaded, setJustUploaded] = useState(false);
@@ -227,12 +232,21 @@ export default function EventUploadPage() {
   };
 
   // Reuses whatever's currently in the name field below (shared with photo
-  // uploads) rather than asking for a name twice -- falls back to an
-  // anonymous "Guest" RSVP if it's still empty, same fallback handleUpload
-  // uses. A guest can tap a different button afterward to change their
-  // mind; the server upserts on (booking, name) for named guests so that
-  // doesn't create a second row (see migration 038).
+  // uploads) rather than asking for a name twice. Unlike handleUpload, this
+  // does NOT fall back to an anonymous "Guest" RSVP -- an RSVP is a specific
+  // person's answer the host reads by name (handleUpload's anonymous photo
+  // fallback doesn't carry the same expectation), so an empty name here
+  // just points the guest at the field below instead of submitting. A guest
+  // can tap a different button afterward to change their mind; the server
+  // upserts on (booking, name) so that doesn't create a second row (see
+  // migration 038).
   const handleRsvp = async (response) => {
+    if (!uploaderName.trim()) {
+      setRsvpError("Please enter your name below so we know who's coming.");
+      nameInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      nameInputRef.current?.focus();
+      return;
+    }
     setRsvpSubmitting(true);
     setRsvpError(null);
     try {
@@ -394,6 +408,23 @@ export default function EventUploadPage() {
           )}
           {!isCancelled && (
             <div style={{ marginTop: "20px" }}>
+              {/* Lives here, not just down by the photo upload field, so it's
+                  always on screen when a guest can RSVP -- the upload field
+                  below only renders while uploads are open, but RSVP stays
+                  available even once they're closed/delivered (see the
+                  isDelivered/isProcessing/uploadsClosed branch further
+                  down), and handleRsvp needs a name it can actually reach.
+                  Shares uploaderName with that upload field either way, so
+                  a guest who types it here doesn't get asked again below. */}
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={uploaderName}
+                onChange={(e) => setUploaderName(e.target.value)}
+                placeholder="Your name"
+                aria-label="Your name"
+                style={{ width: "100%", maxWidth: "220px", padding: "10px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "14px", marginBottom: "14px", boxSizing: "border-box", textAlign: "center" }}
+              />
               <p style={{ fontSize: "13.5px", fontWeight: 600, color: "#211F1D", marginBottom: "10px" }}>Will you be there?</p>
               <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
                 {RSVP_OPTIONS.map((opt) => (
@@ -467,10 +498,13 @@ export default function EventUploadPage() {
                   <button onClick={() => window.location.reload()} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: "8px", border: "1px solid #C97A3D", background: "#FFFFFF", color: "#C97A3D", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>Refresh</button>
                 </div>
               )}
-              <label htmlFor="name-input" style={{ fontSize: "13px", color: "#4a4642", display: "block", marginBottom: "6px" }}>Your name (so we know who to thank)</label>
-              <input id="name-input" type="text" value={uploaderName} onChange={(e) => setUploaderName(e.target.value)} placeholder="e.g. Jordan"
-                style={{ width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid #D8CFC0", background: "#FFFFFF", color: "#211F1D", fontSize: "15px", marginBottom: "20px", boxSizing: "border-box" }} />
-
+              {/* No separate name field here any more -- it's shared state
+                  with the one up by the RSVP buttons (always on screen,
+                  since this whole upload card is hidden once uploads close/
+                  deliver), so a guest who already RSVPed doesn't get asked
+                  for their name twice. handleUpload still falls back to
+                  "Guest" for anyone who skips straight to uploading without
+                  RSVPing first. */}
               <label htmlFor="file-input" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "32px 16px", borderRadius: "12px", border: "1.5px dashed #C9BFA9", cursor: "pointer", textAlign: "center" }}>
                 {/* Same instant-camera sticker used on the host's own QR
                     page for the identical "straight from your camera roll"

@@ -141,10 +141,25 @@ async function processCollectingBookings(failures) {
       // manually cancelled). Checking first turns that into one clear,
       // actionable line instead of a generic crash the alert email gives
       // no way to tell apart from a real bug.
-      const { count: uploadCount } = await supabase
+      // A failed count query (confirmed live: a transient Supabase Gateway
+      // Timeout) must NOT be treated the same as a confirmed zero -- that
+      // silently fired this exact "likely abandoned" alert for a real,
+      // paying Luxe booking with 58 real uploads sitting mid-render, just
+      // because this one query happened to hit the timeout. Logged as an
+      // ordinary per-booking failure (not thrown) so one booking's
+      // transient DB blip doesn't also abort every other booking still
+      // left in this same run's loop.
+      const { count: uploadCount, error: uploadCountError } = await supabase
         .from("uploads")
         .select("id", { count: "exact", head: true })
         .eq("booking_id", booking.id);
+
+      if (uploadCountError) {
+        console.error(`Failed to check upload count for booking ${booking.id}:`, uploadCountError.message);
+        captureError(uploadCountError, { tags: { script: "poll-and-recap", step: "check-upload-count" }, extra: { bookingId: booking.id } });
+        failures.push({ bookingId: booking.id, error: `Couldn't check upload count (${uploadCountError.message}) -- will retry next run.` });
+        continue;
+      }
 
       if (!uploadCount) {
         console.log(`\nBooking ${booking.id} has 0 uploads and is past its deadline -- skipping (likely abandoned).`);

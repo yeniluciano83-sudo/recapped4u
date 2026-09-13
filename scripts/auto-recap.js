@@ -1252,31 +1252,24 @@ async function renderOneSocialCut(bookingId, cutIndex, socialKeys, spec, tmpDir)
     fs.writeFileSync(lp, await downloadFromR2(key));
     socialLocalPaths.push(lp);
   }
-  // Same blurred backdrop for both bookends so a looped replay lands on a
-  // matching frame (see the original comment).
-  const cardBg = await buildCardBackground(fs.readFileSync(socialLocalPaths[0]));
-  const introPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-intro.jpg`);
-  const outroPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-outro.jpg`);
-  fs.writeFileSync(introPath, cardBg);
-  fs.writeFileSync(outroPath, cardBg);
-  const withCards = [introPath, ...socialLocalPaths, outroPath];
-  const slotSeconds = (TARGET_SOCIAL_SECONDS + (withCards.length - 1) * socialStyleConfig.transitionSeconds) / withCards.length;
-  const cutOverlayLines = [
-    { text: introOverlayText(spec.hostName, spec.eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
-    ...buildOverlayLines(socialLocalPaths),
-    { text: outroOverlayText(spec.hostName, spec.eventType), position: "center", fontColor: "white", boxColor: "black@0.45" },
-  ];
+  // No intro/outro title cards on a social cut, unlike the full video --
+  // removed by request. A social cut is meant to autoplay straight into
+  // content on Reels/TikTok/Shorts; a title card ate into its already-
+  // short ~75s runtime before showing anything a viewer actually opened
+  // the clip to see. slotSeconds now spreads the full target duration
+  // across just the real photos instead of across photos-plus-two-cards.
+  const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * socialStyleConfig.transitionSeconds) / socialLocalPaths.length;
   const outPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
   const socialMusicPath = spec.socialNoMusic ? null : STYLE_MUSIC[spec.socialStyle || spec.style] || STYLE_MUSIC.cinematic;
-  await assembleSlideshow(withCards, [], outPath, socialMusicPath, null, slotSeconds, {
+  await assembleSlideshow(socialLocalPaths, [], outPath, socialMusicPath, null, slotSeconds, {
     ...socialStyleConfig,
     ...SOCIAL_CUT_OUTPUT,
-    overlayLines: cutOverlayLines,
+    overlayLines: buildOverlayLines(socialLocalPaths),
     kenBurns: true,
   });
   await uploadToR2(`deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`, fs.readFileSync(outPath), "video/mp4");
-  // Default (1.5s) lands inside the intro card -- see the full-video
-  // uploadPosterFor call above for why this used to skip past it.
+  // No intro card to skip past any more -- the default 1.5s now lands
+  // inside the first real photo, which is the cut's actual opening frame.
   await uploadPosterFor(outPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`);
 }
 

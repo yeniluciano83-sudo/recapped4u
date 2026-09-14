@@ -295,12 +295,27 @@ export default function HomePage() {
           there's no flash of an unstretched or zero-height column first. */}
       {pillarSpan != null && (
         <>
-          <div className="pillar-flank pillar-flank-left" aria-hidden="true" style={{ height: pillarSpan }}>
+          {/* The entablature -- the horizontal beam a real pair of Roman
+              columns actually supports, closing the top of the frame the
+              two flanks were otherwise just standing in open on their own.
+              Same generation + recolor technique as the columns, cropped to
+              one repeatable dentil-row tile and tiled edge to edge (a
+              single fixed-width image can't span every viewport width the
+              way the shaft's vertical tile spans every page height).
+              Starts at HEADER_H (67px, the real measured height of the
+              sticky nav), not document y:0 -- confirmed live that at y:0 it
+              rendered directly behind the sticky header (z-index 40 over
+              its own 1) and was invisible above the fold. ENTABLATURE_H
+              (70px) after that is carved out of the top of the columns'
+              own span below, not added on top of it -- the capitals start
+              right where this beam ends. */}
+          <div className="entablature-bar" aria-hidden="true" />
+          <div className="pillar-flank pillar-flank-left" aria-hidden="true" style={{ height: Math.max(pillarSpan - 67 - 70, 0) }}>
             <img src="/images/pillar-capital.jpg" alt="" className="pillar-cap" />
             <div className="pillar-shaft-fill" />
             <img src="/images/pillar-base.jpg" alt="" className="pillar-base" />
           </div>
-          <div className="pillar-flank pillar-flank-right" aria-hidden="true" style={{ height: pillarSpan }}>
+          <div className="pillar-flank pillar-flank-right" aria-hidden="true" style={{ height: Math.max(pillarSpan - 67 - 70, 0) }}>
             <img src="/images/pillar-capital.jpg" alt="" className="pillar-cap" />
             <div className="pillar-shaft-fill" />
             <img src="/images/pillar-base.jpg" alt="" className="pillar-base" />
@@ -420,7 +435,7 @@ export default function HomePage() {
            exactly 1350px there's still a real 225px gap at the viewport
            edge for a 200px column plus a 16px margin (216px) to sit in.
            Below 1350px there's no room left for a column this size. */
-        .pillar-flank {
+        .pillar-flank, .entablature-bar {
           display: none;
         }
         @media (min-width: 1350px) {
@@ -428,7 +443,7 @@ export default function HomePage() {
             display: flex;
             flex-direction: column;
             position: absolute;
-            top: 0;
+            top: 137px;
             width: 200px;
             z-index: 1;
             pointer-events: none;
@@ -444,9 +459,31 @@ export default function HomePage() {
           }
           .pillar-flank-left { left: 16px; }
           .pillar-flank-right { right: 16px; transform: scaleX(-1); }
+
+          /* Spans corner to corner between the two flanks' own outer edges
+             (16px in from each side, same as them) rather than full
+             viewport width -- it's the beam those columns support, not an
+             independent site-wide rule. background-size: auto 70px scales
+             the tile to this height and lets its width follow the source's
+             own aspect ratio, so the dentils never stretch out of shape at
+             any viewport width -- only how many of them fit changes. */
+          .entablature-bar {
+            display: block;
+            position: absolute;
+            top: 67px;
+            left: 16px;
+            right: 16px;
+            height: 70px;
+            background-image: url("/images/entablature-tile.jpg");
+            background-repeat: repeat-x;
+            background-size: auto 70px;
+            background-position: top center;
+            z-index: 1;
+            pointer-events: none;
+          }
         }
         @media print {
-          .pillar-flank { display: none !important; }
+          .pillar-flank, .entablature-bar { display: none !important; }
         }
 
         /* Shared tactile press feedback for primary buttons/links -- a
@@ -1256,7 +1293,13 @@ function CountUpPrice({ value, duration = 800 }) {
   return <span ref={ref}>${display}</span>;
 }
 
-const BAND_COLORS = { white: "#FFFFFF", tint: "#FBEEE0" };
+// Both keys point at the same cream as the page's own root background
+// (#FAF7F2, set on HomePage's outer div) -- the whole page reads as one
+// continuous surface now instead of alternating white/tinted bands between
+// sections. Kept as two keys rather than deleting `band` entirely: it still
+// drives the .sprocket-divider rule rendered above/below a banded section,
+// which is a real, wanted section break, just not a color one anymore.
+const BAND_COLORS = { white: "#FAF7F2", tint: "#FAF7F2" };
 
 // Fades + slides a section up into place the first time it scrolls into
 // view, rather than everything just appearing instantly on load -- the

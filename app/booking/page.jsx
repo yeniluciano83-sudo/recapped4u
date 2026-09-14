@@ -25,11 +25,11 @@ function formatTime(timeStr) {
 // Mirrors the STYLE_MUSIC map in scripts/auto-recap.js -- same files, served
 // from public/ so they're directly playable here for a style preview.
 const MUSIC_PREVIEW_URL = {
-  cinematic: "/music/cinematic.mp3",
-  upbeat: "/music/upbeat.mp3",
-  documentary: "/music/documentary.mp3",
-  retro: "/music/retro.mp3",
-  highlight: "/music/highlight.mp3",
+  cinematic: "/music/cinematic/track-1.mp3",
+  upbeat: "/music/upbeat/track-1.mp3",
+  documentary: "/music/documentary/track-1.mp3",
+  retro: "/music/retro/track-1.mp3",
+  highlight: "/music/highlight/track-1.mp3",
 };
 
 function StylePreviewButton({ styleId, playingId, onToggle }) {

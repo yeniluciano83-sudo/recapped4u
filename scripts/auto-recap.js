@@ -72,12 +72,16 @@ let currentTmpDir = null;
 // (rather than lib/) so the same files double as browser-playable style
 // previews on the booking and QR share pages -- see MUSIC_PREVIEW_URL in
 // app/booking/page.jsx and app/qr/[slug]/page.jsx.
+//
+// Each style folder now holds several candidate tracks (track-1.mp3 is the
+// original, longstanding pick) -- rendering and the preview pages still
+// only ever use track-1, the rest are staged for a future picker.
 const STYLE_MUSIC = {
-  cinematic: path.join(__dirname, "..", "public", "music", "cinematic.mp3"),
-  upbeat: path.join(__dirname, "..", "public", "music", "upbeat.mp3"),
-  documentary: path.join(__dirname, "..", "public", "music", "documentary.mp3"),
-  retro: path.join(__dirname, "..", "public", "music", "retro.mp3"),
-  highlight: path.join(__dirname, "..", "public", "music", "highlight.mp3"),
+  cinematic: path.join(__dirname, "..", "public", "music", "cinematic", "track-1.mp3"),
+  upbeat: path.join(__dirname, "..", "public", "music", "upbeat", "track-1.mp3"),
+  documentary: path.join(__dirname, "..", "public", "music", "documentary", "track-1.mp3"),
+  retro: path.join(__dirname, "..", "public", "music", "retro", "track-1.mp3"),
+  highlight: path.join(__dirname, "..", "public", "music", "highlight", "track-1.mp3"),
 };
 
 // The actual *edit* per style -- transition, pacing, grain -- passed through

@@ -18,7 +18,7 @@ export async function GET(req, { params }) {
 
   const { data: booking, error } = await supabase
     .from("bookings")
-    .select("id, host_name, event_type, event_date, event_time, venue, upload_slug, status, tier, uploads_closed_at, social_style, deadline_extension_hours, processing_started_at, delivery_format")
+    .select("id, host_name, event_type, event_date, event_time, venue, upload_slug, status, tier, uploads_closed_at, social_style, social_music_track, deadline_extension_hours, processing_started_at, delivery_format")
     .eq("upload_slug", eventId)
     .single();
 
@@ -47,10 +47,25 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
   }
 
-  const { socialStyle } = await req.json();
+  const body = await req.json();
+  const { socialStyle, socialMusicTrack } = body;
+  const hasSocialStyle = "socialStyle" in body;
+  const hasSocialMusicTrack = "socialMusicTrack" in body;
 
-  if (socialStyle !== null && !VALID_STYLES.includes(socialStyle)) {
+  if (hasSocialStyle && socialStyle !== null && !VALID_STYLES.includes(socialStyle)) {
     return NextResponse.json({ error: "Invalid style" }, { status: 400 });
+  }
+
+  // A real positive integer -- like the booking form's own picker, only
+  // loosely validated here (scripts/auto-recap.js's resolveMusicSelection is
+  // the actual range clamp at render time against whichever style ends up
+  // in effect).
+  if (hasSocialMusicTrack && !(Number.isInteger(socialMusicTrack) && socialMusicTrack >= 1)) {
+    return NextResponse.json({ error: "Invalid track" }, { status: 400 });
+  }
+
+  if (!hasSocialStyle && !hasSocialMusicTrack) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
   // Resolve the booking before mutating so there's an id to verify the host
@@ -70,16 +85,31 @@ export async function PATCH(req, { params }) {
     return NextResponse.json({ error: "This link isn't valid for managing this event." }, { status: 403 });
   }
 
+  // Picking a new style resets the track back to 1 -- track numbers are
+  // style-specific (track 3 of "retro" isn't the same file as track 3 of
+  // "cinematic"), so carrying over a stale index would silently land on
+  // whatever that number happens to be in the new style rather than
+  // anything the host actually chose. An explicit socialMusicTrack in this
+  // same request (picking a specific track for the style just chosen)
+  // overrides that reset. A request with only socialMusicTrack (the track
+  // picker, style unchanged) leaves social_style alone entirely.
+  const update = {};
+  if (hasSocialStyle) {
+    update.social_style = socialStyle;
+    update.social_music_track = 1;
+  }
+  if (hasSocialMusicTrack) update.social_music_track = socialMusicTrack;
+
   const { data, error } = await supabase
     .from("bookings")
-    .update({ social_style: socialStyle })
+    .update(update)
     .eq("id", booking.id)
-    .select("social_style")
+    .select("social_style, social_music_track")
     .maybeSingle();
 
   if (error || !data) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ success: true, social_style: data.social_style });
+  return NextResponse.json({ success: true, social_style: data.social_style, social_music_track: data.social_music_track });
 }

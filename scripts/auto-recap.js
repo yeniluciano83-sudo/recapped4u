@@ -67,22 +67,24 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 let currentTmpDir = null;
 
 // Royalty-free tracks (Pixabay Content License â€” free for commercial use,
-// no attribution required), one per editing style, matching the mood
-// described for that style on the booking page. Living under public/
-// (rather than lib/) so the same files double as browser-playable style
-// previews on the booking and QR share pages -- see MUSIC_PREVIEW_URL in
-// app/booking/page.jsx and app/qr/[slug]/page.jsx.
+// no attribution required), matching the mood described for each editing
+// style on the booking page. Living under public/ (rather than lib/) so the
+// same files double as browser-playable previews on the booking and QR
+// share pages -- see MUSIC_TRACKS in app/booking/page.jsx and
+// app/qr/[slug]/page.jsx.
 //
-// Each style folder now holds several candidate tracks (track-1.mp3 is the
-// original, longstanding pick) -- rendering and the preview pages still
-// only ever use track-1, the rest are staged for a future picker.
-const STYLE_MUSIC = {
-  cinematic: path.join(__dirname, "..", "public", "music", "cinematic", "track-1.mp3"),
-  upbeat: path.join(__dirname, "..", "public", "music", "upbeat", "track-1.mp3"),
-  documentary: path.join(__dirname, "..", "public", "music", "documentary", "track-1.mp3"),
-  retro: path.join(__dirname, "..", "public", "music", "retro", "track-1.mp3"),
-  highlight: path.join(__dirname, "..", "public", "music", "highlight", "track-1.mp3"),
-};
+// Each style folder holds several candidate tracks; booking.music_track /
+// booking.social_music_track (set by the booking form's music picker) is a
+// 1-based index into that style's list. resolveMusicSelection (shared with
+// the booking API's own validation) clamps back to track 1 for anything out
+// of range, so an unset column (every booking made before this existed) or a
+// bad value still resolves to a real file instead of crashing the render.
+const { resolveMusicSelection } = require("../lib/musicTrack");
+
+function musicPathFor(style, trackNumber) {
+  const { style: resolvedStyle, track } = resolveMusicSelection(style, trackNumber);
+  return path.join(__dirname, "..", "public", "music", resolvedStyle, `track-${track}.mp3`);
+}
 
 // The actual *edit* per style -- transition, pacing, grain -- passed through
 // to assembleSlideshow's styleConfig (lib/video-assemble.js). Previously
@@ -933,6 +935,8 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
       tier: booking.tier,
       noMusic: booking.full_video_no_music,
       socialNoMusic: booking.social_style === "none",
+      musicTrack: booking.music_track,
+      socialMusicTrack: booking.social_music_track,
       hostName: booking.host_name,
       hostEmail: booking.email,
       eventType: booking.event_type,
@@ -965,6 +969,8 @@ async function continuePipelineWithAnalysis(booking, analyzed, { fullVideoOnly =
       fullCutSlotSeconds,
       noMusic: booking.full_video_no_music,
       socialNoMusic: booking.social_style === "none",
+      musicTrack: booking.music_track,
+      socialMusicTrack: booking.social_music_track,
       hostName: booking.host_name,
       hostEmail: booking.email,
       eventType: booking.event_type,
@@ -1111,7 +1117,7 @@ async function driveRender(bookingId, { budgetMs }) {
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "render-"));
   currentTmpDir = tmpDir;
-  const musicPath = spec.noMusic ? null : STYLE_MUSIC[spec.style] || STYLE_MUSIC.cinematic;
+  const musicPath = spec.noMusic ? null : musicPathFor(spec.style, spec.musicTrack);
 
   try {
     if (rs.phase === "full") {
@@ -1264,7 +1270,7 @@ async function renderOneSocialCut(bookingId, cutIndex, socialKeys, spec, tmpDir)
   // across just the real photos instead of across photos-plus-two-cards.
   const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * socialStyleConfig.transitionSeconds) / socialLocalPaths.length;
   const rawPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-raw.mp4`);
-  const socialMusicPath = spec.socialNoMusic ? null : STYLE_MUSIC[spec.socialStyle || spec.style] || STYLE_MUSIC.cinematic;
+  const socialMusicPath = spec.socialNoMusic ? null : musicPathFor(spec.socialStyle || spec.style, spec.socialMusicTrack);
   await assembleSlideshow(socialLocalPaths, [], rawPath, socialMusicPath, null, slotSeconds, {
     ...socialStyleConfig,
     ...SOCIAL_CUT_OUTPUT,

@@ -22,22 +22,34 @@ function formatTime(timeStr) {
   catch { return timeStr; }
 }
 
-// Mirrors the STYLE_MUSIC map in scripts/auto-recap.js -- same files, served
-// from public/ so they're directly playable here for a style preview.
+// Mirrors public/music/<style>/ -- same files, served from public/ so
+// they're directly playable here for a preview. Track counts differ per
+// style (see the commit that added track-2.mp3 onward alongside each
+// original track-1.mp3) -- kept as a plain count rather than an actual file
+// listing since this only ever needs to render N preview buttons.
+const MUSIC_TRACK_COUNTS = { cinematic: 7, upbeat: 7, documentary: 6, retro: 3, highlight: 6 };
+const trackPreviewUrl = (styleId, trackNumber) => `/music/${styleId}/track-${trackNumber}.mp3`;
+// Kept only for StylePreviewButton's own "does this style have music at
+// all" check -- every real style does; "none" (the social-cut-only "no
+// theme" choice) doesn't.
 const MUSIC_PREVIEW_URL = {
-  cinematic: "/music/cinematic/track-1.mp3",
-  upbeat: "/music/upbeat/track-1.mp3",
-  documentary: "/music/documentary/track-1.mp3",
-  retro: "/music/retro/track-1.mp3",
-  highlight: "/music/highlight/track-1.mp3",
+  cinematic: trackPreviewUrl("cinematic", 1),
+  upbeat: trackPreviewUrl("upbeat", 1),
+  documentary: trackPreviewUrl("documentary", 1),
+  retro: trackPreviewUrl("retro", 1),
+  highlight: trackPreviewUrl("highlight", 1),
 };
 
-function StylePreviewButton({ styleId, playingId, onToggle }) {
+// playingKey/onToggle carry a "styleId:trackNumber" pair, not just a style --
+// TrackPicker below previews specific tracks within a style, and this same
+// button previews that style's track 1 as a quick sense of the mood before
+// a host has even picked the style.
+function StylePreviewButton({ styleId, playingKey, onToggle }) {
   const url = MUSIC_PREVIEW_URL[styleId];
   if (!url) return null;
-  const isPlaying = playingId === styleId;
+  const isPlaying = playingKey === `${styleId}:1`;
   return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(styleId); }}
+    <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(styleId, 1); }}
       aria-label={isPlaying ? `Pause ${styleId} soundtrack preview` : `Preview ${styleId} soundtrack`}
       style={{
         position: "absolute", top: "50%", right: "10px", transform: "translateY(-50%)",
@@ -48,6 +60,50 @@ function StylePreviewButton({ styleId, playingId, onToggle }) {
       }}>
       {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" style={{ marginLeft: "1px" }} />}
     </button>
+  );
+}
+
+// Shown once a real style (not "" or "none") is picked, for either the main
+// video or the social cut -- lets a host flip through that style's actual
+// candidate tracks instead of always getting track 1. selectedTrack/
+// onSelectTrack are 1-based to match booking.music_track/social_music_track
+// directly, no off-by-one translation at submit time.
+function TrackPicker({ styleId, selectedTrack, playingKey, onSelectTrack, onTogglePreview }) {
+  const count = MUSIC_TRACK_COUNTS[styleId];
+  if (!count) return null;
+  return (
+    <div style={{ marginTop: "10px", padding: "12px", borderRadius: "10px", background: "#FAF7F2", border: "1px solid #E4DED2" }}>
+      <div style={{ fontSize: "12px", fontWeight: 600, color: "#4a4642", marginBottom: "8px" }}>Choose a track for this theme</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+        {Array.from({ length: count }, (_, i) => i + 1).map((trackNumber) => {
+          const selected = selectedTrack === trackNumber;
+          const key = `${styleId}:${trackNumber}`;
+          const isPlaying = playingKey === key;
+          return (
+            <button key={trackNumber} type="button" onClick={() => onSelectTrack(trackNumber)} aria-pressed={selected}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "6px",
+                padding: "6px 10px 6px 12px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, cursor: "pointer",
+                border: selected ? "1px solid #C97A3D" : "1px solid #D8CFC0",
+                background: selected ? "#FBEEE0" : "#FFFFFF",
+                color: selected ? "#C97A3D" : "#6b655c",
+              }}>
+              {selected && <Check size={11} strokeWidth={3} />} Track {trackNumber}
+              <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onTogglePreview(styleId, trackNumber); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onTogglePreview(styleId, trackNumber); } }}
+                aria-label={isPlaying ? `Pause track ${trackNumber} preview` : `Preview track ${trackNumber}`}
+                style={{
+                  width: "18px", height: "18px", borderRadius: "50%", flexShrink: 0, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: isPlaying ? "#C97A3D" : "#EFE9DC", color: isPlaying ? "#FFFFFF" : "#6b655c",
+                }}>
+                {isPlaying ? <Pause size={9} fill="currentColor" /> : <Play size={9} fill="currentColor" style={{ marginLeft: "1px" }} />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -133,7 +189,7 @@ function BookingFormInner() {
   // to make an actual choice on step 3 -- canProceed() below blocks
   // Continue until they do, rather than silently defaulting to "recap"
   // the way this used to work.
-  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", eventTime: "", venue: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", roastChoiceMade: false, deliveryFormat: "", fullVideoNoMusic: false });
+  const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", eventTime: "", venue: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", roastChoiceMade: false, deliveryFormat: "", fullVideoNoMusic: false, musicTrack: 1, socialMusicTrack: 1 });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -141,19 +197,20 @@ function BookingFormInner() {
   // starting a new preview stops whatever was already playing, so hosts
   // never get two soundtracks layered on top of each other.
   const previewAudioRef = useRef(null);
-  const [previewingStyle, setPreviewingStyle] = useState(null);
-  const togglePreview = (styleId) => {
+  const [previewingKey, setPreviewingKey] = useState(null);
+  const togglePreview = (styleId, trackNumber = 1) => {
+    const key = `${styleId}:${trackNumber}`;
     const audio = previewAudioRef.current || (previewAudioRef.current = new Audio());
-    if (previewingStyle === styleId) {
+    if (previewingKey === key) {
       audio.pause();
-      setPreviewingStyle(null);
+      setPreviewingKey(null);
       return;
     }
-    audio.src = MUSIC_PREVIEW_URL[styleId];
+    audio.src = trackPreviewUrl(styleId, trackNumber);
     audio.currentTime = 0;
     audio.play().catch(() => {});
-    audio.onended = () => setPreviewingStyle(null);
-    setPreviewingStyle(styleId);
+    audio.onended = () => setPreviewingKey(null);
+    setPreviewingKey(key);
   };
 
   const isRoastEligible = ROAST_ELIGIBLE_TIERS.includes(form.tier);
@@ -368,16 +425,23 @@ function BookingFormInner() {
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {(isSocialCutsFormat ? SOCIAL_STYLE_OPTIONS : STYLES).map((s) => {
               const field = isSocialCutsFormat ? "socialStyle" : "style";
+              const trackField = isSocialCutsFormat ? "socialMusicTrack" : "musicTrack";
               const selected = (isSocialCutsFormat ? form.socialStyle : form.style) === s.id;
               return (
-                <div key={s.id} style={{ position: "relative" }}>
-                  <button onClick={() => update(field, s.id)} aria-pressed={selected} style={{ width: "100%", textAlign: "left", padding: "16px", paddingRight: "48px", borderRadius: "12px", cursor: "pointer", background: selected ? "#FBEEE0" : "#FFFFFF", border: selected ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
-                    <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      {selected && <Check size={15} color="#C97A3D" strokeWidth={3} />} {s.label}
-                    </div>
-                    <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>{s.desc}</div>
-                  </button>
-                  <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
+                <div key={s.id}>
+                  <div style={{ position: "relative" }}>
+                    <button onClick={() => setForm((f) => ({ ...f, [field]: s.id, [trackField]: 1 }))} aria-pressed={selected} style={{ width: "100%", textAlign: "left", padding: "16px", paddingRight: "48px", borderRadius: "12px", cursor: "pointer", background: selected ? "#FBEEE0" : "#FFFFFF", border: selected ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>
+                      <div style={{ fontWeight: 600, fontSize: "15px", display: "flex", alignItems: "center", gap: "6px" }}>
+                        {selected && <Check size={15} color="#C97A3D" strokeWidth={3} />} {s.label}
+                      </div>
+                      <div style={{ fontSize: "13px", color: "#4a4642", marginTop: "2px" }}>{s.desc}</div>
+                    </button>
+                    <StylePreviewButton styleId={s.id} playingKey={previewingKey} onToggle={togglePreview} />
+                  </div>
+                  {selected && (
+                    <TrackPicker styleId={s.id} selectedTrack={form[trackField]} playingKey={previewingKey}
+                      onSelectTrack={(n) => update(trackField, n)} onTogglePreview={togglePreview} />
+                  )}
                 </div>
               );
             })}
@@ -400,7 +464,7 @@ function BookingFormInner() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                 {SOCIAL_STYLE_OPTIONS.map((s) => (
                   <div key={s.id} style={{ position: "relative", display: "inline-flex" }}>
-                    <button onClick={() => update("socialStyle", form.socialStyle === s.id ? "" : s.id)}
+                    <button onClick={() => setForm((f) => ({ ...f, socialStyle: f.socialStyle === s.id ? "" : s.id, socialMusicTrack: 1 }))}
                       aria-pressed={form.socialStyle === s.id}
                       style={{
                         display: "inline-flex", alignItems: "center", gap: "4px",
@@ -411,10 +475,14 @@ function BookingFormInner() {
                       }}>
                       {form.socialStyle === s.id && <Check size={12} strokeWidth={3} />} {s.label}
                     </button>
-                    <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
+                    <StylePreviewButton styleId={s.id} playingKey={previewingKey} onToggle={togglePreview} />
                   </div>
                 ))}
               </div>
+              {form.socialStyle && (
+                <TrackPicker styleId={form.socialStyle} selectedTrack={form.socialMusicTrack} playingKey={previewingKey}
+                  onSelectTrack={(n) => update("socialMusicTrack", n)} onTogglePreview={togglePreview} />
+              )}
             </div>
           )}
 

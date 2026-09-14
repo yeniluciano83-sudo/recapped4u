@@ -23,7 +23,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic, venue, eventTime } = body;
+    const { email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic, venue, eventTime, musicTrack, socialMusicTrack } = body;
     const hostName = (body.hostName || "").trim();
 
     // Both optional and purely descriptive -- back the shareable guest
@@ -35,6 +35,17 @@ export async function POST(req) {
     // than just omitting it.
     const trimmedVenue = (venue || "").trim().slice(0, 200) || null;
     const validEventTime = typeof eventTime === "string" && /^([01]\d|2[0-3]):([0-5]\d)$/.test(eventTime) ? eventTime : null;
+
+    // Which of the chosen style's several candidate tracks (see
+    // public/music/<style>/) to actually use -- 1-based, matching the
+    // booking form's own track picker. Only loosely validated here (a real
+    // positive integer, nothing about whether it's in range for the chosen
+    // style) since scripts/auto-recap.js's resolveMusicSelection is the
+    // actual clamp at render time; this just keeps obvious garbage (a
+    // negative number, a string, 0) from reaching the database at all.
+    const validTrackNumber = (n) => (Number.isInteger(n) && n >= 1 ? n : 1);
+    const validMusicTrack = validTrackNumber(musicTrack);
+    const validSocialMusicTrack = validTrackNumber(socialMusicTrack);
 
     // A whitespace-only hostName passes a plain truthy check, then breaks
     // hostName.split(" ")[0] personalization in every email template
@@ -125,6 +136,8 @@ export async function POST(req) {
         roast_level: effectiveRoastLevel,
         delivery_format: effectiveDeliveryFormat,
         full_video_no_music: !!fullVideoNoMusic,
+        music_track: validMusicTrack,
+        social_music_track: validSocialMusicTrack,
         gallery_template: defaultGalleryTemplate(),
       })
       .select()

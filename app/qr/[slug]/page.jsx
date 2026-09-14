@@ -26,22 +26,29 @@ const STYLES = [
 // unset (which falls back to matching the main video's style/music).
 const SOCIAL_STYLE_OPTIONS = [...STYLES, { id: "none", label: "No theme (no music)" }];
 
-// Mirrors the STYLE_MUSIC map in scripts/auto-recap.js -- same files, served
-// from public/ so they're directly playable here for a style preview.
+// Mirrors public/music/<style>/ -- same files, served from public/ so
+// they're directly playable here for a preview. Track counts differ per
+// style (see the commit that added track-2.mp3 onward alongside each
+// original track-1.mp3).
+const MUSIC_TRACK_COUNTS = { cinematic: 7, upbeat: 7, documentary: 6, retro: 3, highlight: 6 };
+const trackPreviewUrl = (styleId, trackNumber) => `/music/${styleId}/track-${trackNumber}.mp3`;
 const MUSIC_PREVIEW_URL = {
-  cinematic: "/music/cinematic/track-1.mp3",
-  upbeat: "/music/upbeat/track-1.mp3",
-  documentary: "/music/documentary/track-1.mp3",
-  retro: "/music/retro/track-1.mp3",
-  highlight: "/music/highlight/track-1.mp3",
+  cinematic: trackPreviewUrl("cinematic", 1),
+  upbeat: trackPreviewUrl("upbeat", 1),
+  documentary: trackPreviewUrl("documentary", 1),
+  retro: trackPreviewUrl("retro", 1),
+  highlight: trackPreviewUrl("highlight", 1),
 };
 
-function StylePreviewButton({ styleId, playingId, onToggle }) {
+// playingKey/onToggle carry a "styleId:trackNumber" pair -- TrackPicker
+// below previews specific tracks within a style, and this same button
+// previews that style's track 1 as a quick sense of the mood.
+function StylePreviewButton({ styleId, playingKey, onToggle }) {
   const url = MUSIC_PREVIEW_URL[styleId];
   if (!url) return null;
-  const isPlaying = playingId === styleId;
+  const isPlaying = playingKey === `${styleId}:1`;
   return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(styleId); }}
+    <button type="button" onClick={(e) => { e.stopPropagation(); onToggle(styleId, 1); }}
       aria-label={isPlaying ? `Pause ${styleId} soundtrack preview` : `Preview ${styleId} soundtrack`}
       style={{
         position: "absolute", top: "50%", right: "8px", transform: "translateY(-50%)",
@@ -52,6 +59,48 @@ function StylePreviewButton({ styleId, playingId, onToggle }) {
       }}>
       {isPlaying ? <Pause size={11} fill="currentColor" /> : <Play size={11} fill="currentColor" style={{ marginLeft: "1px" }} />}
     </button>
+  );
+}
+
+// Lets the host flip through the chosen style's actual candidate tracks
+// instead of always getting track 1. selectedTrack/onSelectTrack are
+// 1-based to match booking.social_music_track directly.
+function TrackPicker({ styleId, selectedTrack, playingKey, onSelectTrack, onTogglePreview, disabled }) {
+  const count = MUSIC_TRACK_COUNTS[styleId];
+  if (!count) return null;
+  return (
+    <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, background: "#FAF7F2", border: "1px solid #E4DED2" }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#4a4642", marginBottom: 8 }}>Choose a track for this theme</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {Array.from({ length: count }, (_, i) => i + 1).map((trackNumber) => {
+          const selected = selectedTrack === trackNumber;
+          const key = `${styleId}:${trackNumber}`;
+          const isPlaying = playingKey === key;
+          return (
+            <button key={trackNumber} type="button" disabled={disabled} onClick={() => onSelectTrack(trackNumber)} aria-pressed={selected}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "6px 10px 6px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, cursor: disabled ? "default" : "pointer",
+                border: selected ? "1px solid #C97A3D" : "1px solid #D8CFC0",
+                background: selected ? "#FBEEE0" : "#FFFFFF",
+                color: selected ? "#C97A3D" : "#4a4642",
+              }}>
+              {selected && <Check size={11} strokeWidth={3} />} Track {trackNumber}
+              <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onTogglePreview(styleId, trackNumber); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onTogglePreview(styleId, trackNumber); } }}
+                aria-label={isPlaying ? `Pause track ${trackNumber} preview` : `Preview track ${trackNumber}`}
+                style={{
+                  width: 18, height: 18, borderRadius: "50%", flexShrink: 0, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: isPlaying ? "#C97A3D" : "#EFE9DC", color: isPlaying ? "#FFFFFF" : "#4a4642",
+                }}>
+                {isPlaying ? <Pause size={9} fill="currentColor" /> : <Play size={9} fill="currentColor" style={{ marginLeft: "1px" }} />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -132,19 +181,20 @@ export default function QrSharePage() {
   // One shared <audio> element for every style preview button on this page --
   // starting a new preview stops whatever was already playing.
   const previewAudioRef = useRef(null);
-  const [previewingStyle, setPreviewingStyle] = useState(null);
-  const togglePreview = (styleId) => {
+  const [previewingKey, setPreviewingKey] = useState(null);
+  const togglePreview = (styleId, trackNumber = 1) => {
+    const key = `${styleId}:${trackNumber}`;
     const audio = previewAudioRef.current || (previewAudioRef.current = new Audio());
-    if (previewingStyle === styleId) {
+    if (previewingKey === key) {
       audio.pause();
-      setPreviewingStyle(null);
+      setPreviewingKey(null);
       return;
     }
-    audio.src = MUSIC_PREVIEW_URL[styleId];
+    audio.src = trackPreviewUrl(styleId, trackNumber);
     audio.currentTime = 0;
     audio.play().catch(() => {});
-    audio.onended = () => setPreviewingStyle(null);
-    setPreviewingStyle(styleId);
+    audio.onended = () => setPreviewingKey(null);
+    setPreviewingKey(key);
   };
 
   const load = useCallback(async () => {
@@ -296,7 +346,10 @@ export default function QrSharePage() {
   const handleSetSocialStyle = async (styleId) => {
     const next = eventInfo.social_style === styleId ? null : styleId; // click again to clear back to "same as full cut"
     setSavingStyle(true);
-    setEventInfo((prev) => ({ ...prev, social_style: next }));
+    // Matches the server's own reset (see app/api/events/[eventId]/route.js)
+    // -- track numbers are style-specific, so the previous track choice
+    // doesn't carry over to a newly-picked style.
+    setEventInfo((prev) => ({ ...prev, social_style: next, social_music_track: 1 }));
     try {
       await fetch(`/api/events/${slug}?t=${encodeURIComponent(hostToken)}`, {
         method: "PATCH",
@@ -305,6 +358,22 @@ export default function QrSharePage() {
       });
     } catch (err) {
       console.error("Failed to save social cut style", err);
+    } finally {
+      setSavingStyle(false);
+    }
+  };
+
+  const handleSetSocialMusicTrack = async (trackNumber) => {
+    setSavingStyle(true);
+    setEventInfo((prev) => ({ ...prev, social_music_track: trackNumber }));
+    try {
+      await fetch(`/api/events/${slug}?t=${encodeURIComponent(hostToken)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ socialMusicTrack: trackNumber }),
+      });
+    } catch (err) {
+      console.error("Failed to save social cut track", err);
     } finally {
       setSavingStyle(false);
     }
@@ -708,10 +777,15 @@ export default function QrSharePage() {
                       }}>
                       {eventInfo.social_style === s.id && <Check size={12} strokeWidth={3} />} {s.label}
                     </button>
-                    <StylePreviewButton styleId={s.id} playingId={previewingStyle} onToggle={togglePreview} />
+                    <StylePreviewButton styleId={s.id} playingKey={previewingKey} onToggle={togglePreview} />
                   </div>
                 ))}
               </div>
+
+              {eventInfo.social_style && (
+                <TrackPicker styleId={eventInfo.social_style} selectedTrack={eventInfo.social_music_track || 1} playingKey={previewingKey}
+                  disabled={savingStyle} onSelectTrack={handleSetSocialMusicTrack} onTogglePreview={togglePreview} />
+              )}
 
               {photosLoading ? (
                 <p style={{ fontSize: 12.5, color: "#8a857d", margin: 0 }}>Loading photos…</p>

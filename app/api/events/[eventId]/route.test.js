@@ -25,6 +25,7 @@ const BOOKING = {
   tier: "standard",
   uploads_closed_at: null,
   social_style: null,
+  social_music_track: 1,
   deadline_extension_hours: 0,
   processing_started_at: null,
   delivery_format: "recap",
@@ -88,7 +89,7 @@ describe("PATCH /api/events/[eventId]", () => {
     // PATCH resolves the booking first so it has an id to verify the host
     // token against, so every authorized case queues that lookup ahead of the update.
     sb.mockResponse({ data: { id: "b1" }, error: null });
-    sb.mockResponse({ data: { social_style: null }, error: null });
+    sb.mockResponse({ data: { social_style: null, social_music_track: 1 }, error: null });
     const res = await PATCH(jsonRequest({ socialStyle: null }), { params: { eventId: "slug-1" } });
     expect(res.status).toBe(200);
   });
@@ -99,15 +100,48 @@ describe("PATCH /api/events/[eventId]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("updates the social style and returns it", async () => {
+  it("rejects a request with neither field", async () => {
+    const res = await PATCH(jsonRequest({}), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(400);
+    expect(sb.callLog.length).toBe(0);
+  });
+
+  it("rejects an invalid track number", async () => {
+    const res = await PATCH(jsonRequest({ socialMusicTrack: 0 }), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(400);
+    expect(sb.callLog.length).toBe(0);
+  });
+
+  // Picking a style resets the track to 1 -- track numbers are
+  // style-specific, so a stale index would silently carry over into a
+  // style it was never actually chosen for.
+  it("updates the social style, resets the track to 1, and returns both", async () => {
     // PATCH resolves the booking first so it has an id to verify the host
     // token against, so every authorized case queues that lookup ahead of the update.
     sb.mockResponse({ data: { id: "b1" }, error: null });
-    sb.mockResponse({ data: { social_style: "retro" }, error: null });
+    sb.mockResponse({ data: { social_style: "retro", social_music_track: 1 }, error: null });
     const res = await PATCH(jsonRequest({ socialStyle: "retro" }), { params: { eventId: "slug-1" } });
     const json = await res.json();
-    expect(json).toEqual({ success: true, social_style: "retro" });
+    expect(json).toEqual({ success: true, social_style: "retro", social_music_track: 1 });
     const updateCall = sb.callLog[1].calls.find((c) => c.method === "update");
-    expect(updateCall.args[0]).toEqual({ social_style: "retro" });
+    expect(updateCall.args[0]).toEqual({ social_style: "retro", social_music_track: 1 });
+  });
+
+  it("picking a style and a track together uses that track, not the reset", async () => {
+    sb.mockResponse({ data: { id: "b1" }, error: null });
+    sb.mockResponse({ data: { social_style: "retro", social_music_track: 3 }, error: null });
+    const res = await PATCH(jsonRequest({ socialStyle: "retro", socialMusicTrack: 3 }), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(200);
+    const updateCall = sb.callLog[1].calls.find((c) => c.method === "update");
+    expect(updateCall.args[0]).toEqual({ social_style: "retro", social_music_track: 3 });
+  });
+
+  it("updates just the track, leaving the style untouched", async () => {
+    sb.mockResponse({ data: { id: "b1" }, error: null });
+    sb.mockResponse({ data: { social_style: "retro", social_music_track: 2 }, error: null });
+    const res = await PATCH(jsonRequest({ socialMusicTrack: 2 }), { params: { eventId: "slug-1" } });
+    expect(res.status).toBe(200);
+    const updateCall = sb.callLog[1].calls.find((c) => c.method === "update");
+    expect(updateCall.args[0]).toEqual({ social_music_track: 2 });
   });
 });

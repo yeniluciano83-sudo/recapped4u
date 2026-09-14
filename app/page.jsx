@@ -140,6 +140,29 @@ export default function HomePage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const sectionRefs = useRef({});
+  // How far down the page the "services" (Pricing) section starts --
+  // .pillar-flank's own height, so the two flanking columns run from the
+  // very top of the page down to exactly where Pricing begins, not some
+  // fixed guessed number. Measured off the real DOM node in sectionRefs
+  // (already populated by every Section component) rather than duplicating
+  // that wiring. Re-measured on resize since column-count/text-wrap
+  // reflow changes the hero and How It Works section heights, and again a
+  // couple of times shortly after mount to catch late layout shifts (webfont
+  // swap, hero image load) that a single on-mount measurement would miss.
+  const [pillarSpan, setPillarSpan] = useState(null);
+  useEffect(() => {
+    const measure = () => {
+      const el = sectionRefs.current.services;
+      if (el) setPillarSpan(el.getBoundingClientRect().top + window.scrollY);
+    };
+    measure();
+    const timers = [setTimeout(measure, 400), setTimeout(measure, 1200)];
+    window.addEventListener("resize", measure);
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
   // Independent of the "how" Section's own reveal (which just fades the
   // whole block in) -- this one gates a staggered per-step pop so the four
   // steps activate in order, reinforcing that they're an actual sequence
@@ -254,17 +277,36 @@ export default function HomePage() {
           </div>
         )}
       </div>
-      {/* Blind-emboss Roman column flanking both margins -- same
-          public/images/pillar-emboss.jpg mirrored on the right rather than
-          two separate generations, since a symmetrical pair is exactly what
-          a real flanking-column composition wants. Plain <img> (not a CSS
-          background-image trick like the two earlier margin attempts) --
-          real sculptural detail (fluting, capital) needs to render at real
-          resolution, which "contain" background-sizing was fighting the
-          whole time. Fixed + vertically centered so it reads as framing
-          the page rather than scrolling past like content. */}
-      <img src="/images/pillar-emboss.jpg" alt="" aria-hidden="true" className="pillar-margin pillar-margin-left" />
-      <img src="/images/pillar-emboss.jpg" alt="" aria-hidden="true" className="pillar-margin pillar-margin-right" />
+      {/* Blind-emboss Roman column flanking both margins, built from three
+          slices of one generated+recolored source (public/images/
+          pillar-capital.jpg, pillar-shaft.jpg, pillar-base.jpg) rather than
+          one image stretched or letterboxed -- a single photo forced to
+          span an arbitrary, much-taller-than-its-own-aspect-ratio height
+          would either distort the fluting or leave obvious dead space.
+          flex-direction: column with the shaft as the only flex:1 child
+          means the capital and base always render at their own true
+          proportions and only the plain (translation-invariant) fluted
+          middle actually stretches, by tiling -- exactly how a scalable UI
+          column asset is supposed to work. Mirrored on the right via
+          transform: scaleX(-1) on the whole flex column rather than a
+          second generation. Height is set from pillarSpan (measured
+          above) so the pair runs from the very top of the page to exactly
+          where Pricing starts; not rendered until that's measured, so
+          there's no flash of an unstretched or zero-height column first. */}
+      {pillarSpan != null && (
+        <>
+          <div className="pillar-flank pillar-flank-left" aria-hidden="true" style={{ height: pillarSpan }}>
+            <img src="/images/pillar-capital.jpg" alt="" className="pillar-cap" />
+            <div className="pillar-shaft-fill" />
+            <img src="/images/pillar-base.jpg" alt="" className="pillar-base" />
+          </div>
+          <div className="pillar-flank pillar-flank-right" aria-hidden="true" style={{ height: pillarSpan }}>
+            <img src="/images/pillar-capital.jpg" alt="" className="pillar-cap" />
+            <div className="pillar-shaft-fill" />
+            <img src="/images/pillar-base.jpg" alt="" className="pillar-base" />
+          </div>
+        </>
+      )}
       <style>{`
         @media (max-width: 850px) {
           .nav-links { display: none !important; }
@@ -367,38 +409,44 @@ export default function HomePage() {
           opacity: 0.7;
         }
 
-        /* Flanking columns for the two empty margins -- public/images/
-           pillar-emboss.jpg is a real 768x1344 generated image (fine fluting
-           detail), not a CSS pattern, so it needs real pixels to render at:
-           90px display width is the smallest that still reads as a fluted
-           column rather than a blur. That sets the actual floor here --
-           1400px, not 1300px like the two earlier (CSS-only, much
-           narrower) margin attempts -- the widest section (Pricing,
-           maxWidth 1180) needs 590px of clearance from center before its
-           own content starts, so even at exactly 1400px there's still a
-           real 110px gap at the viewport edge for a 90px column plus a
-           12px margin to sit in without crowding it. Below 1400px there's
-           no room left for a column this size at all. */
-        .pillar-margin {
+        /* Flanking columns for the two empty margins, spanning from the top
+           of the page to the top of Pricing (pillarSpan, measured above).
+           200px display width -- much bigger than the two earlier margin
+           attempts -- sets the actual floor here: 1350px, not 1300/1400
+           like those. The binding constraint is the *narrowest* section the
+           column actually runs alongside, not Pricing (the column stops
+           before Pricing starts) -- that's "How It Works" just below the
+           hero, maxWidth 900, needing 450px of clearance from center. At
+           exactly 1350px there's still a real 225px gap at the viewport
+           edge for a 200px column plus a 16px margin (216px) to sit in.
+           Below 1350px there's no room left for a column this size. */
+        .pillar-flank {
           display: none;
         }
-        @media (min-width: 1400px) {
-          .pillar-margin {
-            display: block;
-            position: fixed;
-            top: 50%;
-            width: 90px;
-            height: auto;
-            transform: translateY(-50%);
+        @media (min-width: 1350px) {
+          .pillar-flank {
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            top: 0;
+            width: 200px;
             z-index: 1;
             pointer-events: none;
-            opacity: 0.9;
           }
-          .pillar-margin-left { left: 12px; }
-          .pillar-margin-right { right: 12px; transform: translateY(-50%) scaleX(-1); }
+          .pillar-flank img { display: block; width: 100%; height: auto; }
+          .pillar-cap, .pillar-base { flex-shrink: 0; }
+          .pillar-shaft-fill {
+            flex: 1 1 auto;
+            min-height: 0;
+            background-image: url("/images/pillar-shaft.jpg");
+            background-repeat: repeat-y;
+            background-size: 100% auto;
+          }
+          .pillar-flank-left { left: 16px; }
+          .pillar-flank-right { right: 16px; transform: scaleX(-1); }
         }
         @media print {
-          .pillar-margin { display: none !important; }
+          .pillar-flank { display: none !important; }
         }
 
         /* Shared tactile press feedback for primary buttons/links -- a

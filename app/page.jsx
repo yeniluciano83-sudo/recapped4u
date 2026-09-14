@@ -254,18 +254,17 @@ export default function HomePage() {
           </div>
         )}
       </div>
-      {/* Blind-emboss film-sprocket strip down both margins -- only ever
-          visible past 1600px, where the widest section (maxWidth 1180) still
-          leaves real bare cream on both sides. Fixed + soft-light blend
-          (not scrolled-with-content + a solid fill) for the same reason as
-          the site-wide .grain-overlay in app/layout.js: every Section band
-          below paints its own opaque full-width background, so anything
-          meant to show through every band regardless of its color has to be
-          a blend-mode overlay, not a layer sitting behind it in normal
-          stacking. soft-light (not multiply, like the grain) because a raised
-          bevel needs to both lighten and darken relative to whatever's
-          underneath -- multiply can only ever go darker. */}
-      <div className="film-margin" aria-hidden="true" />
+      {/* Blind-emboss Roman column flanking both margins -- same
+          public/images/pillar-emboss.jpg mirrored on the right rather than
+          two separate generations, since a symmetrical pair is exactly what
+          a real flanking-column composition wants. Plain <img> (not a CSS
+          background-image trick like the two earlier margin attempts) --
+          real sculptural detail (fluting, capital) needs to render at real
+          resolution, which "contain" background-sizing was fighting the
+          whole time. Fixed + vertically centered so it reads as framing
+          the page rather than scrolling past like content. */}
+      <img src="/images/pillar-emboss.jpg" alt="" aria-hidden="true" className="pillar-margin pillar-margin-left" />
+      <img src="/images/pillar-emboss.jpg" alt="" aria-hidden="true" className="pillar-margin pillar-margin-right" />
       <style>{`
         @media (max-width: 850px) {
           .nav-links { display: none !important; }
@@ -368,52 +367,38 @@ export default function HomePage() {
           opacity: 0.7;
         }
 
-        /* The vertical counterpart to .sprocket-divider above -- same
-           perforated-film idea, rotated onto the two empty margins instead
-           of a horizontal rule between bands. 1300px is the actual floor,
-           not a stylistic choice: the widest section (Pricing, maxWidth
-           1180) needs 590px of clearance from center before its own content
-           starts, so even at exactly 1300px there's still a real 60px gap
-           from the viewport edge to that content -- the strip (44px, glued
-           to the physical edge with a 10px margin) fits inside that gap at
-           every width from 1300px up, never just at some wider "typical"
-           size. Below 1300px there's no gap left to put it in at all.
-           overlay, not soft-light -- confirmed live at 1536px (the actual
-           width most people's browser reports on a 1920px monitor at 125%
-           Windows scaling) that soft-light was too subtle to notice without
-           zooming into the exact edge pixels. overlay pushes the same
-           highlight/shadow pair harder in both directions, at real cost:
-           it can noticeably tint a section band that isn't close to cream
-           (none currently are, per BAND_COLORS) -- if a future band color
-           changes that, re-check contrast here rather than assuming it
-           still reads as a subtle emboss instead of a visible smudge. */
-        .film-margin {
+        /* Flanking columns for the two empty margins -- public/images/
+           pillar-emboss.jpg is a real 768x1344 generated image (fine fluting
+           detail), not a CSS pattern, so it needs real pixels to render at:
+           90px display width is the smallest that still reads as a fluted
+           column rather than a blur. That sets the actual floor here --
+           1400px, not 1300px like the two earlier (CSS-only, much
+           narrower) margin attempts -- the widest section (Pricing,
+           maxWidth 1180) needs 590px of clearance from center before its
+           own content starts, so even at exactly 1400px there's still a
+           real 110px gap at the viewport edge for a 90px column plus a
+           12px margin to sit in without crowding it. Below 1400px there's
+           no room left for a column this size at all. */
+        .pillar-margin {
           display: none;
         }
-        @media (min-width: 1300px) {
-          .film-margin {
+        @media (min-width: 1400px) {
+          .pillar-margin {
             display: block;
             position: fixed;
-            inset: 0;
+            top: 50%;
+            width: 90px;
+            height: auto;
+            transform: translateY(-50%);
             z-index: 1;
             pointer-events: none;
-            mix-blend-mode: overlay;
+            opacity: 0.9;
           }
-          .film-margin::before, .film-margin::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 44px;
-            background-repeat: repeat-y;
-            background-position: top center;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='100'%3E%3Crect x='12' y='42' width='18' height='24' rx='7' fill='%234a3826' fill-opacity='0.75'/%3E%3Crect x='16' y='36' width='18' height='24' rx='7' fill='%23ffffff' fill-opacity='0.95'/%3E%3C/svg%3E");
-          }
-          .film-margin::before { left: 10px; }
-          .film-margin::after { right: 10px; }
+          .pillar-margin-left { left: 12px; }
+          .pillar-margin-right { right: 12px; transform: translateY(-50%) scaleX(-1); }
         }
         @media print {
-          .film-margin { display: none !important; }
+          .pillar-margin { display: none !important; }
         }
 
         /* Shared tactile press feedback for primary buttons/links -- a

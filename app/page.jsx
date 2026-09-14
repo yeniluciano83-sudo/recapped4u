@@ -370,15 +370,18 @@ export default function HomePage() {
 
         /* The vertical counterpart to .sprocket-divider above -- same
            perforated-film idea, rotated onto the two empty margins instead
-           of a horizontal rule between bands. Hidden entirely below 1600px:
-           the widest section on this page (Pricing, maxWidth 1180) needs
-           590px of clearance from center before its own content starts, and
-           anything narrower than 1600px doesn't leave enough real bare
-           cream past that for a strip to sit in without crowding it. */
+           of a horizontal rule between bands. 1300px is the actual floor,
+           not a stylistic choice: the widest section (Pricing, maxWidth
+           1180) needs 590px of clearance from center before its own content
+           starts, so even at exactly 1300px there's still a real 60px gap
+           from the viewport edge to that content -- the strip (44px, glued
+           to the physical edge with a 10px margin) fits inside that gap at
+           every width from 1300px up, never just at some wider "typical"
+           size. Below 1300px there's no gap left to put it in at all. */
         .film-margin {
           display: none;
         }
-        @media (min-width: 1600px) {
+        @media (min-width: 1300px) {
           .film-margin {
             display: block;
             position: fixed;
@@ -397,8 +400,8 @@ export default function HomePage() {
             background-position: top center;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='100'%3E%3Crect x='12' y='42' width='18' height='24' rx='7' fill='%235c4a35' fill-opacity='0.55'/%3E%3Crect x='16' y='36' width='18' height='24' rx='7' fill='%23ffffff' fill-opacity='0.9'/%3E%3C/svg%3E");
           }
-          .film-margin::before { left: calc(50% - 650px); }
-          .film-margin::after { right: calc(50% - 650px); }
+          .film-margin::before { left: 10px; }
+          .film-margin::after { right: 10px; }
         }
         @media print {
           .film-margin { display: none !important; }

@@ -377,7 +377,16 @@ export default function HomePage() {
            from the viewport edge to that content -- the strip (44px, glued
            to the physical edge with a 10px margin) fits inside that gap at
            every width from 1300px up, never just at some wider "typical"
-           size. Below 1300px there's no gap left to put it in at all. */
+           size. Below 1300px there's no gap left to put it in at all.
+           overlay, not soft-light -- confirmed live at 1536px (the actual
+           width most people's browser reports on a 1920px monitor at 125%
+           Windows scaling) that soft-light was too subtle to notice without
+           zooming into the exact edge pixels. overlay pushes the same
+           highlight/shadow pair harder in both directions, at real cost:
+           it can noticeably tint a section band that isn't close to cream
+           (none currently are, per BAND_COLORS) -- if a future band color
+           changes that, re-check contrast here rather than assuming it
+           still reads as a subtle emboss instead of a visible smudge. */
         .film-margin {
           display: none;
         }
@@ -388,7 +397,7 @@ export default function HomePage() {
             inset: 0;
             z-index: 1;
             pointer-events: none;
-            mix-blend-mode: soft-light;
+            mix-blend-mode: overlay;
           }
           .film-margin::before, .film-margin::after {
             content: "";
@@ -398,7 +407,7 @@ export default function HomePage() {
             width: 44px;
             background-repeat: repeat-y;
             background-position: top center;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='100'%3E%3Crect x='12' y='42' width='18' height='24' rx='7' fill='%235c4a35' fill-opacity='0.55'/%3E%3Crect x='16' y='36' width='18' height='24' rx='7' fill='%23ffffff' fill-opacity='0.9'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='100'%3E%3Crect x='12' y='42' width='18' height='24' rx='7' fill='%234a3826' fill-opacity='0.75'/%3E%3Crect x='16' y='36' width='18' height='24' rx='7' fill='%23ffffff' fill-opacity='0.95'/%3E%3C/svg%3E");
           }
           .film-margin::before { left: 10px; }
           .film-margin::after { right: 10px; }

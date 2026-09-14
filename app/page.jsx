@@ -254,6 +254,18 @@ export default function HomePage() {
           </div>
         )}
       </div>
+      {/* Blind-emboss film-sprocket strip down both margins -- only ever
+          visible past 1600px, where the widest section (maxWidth 1180) still
+          leaves real bare cream on both sides. Fixed + soft-light blend
+          (not scrolled-with-content + a solid fill) for the same reason as
+          the site-wide .grain-overlay in app/layout.js: every Section band
+          below paints its own opaque full-width background, so anything
+          meant to show through every band regardless of its color has to be
+          a blend-mode overlay, not a layer sitting behind it in normal
+          stacking. soft-light (not multiply, like the grain) because a raised
+          bevel needs to both lighten and darken relative to whatever's
+          underneath -- multiply can only ever go darker. */}
+      <div className="film-margin" aria-hidden="true" />
       <style>{`
         @media (max-width: 850px) {
           .nav-links { display: none !important; }
@@ -354,6 +366,42 @@ export default function HomePage() {
           background-repeat: repeat-x;
           background-position: center;
           opacity: 0.7;
+        }
+
+        /* The vertical counterpart to .sprocket-divider above -- same
+           perforated-film idea, rotated onto the two empty margins instead
+           of a horizontal rule between bands. Hidden entirely below 1600px:
+           the widest section on this page (Pricing, maxWidth 1180) needs
+           590px of clearance from center before its own content starts, and
+           anything narrower than 1600px doesn't leave enough real bare
+           cream past that for a strip to sit in without crowding it. */
+        .film-margin {
+          display: none;
+        }
+        @media (min-width: 1600px) {
+          .film-margin {
+            display: block;
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            mix-blend-mode: soft-light;
+          }
+          .film-margin::before, .film-margin::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 44px;
+            background-repeat: repeat-y;
+            background-position: top center;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='100'%3E%3Crect x='12' y='42' width='18' height='24' rx='7' fill='%235c4a35' fill-opacity='0.55'/%3E%3Crect x='16' y='36' width='18' height='24' rx='7' fill='%23ffffff' fill-opacity='0.9'/%3E%3C/svg%3E");
+          }
+          .film-margin::before { left: calc(50% - 650px); }
+          .film-margin::after { right: calc(50% - 650px); }
+        }
+        @media print {
+          .film-margin { display: none !important; }
         }
 
         /* Shared tactile press feedback for primary buttons/links -- a

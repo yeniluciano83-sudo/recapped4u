@@ -106,12 +106,6 @@ export async function GET(req, { params }) {
       social_video_no_roast_download_urls: socialVideoNoRoastDownloadUrls,
       social_video_poster_urls: socialVideoPosterUrls,
       social_video_no_roast_poster_urls: socialVideoNoRoastPosterUrls,
-      // A flag, not the raw R2 key -- the actual bytes are only ever
-      // served through app/api/teaser/[bookingId]/route.js, same reasoning
-      // as leaving upload_slug out of `booking` above. False for
-      // Free/Highlight bookings (no social cut to have trimmed one from)
-      // and for anything delivered before this feature existed.
-      has_teaser: !!deliverable.teaser_video_key,
     },
     // No more photo_download_urls here -- downloads (single, selected, or
     // "download all") now go through app/api/gallery/[bookingId]/photo/

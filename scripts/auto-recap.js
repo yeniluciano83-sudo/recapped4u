@@ -38,7 +38,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const sharp = require("sharp");
 const { enhancePhoto } = require("../lib/photo-enhance");
-const { assembleSlideshow, extractPosterFrame, buildTeaserClip, planChunks, renderFullVideoChunks, mergeFullVideoChunks } = require("../lib/video-assemble");
+const { assembleSlideshow, extractPosterFrame, appendSocialEndCard, planChunks, renderFullVideoChunks, mergeFullVideoChunks } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
 const { buildCardBackground } = require("../lib/card-background");
 const { buildSocialSelections } = require("../lib/socialSelections");
@@ -1252,42 +1252,35 @@ async function renderOneSocialCut(bookingId, cutIndex, socialKeys, spec, tmpDir)
     fs.writeFileSync(lp, await downloadFromR2(key));
     socialLocalPaths.push(lp);
   }
-  // No intro/outro title cards on a social cut, unlike the full video --
+  // No intro/outro TITLE cards on a social cut, unlike the full video --
   // removed by request. A social cut is meant to autoplay straight into
   // content on Reels/TikTok/Shorts; a title card ate into its already-
   // short ~75s runtime before showing anything a viewer actually opened
   // the clip to see. slotSeconds now spreads the full target duration
   // across just the real photos instead of across photos-plus-two-cards.
   const slotSeconds = (TARGET_SOCIAL_SECONDS + (socialLocalPaths.length - 1) * socialStyleConfig.transitionSeconds) / socialLocalPaths.length;
-  const outPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
+  const rawPath = path.join(tmpDir, `social-cut-${cutIndex + 1}-raw.mp4`);
   const socialMusicPath = spec.socialNoMusic ? null : STYLE_MUSIC[spec.socialStyle || spec.style] || STYLE_MUSIC.cinematic;
-  await assembleSlideshow(socialLocalPaths, [], outPath, socialMusicPath, null, slotSeconds, {
+  await assembleSlideshow(socialLocalPaths, [], rawPath, socialMusicPath, null, slotSeconds, {
     ...socialStyleConfig,
     ...SOCIAL_CUT_OUTPUT,
     overlayLines: buildOverlayLines(socialLocalPaths),
     kenBurns: true,
   });
+  // A brief (2s) branded sign-off IS added back on -- unlike the title
+  // cards above, this isn't decoration, it's the reason a social cut
+  // shared anywhere still points back to recappedforyou.com. See
+  // appendSocialEndCard's own comment in lib/video-assemble.js.
+  const outPath = path.join(tmpDir, `social-cut-${cutIndex + 1}.mp4`);
+  await appendSocialEndCard(rawPath, socialLocalPaths[socialLocalPaths.length - 1], outPath, {
+    width: SOCIAL_CUT_OUTPUT.outputWidth,
+    height: SOCIAL_CUT_OUTPUT.outputHeight,
+    hasAudio: !!socialMusicPath,
+  });
   await uploadToR2(`deliverable/${bookingId}/social-cut-${cutIndex + 1}.mp4`, fs.readFileSync(outPath), "video/mp4");
   // No intro card to skip past any more -- the default 1.5s now lands
   // inside the first real photo, which is the cut's actual opening frame.
   await uploadPosterFor(outPath, tmpDir, `deliverable/${bookingId}/social-cut-${cutIndex + 1}-poster.jpg`);
-  // The public teaser (see buildTeaserClip's own comment) is sourced from
-  // cut 1 only, not every cut -- one clip a host might post to their own
-  // followers is the point, not a full duplicate set of watermarked cuts.
-  if (cutIndex === 0) await buildAndUploadTeaser(bookingId, outPath, tmpDir);
-}
-
-// Trims the just-rendered first social cut down to a few public-facing
-// seconds with a permanent brand watermark burned in -- see
-// buildTeaserClip's own comment in lib/video-assemble.js for why this one
-// clip is different from everything else this pipeline produces. Only
-// ever called for Spotlight/Luxe bookings (the only tiers with a social
-// cut to trim from at all); Free/Highlight bookings simply get no teaser,
-// same as they get no social cut.
-async function buildAndUploadTeaser(bookingId, socialCutPath, tmpDir) {
-  const teaserPath = path.join(tmpDir, "teaser.mp4");
-  await buildTeaserClip(socialCutPath, teaserPath);
-  await uploadToR2(`deliverable/${bookingId}/teaser.mp4`, fs.readFileSync(teaserPath), "video/mp4");
 }
 
 // The deliverable row + status flip + delivery email, once every video for a
@@ -1317,11 +1310,6 @@ async function finalizeFullDelivery(bookingId, rs) {
       social_video_no_roast_keys: [],
       social_video_poster_keys: socialVideoPosterKeys,
       social_video_no_roast_poster_keys: [],
-      // Only ever set alongside social_video_keys[0] -- buildAndUploadTeaser
-      // is called from inside renderOneSocialCut(bookingId, 0, ...), so a
-      // booking with no cut 1 (Free/Highlight; no social cuts at all) has no
-      // teaser file in R2 to point at either.
-      teaser_video_key: socialVideoKeys[0] ? `deliverable/${bookingId}/teaser.mp4` : null,
       gallery_photo_keys: spec.galleryPhotoKeys,
       delivered_at: new Date().toISOString(),
       render_state: null,

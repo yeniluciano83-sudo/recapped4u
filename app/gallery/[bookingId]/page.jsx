@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { buttonStyle, radius, shadow, LoadingState } from "@/components/ui";
 import { useParams } from "next/navigation";
-import { Download, Play, Image as ImageIcon, Share2, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight, ArrowUp, Megaphone } from "lucide-react";
+import { Download, Play, Image as ImageIcon, Share2, X, LayoutGrid, Rows, Film, Square, Check, ChevronLeft, ChevronRight, ArrowUp } from "lucide-react";
 import { useModalDialog } from "@/lib/useModalDialog";
 
 // Keep in sync with GALLERY_RETENTION in app/booking/page.jsx.
@@ -34,7 +34,6 @@ export default function GalleryDeliveryPage() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [sharingRecap, setSharingRecap] = useState(false);
-  const [sharingTeaser, setSharingTeaser] = useState(false);
   // Separate from shareCopied so the video toolbar's confirmation doesn't also
   // light up the "Share this gallery" button further down the page.
   const [videoShareCopied, setVideoShareCopied] = useState(false);
@@ -203,37 +202,6 @@ export default function GalleryDeliveryPage() {
       if (err?.name !== "AbortError") console.error("Recap card share failed", err);
     } finally {
       setSharingRecap(false);
-    }
-  };
-
-  // A few watermarked seconds meant to go out PUBLICLY -- posted to the
-  // host's own followers, not sent to guests, which is the opposite
-  // audience from every other share button on this page (see
-  // buildTeaserClip's own comment in lib/video-assemble.js for why it
-  // carries a permanent brand mark that the other exports don't). Only
-  // exists for Spotlight/Luxe bookings (deliverable.has_teaser); rendered
-  // conditionally further down. Proxied through our own domain
-  // (app/api/teaser/[bookingId]/route.js), not a presigned R2 link, since
-  // R2 doesn't set Access-Control-Allow-Origin and this needs the actual
-  // bytes to attach as a File -- same reasoning as handleShareRecap above.
-  const handleShareTeaser = async () => {
-    setSharingTeaser(true);
-    try {
-      const res = await fetch(`/api/teaser/${bookingId}`);
-      if (!res.ok) throw new Error("Failed to load teaser");
-      const blob = await res.blob();
-      const file = new File([blob], `recapped-teaser-${bookingId}.mp4`, { type: "video/mp4" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: eventName, text: `A moment from ${eventName} 🎉` });
-      } else {
-        const objectUrl = URL.createObjectURL(blob);
-        window.open(objectUrl, "_blank", "noopener,noreferrer");
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
-      }
-    } catch (err) {
-      if (err?.name !== "AbortError") console.error("Teaser share failed", err);
-    } finally {
-      setSharingTeaser(false);
     }
   };
 
@@ -611,25 +579,6 @@ export default function GalleryDeliveryPage() {
               style={{ padding: "14px", borderRadius: "10px", border: "none", background: "#C97A3D", color: "#211F1D", fontSize: "14px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", cursor: sharingRecap ? "default" : "pointer", opacity: sharingRecap ? 0.7 : 1 }}>
               <ImageIcon size={16} /> {sharingRecap ? "Preparing your recap card…" : "Share your finished recap"}
             </button>
-          )}
-          {/* Opposite audience from every other button here -- this is
-              for the host's OWN followers, not their guests, which is why
-              it only shows up when there's actually a watermarked teaser
-              to hand them (see handleShareTeaser's own comment). Spotlight/
-              Luxe only -- Free/Highlight bookings have no social cut to
-              have trimmed one from. */}
-          {!selectMode && data?.deliverable?.has_teaser && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 10, background: "#FBEEE0", border: "1px solid #EAD3AE" }}>
-              <Megaphone size={18} color="#B85C1F" style={{ flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#211F1D" }}>Got a teaser for your own followers?</p>
-                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b655c" }}>A short public clip, not just for your guest list.</p>
-              </div>
-              <button onClick={handleShareTeaser} disabled={sharingTeaser}
-                style={{ flexShrink: 0, padding: "10px 16px", borderRadius: 8, border: "none", background: "#211F1D", color: "#FFFFFF", fontSize: "13px", fontWeight: 700, cursor: sharingTeaser ? "default" : "pointer", opacity: sharingTeaser ? 0.7 : 1 }}>
-                {sharingTeaser ? "Preparing…" : "Share"}
-              </button>
-            </div>
           )}
           <div style={{ display: "flex", gap: "10px" }}>
             {selectMode ? (

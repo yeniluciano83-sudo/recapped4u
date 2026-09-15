@@ -432,13 +432,63 @@ export default function HomePage() {
           .how-step-title { margin-top: 14px; }
         }
 
-        .sprocket-divider {
-          height: 10px;
-          background-image: radial-gradient(circle, #D8CFC0 2px, transparent 2.5px);
-          background-size: 20px 10px;
-          background-repeat: repeat-x;
-          background-position: center;
-          opacity: 0.7;
+        /* A small stepped plinth at each end, joined by a fluted stone sill
+           -- the same repeating-linear-gradient groove used on the How It
+           Works connector further down this file -- rather than the plain
+           dot row this replaces. Reads as the base course two pillars
+           would share, at every section seam, every viewport width (the
+           .pillar-flank photographic columns below only run alongside the
+           hero/How-It-Works region, so sections further down the page had
+           no pillar presence at all before this).
+
+           Drawn in flat CSS rather than reusing pillar-base.jpg: that
+           asset is a blind-emboss carving meant to be read at the ~78px
+           height .pillar-flank displays it at, under soft raking light --
+           tried here first, shrunk to icon size its shading was still all
+           but invisible against the cream even after a heavy contrast
+           push. A drawn silhouette reads at any size, the way the
+           existing dot row and how-step-numeral badge already do. */
+        .pillar-divider {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 0 20px;
+        }
+        .pillar-divider-base {
+          position: relative;
+          flex-shrink: 0;
+          width: 30px;
+          height: 20px;
+        }
+        .pillar-divider-base::before, .pillar-divider-base::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #F1E9DA;
+          border: 1px solid #D8CFC0;
+        }
+        .pillar-divider-base::before {
+          bottom: 0;
+          width: 30px;
+          height: 7px;
+          border-radius: 1px;
+        }
+        .pillar-divider-base::after {
+          bottom: 6px;
+          width: 18px;
+          height: 13px;
+          border-bottom: none;
+          border-radius: 1.5px 1.5px 0 0;
+        }
+        .pillar-divider-line {
+          flex: 1;
+          height: 7px;
+          min-width: 24px;
+          background-color: #F1E9DA;
+          background-image: repeating-linear-gradient(90deg, rgba(33,31,29,.16) 0 1px, transparent 1px 3px);
+          border-top: 1px solid #D8CFC0;
+          border-bottom: 1px solid #D8CFC0;
         }
 
         /* Flanking columns for the two empty margins, spanning from the top
@@ -1432,8 +1482,8 @@ function CountUpPrice({ value, duration = 800 }) {
 // (#FAF7F2, set on HomePage's outer div) -- the whole page reads as one
 // continuous surface now instead of alternating white/tinted bands between
 // sections. Kept as two keys rather than deleting `band` entirely: it still
-// drives the .sprocket-divider rule rendered above/below a banded section,
-// which is a real, wanted section break, just not a color one anymore.
+// drives the PillarDivider rendered above/below a banded section, which is
+// a real, wanted section break, just not a color one anymore.
 const BAND_COLORS = { white: "#FAF7F2", tint: "#FAF7F2" };
 
 // Fades + slides a section up into place the first time it scrolls into
@@ -1515,9 +1565,21 @@ function Section({ id, refs, title, icon, children, subtitle, band, blob, maxWid
 
   return (
     <div style={{ background: BAND_COLORS[band] }}>
-      <div className="sprocket-divider" />
+      <PillarDivider />
       {content}
-      <div className="sprocket-divider" />
+      <PillarDivider />
+    </div>
+  );
+}
+
+// Marks every banded section's start and end -- see .pillar-divider above
+// for why this replaced the old plain dot row.
+function PillarDivider() {
+  return (
+    <div className="pillar-divider" aria-hidden="true">
+      <div className="pillar-divider-base" />
+      <div className="pillar-divider-line" />
+      <div className="pillar-divider-base" />
     </div>
   );
 }

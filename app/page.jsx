@@ -571,9 +571,13 @@ export default function HomePage() {
         /* Real carved-marble tablets, phone/tablet only -- desktop's flat
            cardStyle background (see the price-card TiltCard's own comment)
            is untouched above 1349px, the same breakpoint app/layout.js's
-           mobile-sand-overlay uses. */
+           mobile-sand-overlay uses. Straightened to 0deg here too: a row of
+           tablets sitting in a straight line reads as considered/carved,
+           the way the scattered, individually-tilted paper-card look
+           (still fine on desktop, where it's still paper) doesn't once the
+           material underneath has changed. */
         @media (max-width: 1349px) {
-          .price-card { --price-card-bg-image: url("/images/marble-tablet.jpg"); }
+          .price-card { --price-card-bg-image: url("/images/marble-tablet.jpg"); --price-card-tilt: 0deg; }
         }
 
         /* Fluted-column texture on the How It Works connector, phone/tablet
@@ -960,7 +964,15 @@ export default function HomePage() {
           {TIERS.map((t, idx) => {
             const tierIcon = TIER_ICONS[t.id];
             const tilt = [-1.3, 0.9, 0, -0.7][idx] || 0;
-            const baseTransform = t.highlight ? "scale(1.03)" : `rotate(${tilt}deg)`;
+            // var() with the real per-card tilt as its *fallback*, not a
+            // separately-declared custom property -- if this set
+            // --price-card-tilt inline instead, that inline declaration
+            // would win over any later stylesheet rule, the same reason
+            // --price-card-bg-image below is never set inline either. This
+            // string also gets reused verbatim as TiltCard's mouseleave
+            // reset, so a phone/tablet straightened tilt survives a tap's
+            // synthetic mouseleave too, not just the initial paint.
+            const baseTransform = t.highlight ? "scale(1.03)" : `rotate(var(--price-card-tilt, ${tilt}deg))`;
             return (
             <div key={t.id} className="price-card-breeze">
             <TiltCard href={`/booking?tier=${t.id}`} className="price-card" baseTransform={baseTransform} style={{

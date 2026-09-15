@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { cardStyle as sharedCardStyle } from "@/components/ui";
+import { cardStyle as sharedCardStyle, shadow } from "@/components/ui";
 import Link from "next/link";
-import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, QrCode, MessageCircle, Quote, Play, Pause } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, QrCode, MessageCircle, Quote, Play, Pause, ArrowUp } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -225,6 +225,23 @@ export default function HomePage() {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  // Mobile-only "back to top" -- same scroll-threshold/fade pattern as the
+  // QR share page's own (app/qr/[slug]/page.jsx), the one other page long
+  // enough to need it. This page is easily the longest on the site (hero
+  // through FAQ through footer), and unlike that page there's no anchor nav
+  // scattered through the content to jump back with by hand.
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 600);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const scrollToTop = () => {
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  };
 
   return (
     <div style={{ background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
@@ -1169,6 +1186,29 @@ export default function HomePage() {
           Book Now
         </a>
       </div>
+
+      {/* Mobile only (see .back-to-top below) -- always mounted, visibility
+          driven by opacity/pointer-events off the scroll-position state
+          above, same as the mobile book bar just above and the QR share
+          page's identical button. Sits above that bar, not stacked behind
+          or beside it, so the two never overlap. */}
+      <button
+        onClick={scrollToTop}
+        aria-label="Back to top"
+        aria-hidden={!showBackToTop}
+        tabIndex={showBackToTop ? 0 : -1}
+        className="back-to-top"
+        style={{
+          position: "fixed", right: 16, width: 46, height: 46, borderRadius: "50%",
+          background: "#C97A3D", border: "none", color: "#211F1D", alignItems: "center", justifyContent: "center",
+          boxShadow: shadow.md, cursor: "pointer", zIndex: 46,
+          opacity: showBackToTop ? 1 : 0, pointerEvents: showBackToTop ? "auto" : "none",
+          transform: showBackToTop ? "translateY(0)" : "translateY(10px)",
+        }}
+      >
+        <ArrowUp size={20} />
+      </button>
+
       <style>{`
         .mobile-book-bar {
           display: none;
@@ -1187,6 +1227,26 @@ export default function HomePage() {
         }
         @media (prefers-reduced-motion: reduce) {
           .mobile-book-bar { transition: none; }
+        }
+
+        /* Hidden by default (desktop): the sticky header's own Book Now
+           button and section nav are already reachable at every scroll
+           position there, so a second "back to top" control would be
+           redundant. display: none rather than not rendering the button at
+           all, so the opacity/transform transition below still has
+           something to animate on the one breakpoint it's actually used. */
+        .back-to-top { display: none; transition: opacity 0.2s ease, transform 0.2s ease; }
+        @media (max-width: 850px) {
+          .back-to-top {
+            display: flex;
+            /* Clears the mobile book bar above it (~60px tall including its
+               own padding) rather than sitting behind or beside it -- see
+               .mobile-book-bar's own height math in its padding/content. */
+            bottom: calc(76px + env(safe-area-inset-bottom));
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .back-to-top { transition: none; }
         }
       `}</style>
     </div>

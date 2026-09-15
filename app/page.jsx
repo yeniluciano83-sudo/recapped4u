@@ -539,6 +539,42 @@ export default function HomePage() {
           .price-card-pin { display: none; }
         }
 
+        /* Real carved-marble tablets, phone/tablet only -- desktop's flat
+           cardStyle background (see the price-card TiltCard's own comment)
+           is untouched above 1349px, the same breakpoint app/layout.js's
+           mobile-sand-overlay uses. */
+        @media (max-width: 1349px) {
+          .price-card { --price-card-bg-image: url("/images/marble-tablet.jpg"); }
+        }
+
+        /* Fluted-column texture on the How It Works connector, phone/tablet
+           only -- a repeating-linear-gradient reads as vertical flute
+           grooves regardless of whether .how-step-line is itself vertical
+           (stacked layout, below 760px) or horizontal (the row layout
+           between 760px and 1349px), since the gradient's own axis (90deg)
+           doesn't depend on the element's orientation. */
+        @media (max-width: 1349px) {
+          .how-step-line {
+            background-image: repeating-linear-gradient(90deg, rgba(33,31,29,.16) 0 1px, transparent 1px 3px);
+            background-color: #F1E9DA;
+          }
+        }
+        /* The Roman numeral badge on each step icon (see how-step-numeral
+           below) -- hidden by default, shown only phone/tablet, same
+           breakpoint as everything else in this theme pass. A real DOM
+           element toggled by display, not a var() trick, since (unlike the
+           price-card background) nothing here is fighting an inline style. */
+        .how-step-numeral { display: none; }
+        @media (max-width: 1349px) {
+          .how-step-numeral {
+            display: flex; position: absolute; bottom: -6px; right: -6px;
+            width: 21px; height: 21px; border-radius: 50%;
+            background: #FAF7F2; border: 1.5px solid #C97A3D;
+            align-items: center; justify-content: center;
+            font-family: var(--font-fraunces), Georgia, serif; font-weight: 700; font-size: 10px; color: #C97A3D;
+          }
+        }
+
         /* Event-type pills are sized for a comfortable click target on
            desktop, but at mobile widths many labels are long enough that
            only one pill fits per row -- turning a wrapping tag cloud into
@@ -858,7 +894,10 @@ export default function HomePage() {
           ].map((s, i, arr) => (
               <div className="how-step" key={s.n}>
                 <div className="how-step-node">
-                  <img src={`/images/how-it-works-icons/${s.icon}.jpg`} alt="" aria-hidden="true" className="how-step-circle" width={44} height={44} />
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <img src={`/images/how-it-works-icons/${s.icon}.jpg`} alt="" aria-hidden="true" className="how-step-circle" width={44} height={44} />
+                    <span aria-hidden="true" className="how-step-numeral">{["I", "II", "III", "IV"][i]}</span>
+                  </div>
                   {i < arr.length - 1 && <div className="how-step-line" />}
                 </div>
                 <div className="how-step-content">
@@ -899,6 +938,18 @@ export default function HomePage() {
               ...cardStyle, height: "100%", position: "relative", display: "block", textDecoration: "none", color: "inherit", cursor: "pointer", transformOrigin: "50% 0%",
               border: t.highlight ? "1.5px solid #C97A3D" : cardStyle.border,
               boxShadow: t.highlight ? "0 10px 26px rgba(201,122,61,0.22)" : "0 3px 10px rgba(33,31,29,0.05)",
+              // Real marble, phone/tablet only (see the --price-card-bg-image
+              // custom property, set only inside the same max-width: 1349px
+              // query app/layout.js's mobile-sand-overlay uses) -- "none" by
+              // default keeps desktop's flat cardStyle background exactly as
+              // it was. A CSS custom property, not a plain class rule,
+              // because this card's own background is already an inline
+              // style (from cardStyle above) and inline styles beat any
+              // external class selector; a var() referenced from inline CSS
+              // is the one thing a later stylesheet rule can still override.
+              backgroundImage: "var(--price-card-bg-image, none)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
             }}>
               {t.highlight ? (
                 <span style={{ position: "absolute", top: -11, left: 16, background: "#C97A3D", color: "#211F1D", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999 }}>

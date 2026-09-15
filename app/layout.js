@@ -55,6 +55,21 @@ export default function RootLayout({ children }) {
     <html lang="en" className={`${inter.variable} ${fraunces.variable}`} style={{ colorScheme: "light" }}>
       <body style={{ colorScheme: "light" }}>
         {children}
+        {/* A real, generated blind-emboss texture (Gemini, same technique/
+            pipeline as lib/assets/invite-backgrounds -- see
+            scripts/generate-roman-theme-backgrounds.mjs), phone/tablet
+            widths only. Sits below .grain-overlay in both DOM order and
+            z-index so the fine paper grain still reads on top of it,
+            layering into one surface rather than two competing textures.
+            Gated the mirror-opposite of app/page.jsx's own
+            .pillar-flank/.entablature-bar (hidden below 1350px, shown only
+            above it) -- this is what fills that same gap from the other
+            side, so every width gets one Roman-emboss treatment or the
+            other, never neither. Baked directly onto the site's own
+            #FAF7F2, so this is a plain background-image with no blend mode
+            needed; one fixed image (not tiled) since it's a real photo-
+            like illustration, not a repeatable pattern. */}
+        <div className="mobile-sand-overlay" aria-hidden="true" />
         {/* A whisper of paper grain, site-wide -- ties into the site's own
             "Nostalgic / Retro" editing style copy ("warm film grain...
             scrapbook feel"), and every surface on the site is otherwise a
@@ -106,6 +121,47 @@ export default function RootLayout({ children }) {
           ::selection {
             background: #C97A3D;
             color: #FFFFFF;
+          }
+
+          /* pointer-events: none is load-bearing here too -- see the grain
+             overlay's own comment on the same point. z-index: 0 (below the
+             grain overlay's 1, so the grain still paints on top of it) but
+             still above ordinary static-flow page content, same reasoning
+             as that overlay -- and the same reason this NEEDS
+             mix-blend-mode: multiply the same way that overlay does:
+             confirmed live, without it this fixed, z-indexed, fully opaque
+             image painted directly over every page's own real content
+             (every page paints its own opaque #FAF7F2 on its <main>, so
+             there is no "behind the content" position this image could
+             occupy instead -- on top with a blend mode is the only
+             placement that reaches every page). Multiply can only ever
+             darken, never fully hide, the way a plain opaque image on top
+             did -- opacity 0.7, not grain's near-invisible 0.035, since
+             this texture is meant to actually read as a background, not a
+             whisper of grain; the source image's own "flat" regions are
+             already close to #FAF7F2 by construction (see
+             scripts/generate-roman-theme-backgrounds.mjs), so real content
+             stays legible everywhere except directly over a ridge shadow.
+             background-size: cover with a fixed viewport-sized layer means
+             the image doesn't scroll with the page and doesn't need to
+             tile -- it just re-covers whatever's currently in view. */
+          .mobile-sand-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.7;
+            mix-blend-mode: multiply;
+            background-image: url("/images/mobile-bg-sand.jpg");
+            background-size: cover;
+            background-position: center top;
+          }
+          @media (max-width: 1349px) {
+            .mobile-sand-overlay { display: block; }
+          }
+          @media print {
+            .mobile-sand-overlay { display: none; }
           }
 
           /* SVG feTurbulence, not an image asset -- generated at paint time,

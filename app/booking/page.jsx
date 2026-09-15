@@ -276,9 +276,13 @@ function BookingFormInner() {
     return (
       <Shell>
         <div style={{ textAlign: "center", padding: "60px 24px" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#C97A3D", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+          <div className="confirm-checkmark" style={{ width: 56, height: 56, borderRadius: "50%", background: "#C97A3D", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
             <Check size={28} color="#211F1D" strokeWidth={2.5} />
           </div>
+          {/* Phone/tablet only (see WAX_SEAL_STYLE) -- the "R" mirrors the
+              site's own nav/favicon monogram, stamped like wax pressed with
+              a signet ring, standing in for the plain checkmark above. */}
+          <div className="confirm-wax-seal" aria-hidden="true">R</div>
           <h2 style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontSize: "clamp(24px, 3.2vw, 30px)", margin: "0 0 10px" }}>
             One more step, {form.hostName.split(" ")[0]}
           </h2>
@@ -632,6 +636,38 @@ const STEP_FADE_STYLE = `
   }
 `;
 
+// The confirmation-sent screen's plain accent-circle checkmark, replaced by
+// a wax-seal stamp on phone/tablet -- same max-width: 1349px cutoff as the
+// rest of this pass (app/layout.js's mobile-sand-overlay, app/page.jsx's
+// price-card marble/how-step-numeral), so desktop keeps the plain
+// checkmark exactly as it was. Two separate elements toggled by display,
+// not one element re-skinned, since the desktop version needs no
+// animation at all -- simpler than conditionally suppressing one.
+const WAX_SEAL_STYLE = `
+  .confirm-checkmark { display: flex; }
+  .confirm-wax-seal { display: none; }
+  @media (max-width: 1349px) {
+    .confirm-checkmark { display: none; }
+    .confirm-wax-seal {
+      display: flex; width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 20px;
+      background: radial-gradient(circle at 34% 30%, #E0985A, #C97A3D 60%, #A85F2C 100%);
+      align-items: center; justify-content: center;
+      box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 10px 20px -8px rgba(33,31,29,0.5);
+      font-family: var(--font-fraunces), Georgia, serif; font-weight: 700; font-size: 24px; color: #FFF3E4;
+      transform: scale(0); opacity: 0;
+      animation: confirm-seal-stamp 650ms cubic-bezier(0.34, 1.56, 0.64, 1) 150ms forwards;
+    }
+  }
+  @keyframes confirm-seal-stamp {
+    0% { transform: scale(2.2) rotate(-8deg); opacity: 0; }
+    55% { transform: scale(0.92) rotate(2deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .confirm-wax-seal { animation: none; transform: scale(1); opacity: 1; }
+  }
+`;
+
 const eyebrow = (
   <div style={{ textAlign: "center", marginBottom: "28px" }}>
     <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#7A8B76", fontWeight: 600, margin: 0 }}>Recapped For You</p>
@@ -650,7 +686,7 @@ function Shell({ children, summary }) {
           <h1 style={visuallyHidden}>Book your event recap</h1>
           {eyebrow}
           {children}
-          <style>{STEP_FADE_STYLE}</style>
+          <style>{STEP_FADE_STYLE + WAX_SEAL_STYLE}</style>
         </div>
       </main>
     );

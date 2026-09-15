@@ -432,80 +432,6 @@ export default function HomePage() {
           .how-step-title { margin-top: 14px; }
         }
 
-        /* Phone/tablet only (max-width: 1349px, the same breakpoint the
-           marble price cards and the fluted How It Works connector use) --
-           a stepped plinth at each end, joined by a slab of marble,
-           replacing the plain dot row on those breakpoints only. Desktop
-           keeps .sprocket-divider below unchanged: this section's own
-           theme pass is mobile/tablet-only throughout, and desktop already
-           has its own pillar presence via the .pillar-flank photographic
-           columns further down (hero/How-It-Works region only, so sections
-           further down the page still had no pillar presence there
-           either, but that's a desktop-side gap this pass doesn't touch).
-
-           Both pieces drawn in flat CSS rather than reusing a
-           photographic asset (pillar-base.jpg for the plinths,
-           marble-tablet.jpg for the connecting slab -- both tried first):
-           at this thin a bar, marble-tablet.jpg's own deliberately bare
-           center (see its own generation prompt) plus its border molding
-           only near the edges meant "cover" sizing either showed a mostly
-           blank crop or dragged the border's vertical edge-lines into
-           view as stray ticks, and pillar-base.jpg's blind-emboss shading
-           was unreadable at icon size even after a heavy contrast push
-           (same finding as the plinths below). A drawn look -- soft
-           diagonal veining over the same creamy white as the plinths --
-           reads reliably at any width instead. */
-        .pillar-divider { display: none; }
-        @media (max-width: 1349px) {
-          .pillar-divider {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 0 20px;
-          }
-        }
-        .pillar-divider-base {
-          position: relative;
-          flex-shrink: 0;
-          width: 46px;
-          height: 32px;
-        }
-        .pillar-divider-base::before, .pillar-divider-base::after {
-          content: "";
-          position: absolute;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #FFFDF8;
-          border: 1px solid #E4DED2;
-        }
-        .pillar-divider-base::before {
-          bottom: 0;
-          width: 46px;
-          height: 11px;
-          border-radius: 1.5px;
-        }
-        .pillar-divider-base::after {
-          bottom: 9px;
-          width: 28px;
-          height: 21px;
-          border-bottom: none;
-          border-radius: 2px 2px 0 0;
-        }
-        .pillar-divider-line {
-          flex: 1;
-          height: 16px;
-          min-width: 24px;
-          background-color: #FFFDF8;
-          background-image:
-            linear-gradient(115deg, transparent 25%, rgba(178,168,152,0.30) 38%, transparent 48%),
-            linear-gradient(70deg, transparent 55%, rgba(178,168,152,0.22) 67%, transparent 79%);
-          border-top: 1px solid #E4DED2;
-          border-bottom: 1px solid #E4DED2;
-        }
-
-        /* Desktop's own section-seam marker -- unchanged from before this
-           theme pass, just now scoped to (min-width: 1350px) since
-           .pillar-divider above covers phone/tablet. */
         .sprocket-divider {
           height: 10px;
           background-image: radial-gradient(circle, #D8CFC0 2px, transparent 2.5px);
@@ -513,9 +439,6 @@ export default function HomePage() {
           background-repeat: repeat-x;
           background-position: center;
           opacity: 0.7;
-        }
-        @media (max-width: 1349px) {
-          .sprocket-divider { display: none; }
         }
 
         /* Flanking columns for the two empty margins, spanning from the top
@@ -1509,8 +1432,8 @@ function CountUpPrice({ value, duration = 800 }) {
 // (#FAF7F2, set on HomePage's outer div) -- the whole page reads as one
 // continuous surface now instead of alternating white/tinted bands between
 // sections. Kept as two keys rather than deleting `band` entirely: it still
-// drives the PillarDivider rendered above/below a banded section, which is
-// a real, wanted section break, just not a color one anymore.
+// drives the .sprocket-divider rule rendered above/below a banded section,
+// which is a real, wanted section break, just not a color one anymore.
 const BAND_COLORS = { white: "#FAF7F2", tint: "#FAF7F2" };
 
 // Fades + slides a section up into place the first time it scrolls into
@@ -1592,25 +1515,10 @@ function Section({ id, refs, title, icon, children, subtitle, band, blob, maxWid
 
   return (
     <div style={{ background: BAND_COLORS[band] }}>
-      <PillarDivider />
+      <div className="sprocket-divider" />
       {content}
-      <PillarDivider />
+      <div className="sprocket-divider" />
     </div>
-  );
-}
-
-// Marks every banded section's start and end -- see .pillar-divider above
-// for why this replaced the old plain dot row.
-function PillarDivider() {
-  return (
-    <>
-      <div className="pillar-divider" aria-hidden="true">
-        <div className="pillar-divider-base" />
-        <div className="pillar-divider-line" />
-        <div className="pillar-divider-base" />
-      </div>
-      <div className="sprocket-divider" aria-hidden="true" />
-    </>
   );
 }
 

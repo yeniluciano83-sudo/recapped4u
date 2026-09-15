@@ -432,63 +432,90 @@ export default function HomePage() {
           .how-step-title { margin-top: 14px; }
         }
 
-        /* A small stepped plinth at each end, joined by a fluted stone sill
-           -- the same repeating-linear-gradient groove used on the How It
-           Works connector further down this file -- rather than the plain
-           dot row this replaces. Reads as the base course two pillars
-           would share, at every section seam, every viewport width (the
-           .pillar-flank photographic columns below only run alongside the
-           hero/How-It-Works region, so sections further down the page had
-           no pillar presence at all before this).
+        /* Phone/tablet only (max-width: 1349px, the same breakpoint the
+           marble price cards and the fluted How It Works connector use) --
+           a stepped plinth at each end, joined by a slab of marble,
+           replacing the plain dot row on those breakpoints only. Desktop
+           keeps .sprocket-divider below unchanged: this section's own
+           theme pass is mobile/tablet-only throughout, and desktop already
+           has its own pillar presence via the .pillar-flank photographic
+           columns further down (hero/How-It-Works region only, so sections
+           further down the page still had no pillar presence there
+           either, but that's a desktop-side gap this pass doesn't touch).
 
-           Drawn in flat CSS rather than reusing pillar-base.jpg: that
-           asset is a blind-emboss carving meant to be read at the ~78px
-           height .pillar-flank displays it at, under soft raking light --
-           tried here first, shrunk to icon size its shading was still all
-           but invisible against the cream even after a heavy contrast
-           push. A drawn silhouette reads at any size, the way the
-           existing dot row and how-step-numeral badge already do. */
-        .pillar-divider {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 0 20px;
+           Both pieces drawn in flat CSS rather than reusing a
+           photographic asset (pillar-base.jpg for the plinths,
+           marble-tablet.jpg for the connecting slab -- both tried first):
+           at this thin a bar, marble-tablet.jpg's own deliberately bare
+           center (see its own generation prompt) plus its border molding
+           only near the edges meant "cover" sizing either showed a mostly
+           blank crop or dragged the border's vertical edge-lines into
+           view as stray ticks, and pillar-base.jpg's blind-emboss shading
+           was unreadable at icon size even after a heavy contrast push
+           (same finding as the plinths below). A drawn look -- soft
+           diagonal veining over the same creamy white as the plinths --
+           reads reliably at any width instead. */
+        .pillar-divider { display: none; }
+        @media (max-width: 1349px) {
+          .pillar-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 20px;
+          }
         }
         .pillar-divider-base {
           position: relative;
           flex-shrink: 0;
-          width: 30px;
-          height: 20px;
+          width: 46px;
+          height: 32px;
         }
         .pillar-divider-base::before, .pillar-divider-base::after {
           content: "";
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          background: #F1E9DA;
-          border: 1px solid #D8CFC0;
+          background: #FFFDF8;
+          border: 1px solid #E4DED2;
         }
         .pillar-divider-base::before {
           bottom: 0;
-          width: 30px;
-          height: 7px;
-          border-radius: 1px;
+          width: 46px;
+          height: 11px;
+          border-radius: 1.5px;
         }
         .pillar-divider-base::after {
-          bottom: 6px;
-          width: 18px;
-          height: 13px;
+          bottom: 9px;
+          width: 28px;
+          height: 21px;
           border-bottom: none;
-          border-radius: 1.5px 1.5px 0 0;
+          border-radius: 2px 2px 0 0;
         }
         .pillar-divider-line {
           flex: 1;
-          height: 7px;
+          height: 16px;
           min-width: 24px;
-          background-color: #F1E9DA;
-          background-image: repeating-linear-gradient(90deg, rgba(33,31,29,.16) 0 1px, transparent 1px 3px);
-          border-top: 1px solid #D8CFC0;
-          border-bottom: 1px solid #D8CFC0;
+          background-color: #FFFDF8;
+          background-image:
+            linear-gradient(115deg, transparent 25%, rgba(178,168,152,0.30) 38%, transparent 48%),
+            linear-gradient(70deg, transparent 55%, rgba(178,168,152,0.22) 67%, transparent 79%);
+          border-top: 1px solid #E4DED2;
+          border-bottom: 1px solid #E4DED2;
+        }
+
+        /* Desktop's own section-seam marker -- unchanged from before this
+           theme pass, just now scoped to (min-width: 1350px) since
+           .pillar-divider above covers phone/tablet. */
+        .sprocket-divider {
+          height: 10px;
+          background-image: radial-gradient(circle, #D8CFC0 2px, transparent 2.5px);
+          background-size: 20px 10px;
+          background-repeat: repeat-x;
+          background-position: center;
+          opacity: 0.7;
+        }
+        @media (max-width: 1349px) {
+          .sprocket-divider { display: none; }
         }
 
         /* Flanking columns for the two empty margins, spanning from the top
@@ -1576,11 +1603,14 @@ function Section({ id, refs, title, icon, children, subtitle, band, blob, maxWid
 // for why this replaced the old plain dot row.
 function PillarDivider() {
   return (
-    <div className="pillar-divider" aria-hidden="true">
-      <div className="pillar-divider-base" />
-      <div className="pillar-divider-line" />
-      <div className="pillar-divider-base" />
-    </div>
+    <>
+      <div className="pillar-divider" aria-hidden="true">
+        <div className="pillar-divider-base" />
+        <div className="pillar-divider-line" />
+        <div className="pillar-divider-base" />
+      </div>
+      <div className="sprocket-divider" aria-hidden="true" />
+    </>
   );
 }
 

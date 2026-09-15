@@ -58,18 +58,22 @@ export default function RootLayout({ children }) {
         {/* A real, generated blind-emboss texture (Gemini, same technique/
             pipeline as lib/assets/invite-backgrounds -- see
             scripts/generate-roman-theme-backgrounds.mjs), phone/tablet
-            widths only. Sits below .grain-overlay in both DOM order and
-            z-index so the fine paper grain still reads on top of it,
-            layering into one surface rather than two competing textures.
-            Gated the mirror-opposite of app/page.jsx's own
-            .pillar-flank/.entablature-bar (hidden below 1350px, shown only
-            above it) -- this is what fills that same gap from the other
-            side, so every width gets one Roman-emboss treatment or the
-            other, never neither. Baked directly onto the site's own
-            #FAF7F2, so this is a plain background-image with no blend mode
-            needed; one fixed image (not tiled) since it's a real photo-
-            like illustration, not a repeatable pattern. */}
-        <div className="mobile-sand-overlay" aria-hidden="true" />
+            widths only: two flanking columns joined by a base at the
+            bottom, echoing app/page.jsx's own real desktop
+            .pillar-flank/.entablature-bar columns rather than an unrelated
+            motif -- this is that same idea, reframed as one background
+            image instead of three stacked photo slices, for the widths
+            those real columns have no room to stand in. Gated the mirror-
+            opposite of that pair too (hidden below 1350px, shown only
+            above it): this fills that same gap from the other side, so
+            every width gets one Roman-emboss column treatment or the
+            other, never neither. Sits below .grain-overlay in both DOM
+            order and z-index so the fine paper grain still reads on top of
+            it, layering into one surface rather than two competing
+            textures. One fixed image (not tiled): the columns are meant to
+            frame the current screenful the way the real desktop ones frame
+            the whole page, not repeat as a pattern. */}
+        <div className="mobile-pillar-overlay" aria-hidden="true" />
         {/* A whisper of paper grain, site-wide -- ties into the site's own
             "Nostalgic / Retro" editing style copy ("warm film grain...
             scrapbook feel"), and every surface on the site is otherwise a
@@ -136,32 +140,47 @@ export default function RootLayout({ children }) {
              occupy instead -- on top with a blend mode is the only
              placement that reaches every page). Multiply can only ever
              darken, never fully hide, the way a plain opaque image on top
-             did -- opacity 0.7, not grain's near-invisible 0.035, since
-             this texture is meant to actually read as a background, not a
-             whisper of grain; the source image's own "flat" regions are
-             already close to #FAF7F2 by construction (see
+             did -- opacity 1, not grain's near-invisible 0.035, since this
+             texture is meant to actually read as a background, not a
+             whisper of grain. Confirmed live at 0.7 first: multiply
+             combined with a fractional opacity (which fades part-way back
+             toward "no effect at all") compounds into a much weaker result
+             than either alone suggests -- the plinth beam connecting the
+             two columns, the actual point of this asset, was nearly
+             invisible against real page content at that setting despite
+             reading clearly in isolation. The source image's own "flat"
+             regions are already close to #FAF7F2 by construction (see
              scripts/generate-roman-theme-backgrounds.mjs), so real content
-             stays legible everywhere except directly over a ridge shadow.
-             background-size: cover with a fixed viewport-sized layer means
-             the image doesn't scroll with the page and doesn't need to
-             tile -- it just re-covers whatever's currently in view. */
-          .mobile-sand-overlay {
+             stays legible everywhere except directly over a column's own
+             carved shadow even at full opacity. background-size: cover
+             with a fixed viewport-sized layer means the image doesn't
+             scroll with the page and doesn't need to tile -- it just
+             re-covers whatever's currently in view. */
+          .mobile-pillar-overlay {
             display: none;
             position: fixed;
             inset: 0;
             z-index: 0;
             pointer-events: none;
-            opacity: 0.7;
+            opacity: 1;
             mix-blend-mode: multiply;
-            background-image: url("/images/mobile-bg-sand.jpg");
+            background-image: url("/images/mobile-bg-pillars.jpg");
             background-size: cover;
-            background-position: center top;
+            /* Bottom, not top: the source image's whole point is the
+               plinth beam connecting the two columns at its own bottom
+               edge, and anchoring there guarantees that beam always sits
+               right at the bottom of the viewport -- reading as it capping
+               whatever section has currently scrolled to the bottom of the
+               screen, not just showing once near the very top of the page.
+               Confirmed live that anchoring top instead left the beam
+               barely visible, cropped against the mobile book bar. */
+            background-position: center bottom;
           }
           @media (max-width: 1349px) {
-            .mobile-sand-overlay { display: block; }
+            .mobile-pillar-overlay { display: block; }
           }
           @media print {
-            .mobile-sand-overlay { display: none; }
+            .mobile-pillar-overlay { display: none; }
           }
 
           /* SVG feTurbulence, not an image asset -- generated at paint time,

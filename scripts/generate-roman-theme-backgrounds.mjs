@@ -1,12 +1,17 @@
 // One-time generator for the ancient-Roman theme's two Gemini-illustrated
-// textures: public/images/mobile-bg-sand.jpg (the mobile/tablet page
+// textures: public/images/mobile-bg-pillars.jpg (the mobile/tablet page
 // background, app/layout.js) and public/images/marble-tablet.jpg (the
 // pricing tier card background, app/page.jsx / app/booking/page.jsx).
 // Same model and blind-emboss visual language as
 // scripts/generate-invite-backgrounds.mjs, not run at request time --
 // these are static assets, regenerated only when deliberately redoing one.
 //
-// Usage: node --env-file=.env.local scripts/generate-roman-theme-backgrounds.mjs [sand] [marble]
+// pillars replaces an earlier wave-sand version of this same background
+// (same file slot, same processing) -- kept as "pillars" rather than
+// "sand" throughout this file since that's the name that matters going
+// forward, not a record of what used to be here.
+//
+// Usage: node --env-file=.env.local scripts/generate-roman-theme-backgrounds.mjs [pillars] [marble]
 //   No args -- regenerates both.
 import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
@@ -24,14 +29,22 @@ const STYLE_SUFFIX =
   "Photographed macro, in a single-tone blind-emboss / carved relief -- any detail is pressed into the material itself, not painted or inked, reading in the exact same soft ivory-white tone as the material around it, revealed only by soft raking studio light casting delicate, precise shadows and highlights. Extremely elegant, minimal, sophisticated. No ink, no color, no text, no people.";
 
 const JOBS = {
-  sand: {
-    prompt: `A blind-emboss relief of wave-washed beach sand ripples -- the uneven, organic parallel ridges left in wet sand as an ocean wave recedes -- covering the entire frame edge to edge at a macro, top-down angle, vertical portrait format. ${STYLE_SUFFIX}`,
+  pillars: {
+    // Same idea as app/page.jsx's real desktop flanking columns
+    // (pillar-capital/shaft/base.jpg + entablature-tile.jpg), reframed as
+    // one portrait background instead of three stacked photo slices: two
+    // matching fluted columns up the left/right edges, joined at the
+    // bottom by a plain stone plinth beam, with the large center left
+    // bare for real page content to sit on top of.
+    prompt: `A blind-emboss relief of two matching fluted Roman columns, one running the full height along the left edge of the frame and one along the right edge, mirror images of each other, each with a simple Ionic capital at the top. The two columns are joined at the very bottom of the frame by a single plain horizontal stone plinth/base beam spanning the full width between them, like the foot of a stone gate or table. The entire large center area between the two columns, at least 70% of the frame's width, stays completely bare, smooth, softly lit blank material with no carving or motif of any kind. Vertical portrait format, tall and narrow. ${STYLE_SUFFIX}`,
     aspectRatio: "9:16",
-    dest: path.join(OUT_DIR, "mobile-bg-sand.jpg"),
-    // Contrast pushed around midtone after the fact -- confirmed live
-    // (this session) that the raw Gemini output alone reads as too faint
-    // once it's an actual page background rather than a hero-sized study.
-    postGain: 1.6,
+    dest: path.join(OUT_DIR, "mobile-bg-pillars.jpg"),
+    // Contrast pushed around midtone after the fact -- confirmed live that
+    // the raw Gemini output alone reads as too faint once it's an actual
+    // page background rather than a hero-sized study, and specifically
+    // that the plinth beam connecting the two columns at the very bottom
+    // (the actual point of this asset) all but disappeared below ~2x.
+    postGain: 2.2,
   },
   marble: {
     prompt: `A smooth polished slab of ancient Roman marble with natural subtle veining, vertical portrait format. A thin carved decorative border frame runs around the outer edge only -- a simple classical fillet-and-bead molding line about 6% of the frame's width in from each edge. The entire large center area, at least 80% of the frame, is completely bare, smooth, softly lit blank polished marble with no carving, no border detail, no motif of any kind -- reserved deliberately empty for a pricing card's own text. ${STYLE_SUFFIX}`,
@@ -75,7 +88,14 @@ async function generate(name, job) {
       .jpeg({ quality: 90 })
       .toBuffer();
   } else {
-    outBuf = await sharp(rawBuf).modulate({ brightness: 1.1, saturation: 0.9 }).jpeg({ quality: 90 }).toBuffer();
+    // brightness 1.2 / saturation 0.55, not the invite backgrounds' own
+    // 1.16 / 0.75 -- confirmed live that this specific marble's real cool
+    // grey veining needed a bigger saturation cut than warm ivory
+    // cardstock ever did to read as "white cream" rather than grey-veined
+    // Carrara marble, the same known Gemini-brightness gap
+    // lib/inviteCard.js's own comment already documents, just further
+    // along it for this particular source image.
+    outBuf = await sharp(rawBuf).modulate({ brightness: 1.2, saturation: 0.55 }).jpeg({ quality: 90 }).toBuffer();
   }
 
   // Same tmp-then-rename dance as generate-invite-backgrounds.mjs -- a

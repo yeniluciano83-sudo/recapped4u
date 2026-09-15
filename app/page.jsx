@@ -526,6 +526,16 @@ export default function HomePage() {
         @media (prefers-reduced-motion: reduce) {
           .price-card-breeze { animation: none; }
         }
+        /* A real marble tablet doesn't sway in a breeze or hang from a
+           pinned piece of tape -- both read as "paper on a corkboard",
+           which fights the carved-stone material the same cards switch to
+           on phone/tablet (see --price-card-bg-image below). Stopped
+           rather than removed so the exact same markup still works if
+           this breakpoint's background ever changes back. */
+        @media (max-width: 1349px) {
+          .price-card-breeze { animation: none; }
+          .price-card-pin { display: none; }
+        }
 
         /* The pinned-to-a-corkboard tape mark above each non-highlighted
            pricing card reads fine floating in the gap between cards in a
@@ -534,7 +544,9 @@ export default function HomePage() {
            below) the cards stack tightly enough that the mark pokes into
            the seam between two cards and reads as a rendering glitch
            instead of a decoration. Hide it below that same collapse
-           point. */
+           point. (Redundant with the max-width: 1349px rule above, which
+           already covers this width, but kept in case that rule's
+           breakpoint ever moves independently of this one's own reason.) */
         @media (max-width: 480px) {
           .price-card-pin { display: none; }
         }

@@ -307,7 +307,7 @@ describe("POST /api/bookings", () => {
       expect(res.status).toBe(200);
       expect(json).toEqual({ bookingId: "booking-promo" });
       expect(stripeMocks.sessionsCreate).not.toHaveBeenCalled();
-      expect(supabase.rpc).toHaveBeenCalledWith("redeem_promo_code", { p_code: "FOUNDERS1", p_tier: "keepsake" });
+      expect(supabase.rpc).toHaveBeenCalledWith("redeem_promo_code", { p_code: "FOUNDERS1", p_tier: "keepsake", p_email: "jordan@example.com" });
 
       const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
       expect(insertCall.args[0].promo_code_used).toBe("FOUNDERS1");
@@ -355,18 +355,28 @@ describe("POST /api/bookings", () => {
       expect(insertCall.args[0].promo_code_used).toBeNull();
     });
 
-    it("gives back a single-use code's redemption if the booking insert fails afterward", async () => {
+    it("gives back a code's redemption (both the counter and the per-email record) if the booking insert fails afterward", async () => {
       supabase.rpc.mockResolvedValue({ data: { code: "COMP1", use_count: 1 }, error: null });
       sb.mockResponse({ data: null, error: new Error("db down") }); // insert fails
-      sb.mockResponse({ data: null, error: null }); // the revert update
+      sb.mockResponse({ data: null, error: null }); // revert promo_codes.use_count
+      sb.mockResponse({ data: null, error: null }); // revert (delete) the promo_code_redemptions row
 
       const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "recap", promoCode: "COMP1" }));
 
       expect(res.status).toBe(500);
+      expect(sb.callLog[1].table).toBe("promo_codes");
       const revertCall = sb.callLog[1].calls.find((c) => c.method === "update");
       expect(revertCall.args[0]).toEqual({ use_count: 0 }); // 1 (post-increment) - 1 = back to 0
-      const eqCall = sb.callLog[1].calls.find((c) => c.method === "eq");
-      expect(eqCall.args).toEqual(["code", "COMP1"]);
+      const codeEqCall = sb.callLog[1].calls.find((c) => c.method === "eq");
+      expect(codeEqCall.args).toEqual(["code", "COMP1"]);
+
+      expect(sb.callLog[2].table).toBe("promo_code_redemptions");
+      expect(sb.callLog[2].calls.some((c) => c.method === "delete")).toBe(true);
+      const redemptionEqCalls = sb.callLog[2].calls.filter((c) => c.method === "eq");
+      expect(redemptionEqCalls).toEqual([
+        { method: "eq", args: ["code", "COMP1"] },
+        { method: "eq", args: ["email", "jordan@example.com"] },
+      ]);
     });
   });
 });

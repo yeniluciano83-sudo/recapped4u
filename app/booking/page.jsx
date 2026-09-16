@@ -181,6 +181,15 @@ function BookingFormInner() {
   // malformed or stale query param can't silently set something invalid.
   const tierParam = searchParams.get("tier");
   const initialTier = TIERS.some((t) => t.id === tierParam) ? tierParam : "";
+  // A comp/promo code (see migrations/042_add_promo_codes.sql) arrives the
+  // same way a preselected tier does -- a QR code encoding
+  // /booking?tier=premium&promo=<code>, scanned by a founder or a comp
+  // recipient. Passed straight through on submit with no visible field or
+  // validation here: the API route is the actual source of truth on
+  // whether a code is real, unused, and valid for the chosen tier, and a
+  // wrong/stale code should just fail the same way any other submit error
+  // does rather than gate the form itself.
+  const promoCodeParam = searchParams.get("promo");
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -256,7 +265,7 @@ function BookingFormInner() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled, roastLevel: effectiveRoastLevel }) });
+      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled, roastLevel: effectiveRoastLevel, promoCode: promoCodeParam || undefined }) });
       const data = await res.json();
       if (!res.ok) {
         setSubmitError(data.error || "Submission failed. Please try again.");

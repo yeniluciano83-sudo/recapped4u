@@ -5,7 +5,7 @@ const stripeMocks = vi.hoisted(() => ({
   sessionsCreate: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn() } }));
+vi.mock("@/lib/supabase", () => ({ supabase: { from: vi.fn(), rpc: vi.fn() } }));
 vi.mock("stripe", () => ({
   default: vi.fn().mockImplementation(function () {
     return { checkout: { sessions: { create: stripeMocks.sessionsCreate } } };
@@ -47,6 +47,7 @@ describe("POST /api/bookings", () => {
   beforeEach(() => {
     sb = createSupabaseMock();
     supabase.from.mockImplementation(sb.from);
+    supabase.rpc.mockReset();
     stripeMocks.sessionsCreate.mockReset();
     sendConfirmBookingEmail.mockReset();
     generateConfirmToken.mockReset().mockReturnValue("fake-token");
@@ -292,5 +293,71 @@ describe("POST /api/bookings", () => {
 
     expect(res.status).toBe(500);
     expect(stripeMocks.sessionsCreate).not.toHaveBeenCalled();
+  });
+
+  describe("promo codes -- migrations/042_add_promo_codes.sql", () => {
+    it("redeems a valid code on a paid tier, comping it like a free booking with no Stripe session", async () => {
+      supabase.rpc.mockResolvedValue({ data: { code: "FOUNDERS1", use_count: 4 }, error: null });
+      sb.mockResponse({ data: { id: "booking-promo" }, error: null }); // insert
+      sb.mockResponse({ data: null, error: null }); // update -> pending_confirmation
+
+      const res = await POST(jsonRequest({ ...BASE_BODY, tier: "keepsake", deliveryFormat: "recap", promoCode: "  founders1  " }));
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json).toEqual({ bookingId: "booking-promo" });
+      expect(stripeMocks.sessionsCreate).not.toHaveBeenCalled();
+      expect(supabase.rpc).toHaveBeenCalledWith("redeem_promo_code", { p_code: "FOUNDERS1", p_tier: "keepsake" });
+
+      const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+      expect(insertCall.args[0].promo_code_used).toBe("FOUNDERS1");
+      expect(insertCall.args[0].status).toBe("booked");
+    });
+
+    it("rejects the booking without an insert when the code doesn't redeem (invalid, exhausted, or wrong tier)", async () => {
+      supabase.rpc.mockResolvedValue({ data: null, error: null });
+
+      const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", promoCode: "NOPE" }));
+
+      expect(res.status).toBe(400);
+      expect(sb.callLog.length).toBe(0);
+      expect(stripeMocks.sessionsCreate).not.toHaveBeenCalled();
+    });
+
+    it("returns 500 without creating a booking if the redeem call itself errors", async () => {
+      supabase.rpc.mockResolvedValue({ data: null, error: new Error("function does not exist") });
+
+      const res = await POST(jsonRequest({ ...BASE_BODY, promoCode: "FOUNDERS1" }));
+
+      expect(res.status).toBe(500);
+      expect(sb.callLog.length).toBe(0);
+    });
+
+    it("ignores an empty/whitespace-only promo code -- proceeds as an ordinary paid booking", async () => {
+      sb.mockResponse({ data: { id: "booking-nopromocode" }, error: null });
+      sb.mockResponse({ data: null, error: null });
+      stripeMocks.sessionsCreate.mockResolvedValue({ id: "cs_test_np", url: "https://checkout.stripe.com/np" });
+
+      const res = await POST(jsonRequest({ ...BASE_BODY, promoCode: "   " }));
+
+      expect(res.status).toBe(200);
+      expect(supabase.rpc).not.toHaveBeenCalled();
+      const insertCall = sb.callLog[0].calls.find((c) => c.method === "insert");
+      expect(insertCall.args[0].promo_code_used).toBeNull();
+    });
+
+    it("gives back a single-use code's redemption if the booking insert fails afterward", async () => {
+      supabase.rpc.mockResolvedValue({ data: { code: "COMP1", use_count: 1 }, error: null });
+      sb.mockResponse({ data: null, error: new Error("db down") }); // insert fails
+      sb.mockResponse({ data: null, error: null }); // the revert update
+
+      const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", deliveryFormat: "recap", promoCode: "COMP1" }));
+
+      expect(res.status).toBe(500);
+      const revertCall = sb.callLog[1].calls.find((c) => c.method === "update");
+      expect(revertCall.args[0]).toEqual({ use_count: 0 }); // 1 (post-increment) - 1 = back to 0
+      const eqCall = sb.callLog[1].calls.find((c) => c.method === "eq");
+      expect(eqCall.args).toEqual(["code", "COMP1"]);
+    });
   });
 });

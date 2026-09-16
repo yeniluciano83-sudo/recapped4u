@@ -1276,6 +1276,16 @@ async function renderOneSocialCut(bookingId, cutIndex, socialKeys, spec, tmpDir)
     ...SOCIAL_CUT_OUTPUT,
     overlayLines: buildOverlayLines(socialLocalPaths),
     kenBurns: true,
+    // Matches the full video's own unconditional polaroid look (see the
+    // "full" phase render above) -- a social cut used to fall back to
+    // assembleSlideshow's "blur" default since this key was never set
+    // here, so the two deliverables for the same event read as two
+    // different visual products instead of one consistent one. polaroid
+    // is vertical-safe already (isVertical/card-geometry math above is
+    // all width/height-relative, and the mode skips kenBurns's whole-frame
+    // zoom on its own regardless of the flag here -- see the photoBackground
+    // check ahead of the zoomRate branch).
+    photoBackground: "polaroid",
   });
   // A brief (2s) branded sign-off IS added back on -- unlike the title
   // cards above, this isn't decoration, it's the reason a social cut

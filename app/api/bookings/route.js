@@ -23,7 +23,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json();
-    const { email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic, venue, eventTime, musicTrack, socialMusicTrack } = body;
+    const { email, eventType, eventDate, guestCount, tier, style, socialStyle, notes, roastEnabled, roastLevel, deliveryFormat, fullVideoNoMusic, venue, eventTime, musicTrack, socialMusicTrack, promoCode } = body;
     const hostName = (body.hostName || "").trim();
 
     // Both optional and purely descriptive -- back the shareable guest
@@ -66,6 +66,42 @@ export async function POST(req) {
     if (!Object.prototype.hasOwnProperty.call(TIER_PRICES, tier)) {
       return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
     }
+
+    // A comp/promo code (see migrations/042_add_promo_codes.sql) skips
+    // Stripe entirely, same end state as a Free-tier booking below --
+    // redeemed atomically here, before the booking row exists, so a
+    // rejected code never creates an orphaned booking. Case/whitespace-
+    // insensitive: this is typed or QR-scanned by a founder or a comp
+    // recipient, not read back from a system that already normalized it.
+    let redeemedPromo = null;
+    if (typeof promoCode === "string" && promoCode.trim()) {
+      const { data: promoRow, error: promoError } = await supabase.rpc("redeem_promo_code", {
+        p_code: promoCode.trim().toUpperCase(),
+        p_tier: tier,
+      });
+      if (promoError) {
+        console.error("Promo code redemption failed:", promoError.message);
+        captureError(promoError, { tags: { route: "bookings.create", step: "promo-redeem" } });
+        return NextResponse.json({ error: "Booking failed" }, { status: 500 });
+      }
+      // The function returns a real row on success. On failure it does NOT
+      // return null/undefined -- confirmed live against the real database
+      // -- it returns a composite with every column set to null (Postgres'
+      // representation of "no row" for a function declared to return a
+      // single row type, not a table). A plain truthiness check on that
+      // object passes, since it's a real non-null object -- checking
+      // `.code` specifically (a real row's `code` is NOT NULL in the
+      // table, so it can only be null here on the all-null failure shape)
+      // is what actually distinguishes them. Also handled defensively as
+      // an array with one element, in case a different client version
+      // ever serializes it that way.
+      const row = Array.isArray(promoRow) ? promoRow[0] : promoRow;
+      redeemedPromo = row && row.code != null ? row : null;
+      if (!redeemedPromo) {
+        return NextResponse.json({ error: "That code isn't valid for this tier, or has already been used." }, { status: 400 });
+      }
+    }
+    const isComped = !!redeemedPromo;
 
     const VALID_DELIVERY_FORMATS = ["recap", "video_only", "social_cuts"];
     // Only Spotlight/Luxe ever choose this -- every other tier only ever
@@ -139,23 +175,43 @@ export async function POST(req) {
         music_track: validMusicTrack,
         social_music_track: validSocialMusicTrack,
         gallery_template: defaultGalleryTemplate(),
+        promo_code_used: redeemedPromo ? redeemedPromo.code : null,
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Give back a redeemed single-use code rather than burn it on a
+      // booking that was never actually created -- best-effort (an error
+      // here shouldn't mask the original insert failure, which is already
+      // a real problem worth its own investigation).
+      if (redeemedPromo) {
+        // redeemedPromo.use_count is the POST-increment value the redeem
+        // function returned -- subtract 1 to actually undo it, not just
+        // rewrite the same already-incremented number back.
+        await supabase
+          .from("promo_codes")
+          .update({ use_count: redeemedPromo.use_count - 1 })
+          .eq("code", redeemedPromo.code)
+          .then(({ error: revertError }) => {
+            if (revertError) console.error(`Failed to revert promo code ${redeemedPromo.code} after booking insert failure:`, revertError.message);
+          });
+      }
+      throw error;
+    }
 
     const price = TIER_PRICES[tier];
 
-    // Free tier has nothing to charge and no Stripe payment webhook to wait
-    // on, but skipping straight to "collecting" would let anyone book a free
-    // event under a stranger's email and have it go live immediately -- the
+    // Free tier -- or any tier comped via a redeemed promo code above --
+    // has nothing to charge and no Stripe payment webhook to wait on, but
+    // skipping straight to "collecting" would let anyone book a free event
+    // under a stranger's email and have it go live immediately -- the
     // guest upload link would be active and confirmation/reminder emails
     // would go out to someone who never asked for any of it. Instead, hold
     // it at "pending_confirmation" (no upload link, no QR) until whoever
     // owns the email clicks the confirm link. Paid tiers don't need this:
     // Stripe payment is already a real-money barrier before anything's live.
-    if (price.amount === 0) {
+    if (price.amount === 0 || isComped) {
       const { error: pendingError } = await supabase
         .from("bookings")
         .update({ status: "pending_confirmation" })

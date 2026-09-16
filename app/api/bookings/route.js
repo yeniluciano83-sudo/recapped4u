@@ -84,10 +84,19 @@ export async function POST(req) {
         captureError(promoError, { tags: { route: "bookings.create", step: "promo-redeem" } });
         return NextResponse.json({ error: "Booking failed" }, { status: 500 });
       }
-      // The function returns a single row on success, or no row (null/[])
-      // for any failure reason -- see its own comment for why those aren't
-      // distinguished here.
-      redeemedPromo = Array.isArray(promoRow) ? promoRow[0] : promoRow;
+      // The function returns a real row on success. On failure it does NOT
+      // return null/undefined -- confirmed live against the real database
+      // -- it returns a composite with every column set to null (Postgres'
+      // representation of "no row" for a function declared to return a
+      // single row type, not a table). A plain truthiness check on that
+      // object passes, since it's a real non-null object -- checking
+      // `.code` specifically (a real row's `code` is NOT NULL in the
+      // table, so it can only be null here on the all-null failure shape)
+      // is what actually distinguishes them. Also handled defensively as
+      // an array with one element, in case a different client version
+      // ever serializes it that way.
+      const row = Array.isArray(promoRow) ? promoRow[0] : promoRow;
+      redeemedPromo = row && row.code != null ? row : null;
       if (!redeemedPromo) {
         return NextResponse.json({ error: "That code isn't valid for this tier, or has already been used." }, { status: 400 });
       }

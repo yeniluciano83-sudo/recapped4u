@@ -315,7 +315,16 @@ describe("POST /api/bookings", () => {
     });
 
     it("rejects the booking without an insert when the code doesn't redeem (invalid, exhausted, or wrong tier)", async () => {
-      supabase.rpc.mockResolvedValue({ data: null, error: null });
+      // The real function does NOT return null/undefined on failure --
+      // confirmed live -- it returns a composite with every column null
+      // (Postgres' "no row" shape for a function declared to return a
+      // single row type). A plain truthiness check on that object would
+      // wrongly treat it as a successful redemption -- this is the exact
+      // shape that bug needed, not a simplified `data: null`.
+      supabase.rpc.mockResolvedValue({
+        data: { id: null, code: null, label: null, tier_restriction: null, max_uses: null, use_count: null, active: null, created_at: null },
+        error: null,
+      });
 
       const res = await POST(jsonRequest({ ...BASE_BODY, tier: "premium", promoCode: "NOPE" }));
 

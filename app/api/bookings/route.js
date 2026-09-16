@@ -67,22 +67,17 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
     }
 
-    // A comp/promo code (see migrations/042_add_promo_codes.sql and 043's
-    // per-email redemption limit) skips Stripe entirely, same end state as
-    // a Free-tier booking below -- redeemed atomically here, before the
-    // booking row exists, so a rejected code never creates an orphaned
-    // booking. Case/whitespace-insensitive: this is typed or QR-scanned by
-    // a founder or a comp recipient, not read back from a system that
-    // already normalized it. p_email is the same trimmed email the booking
-    // itself will be created under -- migration 043's redemption table is
-    // keyed on (code, email), so this is what actually ties "this person
-    // already used this code" to a real identity rather than a code alone.
+    // A comp/promo code (see migrations/042_add_promo_codes.sql) skips
+    // Stripe entirely, same end state as a Free-tier booking below --
+    // redeemed atomically here, before the booking row exists, so a
+    // rejected code never creates an orphaned booking. Case/whitespace-
+    // insensitive: this is typed or QR-scanned by a founder or a comp
+    // recipient, not read back from a system that already normalized it.
     let redeemedPromo = null;
     if (typeof promoCode === "string" && promoCode.trim()) {
       const { data: promoRow, error: promoError } = await supabase.rpc("redeem_promo_code", {
         p_code: promoCode.trim().toUpperCase(),
         p_tier: tier,
-        p_email: email.trim(),
       });
       if (promoError) {
         console.error("Promo code redemption failed:", promoError.message);
@@ -200,18 +195,6 @@ export async function POST(req) {
           .eq("code", redeemedPromo.code)
           .then(({ error: revertError }) => {
             if (revertError) console.error(`Failed to revert promo code ${redeemedPromo.code} after booking insert failure:`, revertError.message);
-          });
-        // migrations/043: also give back this person's one-time redemption
-        // -- otherwise a failed insert (transient DB error, not their
-        // fault) would permanently burn their only shot at a per-email-
-        // limited code with no booking to show for it.
-        await supabase
-          .from("promo_code_redemptions")
-          .delete()
-          .eq("code", redeemedPromo.code)
-          .eq("email", email.trim().toLowerCase())
-          .then(({ error: revertError }) => {
-            if (revertError) console.error(`Failed to revert redemption record for ${redeemedPromo.code} after booking insert failure:`, revertError.message);
           });
       }
       throw error;

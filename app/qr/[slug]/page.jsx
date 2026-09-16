@@ -30,7 +30,7 @@ const SOCIAL_STYLE_OPTIONS = [...STYLES, { id: "none", label: "No theme (no musi
 // they're directly playable here for a preview. Track counts differ per
 // style (see the commit that added track-2.mp3 onward alongside each
 // original track-1.mp3).
-const MUSIC_TRACK_COUNTS = { cinematic: 7, upbeat: 7, documentary: 6, retro: 3, highlight: 6 };
+const MUSIC_TRACK_COUNTS = { cinematic: 11, upbeat: 11, documentary: 10, retro: 3, highlight: 10 };
 const trackPreviewUrl = (styleId, trackNumber) => `/music/${styleId}/track-${trackNumber}.mp3`;
 const MUSIC_PREVIEW_URL = {
   cinematic: trackPreviewUrl("cinematic", 1),

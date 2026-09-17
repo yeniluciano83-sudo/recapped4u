@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useId, useRef } from "react";
+import React, { useState, useId, useRef, useEffect } from "react";
 import { fieldStyle, buttonStyle } from "@/components/ui";
 import { canProceedFromStyleStep, hasMadeRequiredRoastChoice } from "@/lib/bookingFormValidation";
 import { isRoastLevelSelectable } from "@/lib/pricing";
@@ -181,15 +181,19 @@ function BookingFormInner() {
   // malformed or stale query param can't silently set something invalid.
   const tierParam = searchParams.get("tier");
   const initialTier = TIERS.some((t) => t.id === tierParam) ? tierParam : "";
-  // A comp/promo code (see migrations/042_add_promo_codes.sql) arrives the
-  // same way a preselected tier does -- a QR code encoding
-  // /booking?tier=premium&promo=<code>, scanned by a founder or a comp
-  // recipient. Passed straight through on submit with no visible field or
-  // validation here: the API route is the actual source of truth on
-  // whether a code is real, unused, and valid for the chosen tier, and a
-  // wrong/stale code should just fail the same way any other submit error
-  // does rather than gate the form itself.
+  // A comp/promo code (see migrations/042_add_promo_codes.sql) can arrive
+  // two ways: pre-filled from a QR code/link (/booking?tier=premium&promo=<code>),
+  // or typed in by hand on the review step below (promoCodeInput) -- a
+  // code handed out as plain text (a DM, a screenshot) has no link for a
+  // query param to ride along with. Real state, not a read-only param,
+  // specifically so someone arriving via a link can still see and edit
+  // what's about to be submitted. No client-side validation here either
+  // way: the API route is the actual source of truth on whether a code is
+  // real, unused, and valid for the chosen tier, and a wrong/stale code
+  // should just fail the same way any other submit error does rather than
+  // gate the form itself.
   const promoCodeParam = searchParams.get("promo");
+  const [promoCodeInput, setPromoCodeInput] = useState(promoCodeParam || "");
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -201,6 +205,39 @@ function BookingFormInner() {
   const [form, setForm] = useState({ hostName: "", email: "", eventType: "", eventTypeOther: "", eventDate: "", eventTime: "", venue: "", guestCount: "", tier: initialTier, style: "", socialStyle: "", notes: "", roastEnabled: false, roastLevel: "light", roastChoiceMade: false, deliveryFormat: "", fullVideoNoMusic: false, musicTrack: 1, socialMusicTrack: 1 });
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+
+  // Live, read-only check (app/api/promo-codes/check -- never redeems
+  // anything, unlike the real POST /api/bookings submit) so a code typed in
+  // BEFORE the tier step below can steer straight to the tier it's actually
+  // restricted to, instead of someone guessing a tier, picking a style for
+  // it, and only finding out at the very end that their code needed a
+  // different package. Debounced rather than firing per keystroke; skipped
+  // entirely for an empty field.
+  const [promoCheck, setPromoCheck] = useState(null); // null = not checked yet; { valid, tierRestriction } once it resolves
+  const [promoChecking, setPromoChecking] = useState(false);
+  useEffect(() => {
+    const code = promoCodeInput.trim();
+    if (!code) {
+      setPromoCheck(null);
+      setPromoChecking(false);
+      return;
+    }
+    setPromoChecking(true);
+    const timer = setTimeout(() => {
+      fetch("/api/promo-codes/check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) })
+        .then((res) => res.json())
+        .then((data) => {
+          setPromoCheck(data);
+          // Steers the tier picker, doesn't lock it -- the cards below stay
+          // fully clickable, so a mistaken auto-select is one tap to undo.
+          if (data.valid && data.tierRestriction) update("tier", data.tierRestriction);
+        })
+        .catch(() => setPromoCheck({ valid: false }))
+        .finally(() => setPromoChecking(false));
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promoCodeInput]);
 
   // One shared <audio> element for every style preview button on this page --
   // starting a new preview stops whatever was already playing, so hosts
@@ -265,7 +302,7 @@ function BookingFormInner() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled, roastLevel: effectiveRoastLevel, promoCode: promoCodeParam || undefined }) });
+      const res = await fetch("/api/bookings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, style: effectiveStyle, eventType: effectiveEventType, roastEnabled: isRoastEligible && form.roastEnabled, roastLevel: effectiveRoastLevel, promoCode: promoCodeInput.trim() || undefined }) });
       const data = await res.json();
       if (!res.ok) {
         setSubmitError(data.error || "Submission failed. Please try again.");
@@ -356,6 +393,23 @@ function BookingFormInner() {
 
       {step === 2 && (
         <StepBlock icon={<StepIcon src="/images/booking-icons/choose-package.jpg" />} title="Choose your package">
+          <div style={{ marginBottom: "18px" }}>
+            <Field label="Promo code (optional)">
+              <input style={inputStyle} value={promoCodeInput} onChange={(e) => setPromoCodeInput(e.target.value)} placeholder="Have a code? Enter it here" autoCapitalize="characters" />
+            </Field>
+            {promoChecking && <p style={{ fontSize: 12.5, color: "#6b655c", margin: "6px 0 0" }}>Checking...</p>}
+            {!promoChecking && promoCheck?.valid && (
+              <p style={{ fontSize: 12.5, color: "#3F7A4E", margin: "6px 0 0", display: "flex", alignItems: "center", gap: 5 }}>
+                <Check size={13} strokeWidth={3} />
+                {promoCheck.tierRestriction
+                  ? `Valid -- ${TIERS.find((t) => t.id === promoCheck.tierRestriction)?.name || promoCheck.tierRestriction} selected below.`
+                  : "Valid -- pick any package below."}
+              </p>
+            )}
+            {!promoChecking && promoCheck?.valid === false && (
+              <p style={{ fontSize: 12.5, color: "#C97A3D", margin: "6px 0 0" }}>That code isn't valid, or has already been used.</p>
+            )}
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {TIERS.map((t) => (
               <button key={t.id} onClick={() => update("tier", t.id)} aria-pressed={form.tier === t.id} style={{ textAlign: "left", padding: "18px", borderRadius: "14px", cursor: "pointer", background: form.tier === t.id ? "#FBEEE0" : "#FFFFFF", border: form.tier === t.id ? "1.5px solid #C97A3D" : "1px solid #E4DED2" }}>

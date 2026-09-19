@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { cardStyle as sharedCardStyle } from "@/components/ui";
+import { cardStyle as sharedCardStyle, shadow } from "@/components/ui";
 import Link from "next/link";
-import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, QrCode, MessageCircle, Quote, Play, Pause } from "lucide-react";
+import { Camera, Sparkles, Users, Check, ChevronRight, HelpCircle, Mail, Star, Flame, Menu, X, QrCode, MessageCircle, Quote, Play, Pause, ArrowUp } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "how", label: "How It Works" },
@@ -225,6 +225,23 @@ export default function HomePage() {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  // Mobile-only "back to top" -- same scroll-threshold/fade pattern as the
+  // QR share page's own (app/qr/[slug]/page.jsx), the one other page long
+  // enough to need it. This page is easily the longest on the site (hero
+  // through FAQ through footer), and unlike that page there's no anchor nav
+  // scattered through the content to jump back with by hand.
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 600);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const scrollToTop = () => {
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  };
 
   return (
     <div style={{ background: "#FAF7F2", color: "#211F1D", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
@@ -526,6 +543,16 @@ export default function HomePage() {
         @media (prefers-reduced-motion: reduce) {
           .price-card-breeze { animation: none; }
         }
+        /* A real marble tablet doesn't sway in a breeze or hang from a
+           pinned piece of tape -- both read as "paper on a corkboard",
+           which fights the carved-stone material the same cards switch to
+           on phone/tablet (see --price-card-bg-image below). Stopped
+           rather than removed so the exact same markup still works if
+           this breakpoint's background ever changes back. */
+        @media (max-width: 1349px) {
+          .price-card-breeze { animation: none; }
+          .price-card-pin { display: none; }
+        }
 
         /* The pinned-to-a-corkboard tape mark above each non-highlighted
            pricing card reads fine floating in the gap between cards in a
@@ -534,9 +561,51 @@ export default function HomePage() {
            below) the cards stack tightly enough that the mark pokes into
            the seam between two cards and reads as a rendering glitch
            instead of a decoration. Hide it below that same collapse
-           point. */
+           point. (Redundant with the max-width: 1349px rule above, which
+           already covers this width, but kept in case that rule's
+           breakpoint ever moves independently of this one's own reason.) */
         @media (max-width: 480px) {
           .price-card-pin { display: none; }
+        }
+
+        /* Real carved-marble tablets, phone/tablet only -- desktop's flat
+           cardStyle background (see the price-card TiltCard's own comment)
+           is untouched above 1349px, the same breakpoint app/layout.js's
+           mobile-sand-overlay uses. Straightened to 0deg here too: a row of
+           tablets sitting in a straight line reads as considered/carved,
+           the way the scattered, individually-tilted paper-card look
+           (still fine on desktop, where it's still paper) doesn't once the
+           material underneath has changed. */
+        @media (max-width: 1349px) {
+          .price-card { --price-card-bg-image: url("/images/marble-tablet.jpg"); --price-card-tilt: 0deg; }
+        }
+
+        /* Fluted-column texture on the How It Works connector, phone/tablet
+           only -- a repeating-linear-gradient reads as vertical flute
+           grooves regardless of whether .how-step-line is itself vertical
+           (stacked layout, below 760px) or horizontal (the row layout
+           between 760px and 1349px), since the gradient's own axis (90deg)
+           doesn't depend on the element's orientation. */
+        @media (max-width: 1349px) {
+          .how-step-line {
+            background-image: repeating-linear-gradient(90deg, rgba(33,31,29,.16) 0 1px, transparent 1px 3px);
+            background-color: #F1E9DA;
+          }
+        }
+        /* The Roman numeral badge on each step icon (see how-step-numeral
+           below) -- hidden by default, shown only phone/tablet, same
+           breakpoint as everything else in this theme pass. A real DOM
+           element toggled by display, not a var() trick, since (unlike the
+           price-card background) nothing here is fighting an inline style. */
+        .how-step-numeral { display: none; }
+        @media (max-width: 1349px) {
+          .how-step-numeral {
+            display: flex; position: absolute; bottom: -6px; right: -6px;
+            width: 21px; height: 21px; border-radius: 50%;
+            background: #FAF7F2; border: 1.5px solid #C97A3D;
+            align-items: center; justify-content: center;
+            font-family: var(--font-fraunces), Georgia, serif; font-weight: 700; font-size: 10px; color: #C97A3D;
+          }
         }
 
         /* Event-type pills are sized for a comfortable click target on
@@ -858,7 +927,10 @@ export default function HomePage() {
           ].map((s, i, arr) => (
               <div className="how-step" key={s.n}>
                 <div className="how-step-node">
-                  <img src={`/images/how-it-works-icons/${s.icon}.jpg`} alt="" aria-hidden="true" className="how-step-circle" width={44} height={44} />
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <img src={`/images/how-it-works-icons/${s.icon}.jpg`} alt="" aria-hidden="true" className="how-step-circle" width={44} height={44} />
+                    <span aria-hidden="true" className="how-step-numeral">{["I", "II", "III", "IV"][i]}</span>
+                  </div>
                   {i < arr.length - 1 && <div className="how-step-line" />}
                 </div>
                 <div className="how-step-content">
@@ -892,13 +964,33 @@ export default function HomePage() {
           {TIERS.map((t, idx) => {
             const tierIcon = TIER_ICONS[t.id];
             const tilt = [-1.3, 0.9, 0, -0.7][idx] || 0;
-            const baseTransform = t.highlight ? "scale(1.03)" : `rotate(${tilt}deg)`;
+            // var() with the real per-card tilt as its *fallback*, not a
+            // separately-declared custom property -- if this set
+            // --price-card-tilt inline instead, that inline declaration
+            // would win over any later stylesheet rule, the same reason
+            // --price-card-bg-image below is never set inline either. This
+            // string also gets reused verbatim as TiltCard's mouseleave
+            // reset, so a phone/tablet straightened tilt survives a tap's
+            // synthetic mouseleave too, not just the initial paint.
+            const baseTransform = t.highlight ? "scale(1.03)" : `rotate(var(--price-card-tilt, ${tilt}deg))`;
             return (
             <div key={t.id} className="price-card-breeze">
             <TiltCard href={`/booking?tier=${t.id}`} className="price-card" baseTransform={baseTransform} style={{
               ...cardStyle, height: "100%", position: "relative", display: "block", textDecoration: "none", color: "inherit", cursor: "pointer", transformOrigin: "50% 0%",
               border: t.highlight ? "1.5px solid #C97A3D" : cardStyle.border,
               boxShadow: t.highlight ? "0 10px 26px rgba(201,122,61,0.22)" : "0 3px 10px rgba(33,31,29,0.05)",
+              // Real marble, phone/tablet only (see the --price-card-bg-image
+              // custom property, set only inside the same max-width: 1349px
+              // query app/layout.js's mobile-sand-overlay uses) -- "none" by
+              // default keeps desktop's flat cardStyle background exactly as
+              // it was. A CSS custom property, not a plain class rule,
+              // because this card's own background is already an inline
+              // style (from cardStyle above) and inline styles beat any
+              // external class selector; a var() referenced from inline CSS
+              // is the one thing a later stylesheet rule can still override.
+              backgroundImage: "var(--price-card-bg-image, none)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
             }}>
               {t.highlight ? (
                 <span style={{ position: "absolute", top: -11, left: 16, background: "#C97A3D", color: "#211F1D", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999 }}>
@@ -1106,6 +1198,29 @@ export default function HomePage() {
           Book Now
         </a>
       </div>
+
+      {/* Mobile only (see .back-to-top below) -- always mounted, visibility
+          driven by opacity/pointer-events off the scroll-position state
+          above, same as the mobile book bar just above and the QR share
+          page's identical button. Sits above that bar, not stacked behind
+          or beside it, so the two never overlap. */}
+      <button
+        onClick={scrollToTop}
+        aria-label="Back to top"
+        aria-hidden={!showBackToTop}
+        tabIndex={showBackToTop ? 0 : -1}
+        className="back-to-top"
+        style={{
+          position: "fixed", right: 16, width: 46, height: 46, borderRadius: "50%",
+          background: "#C97A3D", border: "none", color: "#211F1D", alignItems: "center", justifyContent: "center",
+          boxShadow: shadow.md, cursor: "pointer", zIndex: 46,
+          opacity: showBackToTop ? 1 : 0, pointerEvents: showBackToTop ? "auto" : "none",
+          transform: showBackToTop ? "translateY(0)" : "translateY(10px)",
+        }}
+      >
+        <ArrowUp size={20} />
+      </button>
+
       <style>{`
         .mobile-book-bar {
           display: none;
@@ -1124,6 +1239,26 @@ export default function HomePage() {
         }
         @media (prefers-reduced-motion: reduce) {
           .mobile-book-bar { transition: none; }
+        }
+
+        /* Hidden by default (desktop): the sticky header's own Book Now
+           button and section nav are already reachable at every scroll
+           position there, so a second "back to top" control would be
+           redundant. display: none rather than not rendering the button at
+           all, so the opacity/transform transition below still has
+           something to animate on the one breakpoint it's actually used. */
+        .back-to-top { display: none; transition: opacity 0.2s ease, transform 0.2s ease; }
+        @media (max-width: 850px) {
+          .back-to-top {
+            display: flex;
+            /* Clears the mobile book bar above it (~60px tall including its
+               own padding) rather than sitting behind or beside it -- see
+               .mobile-book-bar's own height math in its padding/content. */
+            bottom: calc(76px + env(safe-area-inset-bottom));
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .back-to-top { transition: none; }
         }
       `}</style>
     </div>

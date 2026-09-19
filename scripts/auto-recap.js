@@ -66,12 +66,14 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // same process.
 let currentTmpDir = null;
 
-// Royalty-free tracks (Pixabay Content License â€” free for commercial use,
-// no attribution required), matching the mood described for each editing
-// style on the booking page. Living under public/ (rather than lib/) so the
-// same files double as browser-playable previews on the booking and QR
-// share pages -- see MUSIC_TRACKS in app/booking/page.jsx and
-// app/qr/[slug]/page.jsx.
+// Royalty-free tracks matching the mood described for each editing style on
+// the booking page -- either Pixabay Content License, or CC0 1.0 Universal
+// (public domain, mostly HoliznaCC0 tracks via freemusicarchive.org). Every
+// track is free for commercial use with no attribution required either way;
+// see each style folder's own CREDITS.md for exact per-track sourcing.
+// Living under public/ (rather than lib/) so the same files double as
+// browser-playable previews on the booking and QR share pages -- see
+// MUSIC_TRACKS in app/booking/page.jsx and app/qr/[slug]/page.jsx.
 //
 // Each style folder holds several candidate tracks; booking.music_track /
 // booking.social_music_track (set by the booking form's music picker) is a

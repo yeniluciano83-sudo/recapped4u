@@ -5,7 +5,7 @@ Every track here is free to use commercially with **no attribution required**.
 - track-1.mp3, track-2.mp3, track-3.mp3 are Pixabay Content License tracks
   — see the licensing note in scripts/auto-recap.js.
 
-- track-4.mp3 through track-10.mp3 are HoliznaCC0 tracks from the album
+- track-4.mp3 through track-9.mp3 are HoliznaCC0 tracks from the album
   "Waves Of Nostalgia 2" (freemusicarchive.org/music/holiznacc0/waves-of-nostalgia-2),
   licensed CC0 1.0 Universal (public domain) — the artist explicitly
   releases everything under this name attribution-free. Picked for the
@@ -16,8 +16,7 @@ Every track here is free to use commercially with **no attribution required**.
 
   - track-4.mp3 — "Machines With Feelings"
   - track-5.mp3 — "All The Fight Left"
-  - track-6.mp3 — "New Gods"
-  - track-7.mp3 — "Night Life"
-  - track-8.mp3 — "Fires Uptown"
-  - track-9.mp3 — "Street Lights Passing By"
-  - track-10.mp3 — "We Used To Dance"
+  - track-6.mp3 — "Night Life"
+  - track-7.mp3 — "Fires Uptown"
+  - track-8.mp3 — "Street Lights Passing By"
+  - track-9.mp3 — "We Used To Dance"

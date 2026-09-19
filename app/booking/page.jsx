@@ -68,12 +68,17 @@ function StylePreviewButton({ styleId, playingKey, onToggle }) {
 // candidate tracks instead of always getting track 1. selectedTrack/
 // onSelectTrack are 1-based to match booking.music_track/social_music_track
 // directly, no off-by-one translation at submit time.
-function TrackPicker({ styleId, selectedTrack, playingKey, onSelectTrack, onTogglePreview }) {
+function TrackPicker({ styleId, selectedTrack, playingKey, onSelectTrack, onTogglePreview, showMedleyNote }) {
   const count = MUSIC_TRACK_COUNTS[styleId];
   if (!count) return null;
   return (
     <div style={{ marginTop: "10px", padding: "12px", borderRadius: "10px", background: "#FAF7F2", border: "1px solid #E4DED2" }}>
       <div style={{ fontSize: "12px", fontWeight: 600, color: "#4a4642", marginBottom: "8px" }}>Choose a track for this theme</div>
+      {showMedleyNote && (
+        <p style={{ fontSize: "11.5px", color: "#8a857d", margin: "-2px 0 10px", lineHeight: 1.5 }}>
+          For a longer event, we'll automatically bring in more tracks from this theme after yours (never a different theme) so the music doesn't just loop the same song on repeat.
+        </p>
+      )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
         {Array.from({ length: count }, (_, i) => i + 1).map((trackNumber) => {
           const selected = selectedTrack === trackNumber;
@@ -507,7 +512,8 @@ function BookingFormInner() {
                   </div>
                   {selected && (
                     <TrackPicker styleId={s.id} selectedTrack={form[trackField]} playingKey={previewingKey}
-                      onSelectTrack={(n) => update(trackField, n)} onTogglePreview={togglePreview} />
+                      onSelectTrack={(n) => update(trackField, n)} onTogglePreview={togglePreview}
+                      showMedleyNote={!isSocialCutsFormat} />
                   )}
                 </div>
               );

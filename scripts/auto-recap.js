@@ -75,6 +75,12 @@ let currentTmpDir = null;
 // browser-playable previews on the booking and QR share pages -- see
 // MUSIC_TRACKS in app/booking/page.jsx and app/qr/[slug]/page.jsx.
 //
+// retro used to include several Kevin MacLeod (incompetech.com) tracks that
+// required Creative Commons attribution never actually placed anywhere a
+// host/guest would see it -- those were swapped for CC0 HoliznaCC0 tracks
+// (see public/music/retro/CREDITS.md), so every style here is attribution-free
+// now, not just most of them.
+//
 // Each style folder holds several candidate tracks; booking.music_track /
 // booking.social_music_track (set by the booking form's music picker) is a
 // 1-based index into that style's list. resolveMusicSelection (shared with

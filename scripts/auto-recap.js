@@ -34,11 +34,15 @@ const ffmpeg = require("fluent-ffmpeg");
 // Linux binary is missing the drawtext filter, so CI sets FFMPEG_PATH to
 // a real system ffmpeg instead.
 ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH || require("ffmpeg-static"));
+// See the matching comment in lib/video-assemble.js -- needed for
+// getAudioDurationSeconds' real track-length probing (long-video music
+// medleys), the only ffprobe use in either file.
+ffmpeg.setFfprobePath(process.env.FFPROBE_PATH || require("ffprobe-static").path);
 const { createClient } = require("@supabase/supabase-js");
 const { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const sharp = require("sharp");
 const { enhancePhoto } = require("../lib/photo-enhance");
-const { assembleSlideshow, extractPosterFrame, appendSocialEndCard, planChunks, renderFullVideoChunks, mergeFullVideoChunks } = require("../lib/video-assemble");
+const { assembleSlideshow, extractPosterFrame, appendSocialEndCard, planChunks, renderFullVideoChunks, mergeFullVideoChunks, concatAudioTracks, getAudioDurationSeconds } = require("../lib/video-assemble");
 const { generateRoastScript } = require("../lib/roast");
 const { buildCardBackground } = require("../lib/card-background");
 const { buildSocialSelections } = require("../lib/socialSelections");
@@ -87,11 +91,40 @@ let currentTmpDir = null;
 // the booking API's own validation) clamps back to track 1 for anything out
 // of range, so an unset column (every booking made before this existed) or a
 // bad value still resolves to a real file instead of crashing the render.
-const { resolveMusicSelection } = require("../lib/musicTrack");
+const { resolveMusicSelection, buildMusicPlaylist } = require("../lib/musicTrack");
 
 function musicPathFor(style, trackNumber) {
   const { style: resolvedStyle, track } = resolveMusicSelection(style, trackNumber);
   return path.join(__dirname, "..", "public", "music", resolvedStyle, `track-${track}.mp3`);
+}
+
+// buildMusicPlaylist (lib/musicTrack.js) may probe the same track's duration
+// more than once while cycling a short pool to cover a very long video --
+// this process only ever renders one booking (see currentTmpDir's own
+// comment), so a plain module-level cache is enough, no eviction needed.
+const trackDurationCache = new Map();
+async function cachedTrackDurationSeconds(style, track) {
+  const key = `${style}:${track}`;
+  if (!trackDurationCache.has(key)) {
+    trackDurationCache.set(key, await getAudioDurationSeconds(musicPathFor(style, track)));
+  }
+  return trackDurationCache.get(key);
+}
+
+// The full video's music path, built for its *actual* length rather than
+// always a single looped track -- see buildMusicPlaylist's own comment for
+// why a long Spotlight/Luxe recap needs more than one track. workDir is
+// where the medley file (when there is one) gets written; cheap enough to
+// rebuild from scratch on every driveRender call (a fresh tmpDir each time)
+// rather than needing to persist anything in render_state.
+async function fullVideoMusicPathFor(style, trackNumber, slotCount, slotSeconds, workDir) {
+  const estimatedDurationSeconds = slotCount * slotSeconds;
+  const { style: resolvedStyle, tracks } = await buildMusicPlaylist(style, trackNumber, estimatedDurationSeconds, cachedTrackDurationSeconds);
+  if (tracks.length === 1) return musicPathFor(resolvedStyle, tracks[0]);
+  const trackPaths = tracks.map((t) => musicPathFor(resolvedStyle, t));
+  const medleyPath = path.join(workDir, "music-medley.m4a");
+  await concatAudioTracks(trackPaths, medleyPath);
+  return medleyPath;
 }
 
 // The actual *edit* per style -- transition, pacing, grain -- passed through
@@ -1125,10 +1158,15 @@ async function driveRender(bookingId, { budgetMs }) {
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "render-"));
   currentTmpDir = tmpDir;
-  const musicPath = spec.noMusic ? null : musicPathFor(spec.style, spec.musicTrack);
 
   try {
     if (rs.phase === "full") {
+      // Computed here rather than unconditionally at the top of this
+      // function -- a call resumed at the "social" phase (full video
+      // already merged) has no use for this, and building a long-video
+      // medley involves real ffprobe/ffmpeg work worth skipping when it's
+      // not actually needed.
+      const musicPath = spec.noMusic ? null : await fullVideoMusicPathFor(spec.style, spec.musicTrack, spec.slotKeys.length, spec.fullCutSlotSeconds, tmpDir);
       const slotDir = path.join(tmpDir, "slots");
       fs.mkdirSync(slotDir, { recursive: true });
       const slotPath = (i) => path.join(slotDir, `slot-${String(i).padStart(4, "0")}.jpg`);

@@ -106,4 +106,5 @@ jobs:
           APP_URL: ${{ secrets.APP_URL }}
           ADMIN_ALERT_EMAIL: ${{ secrets.ADMIN_ALERT_EMAIL }}
           FFMPEG_PATH: /usr/bin/ffmpeg
+          FFPROBE_PATH: /usr/bin/ffprobe
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}

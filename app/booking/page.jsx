@@ -27,7 +27,7 @@ function formatTime(timeStr) {
 // style (see the commit that added track-2.mp3 onward alongside each
 // original track-1.mp3) -- kept as a plain count rather than an actual file
 // listing since this only ever needs to render N preview buttons.
-const MUSIC_TRACK_COUNTS = { cinematic: 7, upbeat: 7, documentary: 6, retro: 3, highlight: 6 };
+const MUSIC_TRACK_COUNTS = { cinematic: 6, upbeat: 8, documentary: 6, retro: 3, highlight: 4 };
 const trackPreviewUrl = (styleId, trackNumber) => `/music/${styleId}/track-${trackNumber}.mp3`;
 // Kept only for StylePreviewButton's own "does this style have music at
 // all" check -- every real style does; "none" (the social-cut-only "no

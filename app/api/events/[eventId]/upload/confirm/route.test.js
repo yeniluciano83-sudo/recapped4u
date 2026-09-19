@@ -254,17 +254,24 @@ describe("POST /api/events/[eventId]/upload/confirm -- upload-cap-reached notifi
     expect(sb.callLog.length).toBe(4);
   });
 
-  it("still returns success to the guest even if the notification email throws", async () => {
+  it("still returns success to the guest even if the notification email throws, and does NOT stamp upload_cap_notified_at", async () => {
     sendUploadCapReachedEmail.mockRejectedValueOnce(new Error("Resend down"));
     sb.mockResponse({ data: { ...BOOKING }, error: null });
     sb.mockResponse({ data: { id: "u1", storage_key: VALID_BODY.key }, error: null });
     sb.mockResponse({ data: null, error: null });
     sb.mockResponse({ data: { upload_cap_notified_at: null }, error: null });
     sb.mockResponse({ data: null, error: null, count: 20 });
-    sb.mockResponse({ data: null, error: null });
 
     const res = await POST(makeRequest(VALID_BODY), { params: { eventId: "slug-1" } });
     expect(res.status).toBe(200);
     expect(captureError).toHaveBeenCalledTimes(1);
+    // A failed send used to still stamp the flag anyway, which permanently
+    // suppressed the one and only moment this notification can ever fire
+    // again (every later upload attempt is rejected by the cap trigger
+    // before reaching this code). Exactly 5 .from() calls -- booking,
+    // insert, status update, cap-state read, re-count -- with no 6th for a
+    // stamp that must not happen on failure.
+    expect(sb.callLog.length).toBe(5);
+    expect(sb.callLog.some((c) => c.calls.some((call) => call.method === "update" && "upload_cap_notified_at" in call.args[0]))).toBe(false);
   });
 });

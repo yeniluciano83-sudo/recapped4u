@@ -239,11 +239,20 @@ export async function POST(req, { params }) {
             uploadSlug: booking.upload_slug,
             bookingId: booking.id,
           });
+          // Only mark as notified once the send actually succeeds -- a
+          // transient failure here (Resend hiccup, rate limit) used to set
+          // this flag anyway, which permanently suppressed the one and only
+          // moment this notification can ever fire again (every later
+          // upload attempt is rejected by the cap trigger before reaching
+          // this code at all, so there's no other retry point). Left unset
+          // on failure so a host who deletes and re-fills still gets a real
+          // shot at being notified, instead of silently never hearing about
+          // a full event.
+          await supabase.from("bookings").update({ upload_cap_notified_at: new Date().toISOString() }).eq("id", booking.id);
         } catch (err) {
           console.error(`Upload-cap-reached email failed for booking ${booking.id}:`, err.message);
           captureError(err, { tags: { route: "events.upload-confirm", email: "upload-cap-reached" }, extra: { bookingId: booking.id } });
         }
-        await supabase.from("bookings").update({ upload_cap_notified_at: new Date().toISOString() }).eq("id", booking.id);
       }
     }
   } catch (err) {
